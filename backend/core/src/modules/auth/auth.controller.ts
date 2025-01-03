@@ -100,4 +100,9 @@ export class AuthController {
       data: undefined,
     });
   }
+
+  @Get('test_exception')
+  async testException() {
+    throw new Error('Test exception');
+  }
 }
