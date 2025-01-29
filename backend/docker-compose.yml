@@ -1,0 +1,18 @@
+services:
+  core:
+    build: ./core
+    ports:
+      - "3000:3000"
+    env_file: .env
+  
+  # scheduling:
+  #   build: ./scheduling-engine
+  #   ports:
+  #     - "8000:8000"
+    
+  # postgres:
+  #   image: postgres:15
+  #   # Add other database config
+
+  # redis:
+  #   image: redis:alpine
