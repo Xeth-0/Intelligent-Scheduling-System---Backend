@@ -1,3 +1,3 @@
-export interface IAuthService{
-    // service interface methods
+export interface IAuthService {
+  // service interface methods
 }
