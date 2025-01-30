@@ -1,22 +1,129 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "postgresql" // or "mysql", "sqlite", etc.
   url      = env("DATABASE_URL")
 }
 
-// can define these in their modules too under the entities folder.
+// ================== Enums ==================
+enum Role {
+  ADMIN
+  TEACHER
+  STUDENT
+}
+
+enum ClassroomType {
+  LECTURE
+  LAB
+  SEMINAR
+}
+
+// ================== Campus ==================
+model Campus {
+  campusId         String       @id @default(uuid())
+  name             String
+  location         String?
+  schedulingPolicy String?
+  departments      Department[]
+  classrooms       Classroom[]
+}
+
+// ================== User ==================
 model User {
-  id Int @default(autoincrement()) @id
-  email String @unique
-  name String?
+  userId       String       @id @default(uuid())
+  firstName    String
+  lastName     String
+  email        String       @unique
   passwordHash String
+  role         Role
+  department   Department?  @relation(fields: [departmentId], references: [deptId], onDelete: Restrict)
+  departmentId String?
+  classGroup   ClassGroup?  @relation(fields: [classGroupId], references: [classGroupId], onDelete: Restrict)
+  classGroupId String?
+  subjects     Subject[]    @relation("UserSubjects")
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  Preference   Preference[]
+}
+
+// ================== Department ==================
+model Department {
+  deptId     String      @id @default(uuid())
+  name       String
+  campus     Campus      @relation(fields: [campusId], references: [campusId], onDelete: Cascade)
+  campusId   String
+  users      User[]
+  yearGroups YearGroup[]
+  Subject    Subject[]
+}
+
+// ================== Subject ==================
+model Subject {
+  subjectId    String      @id @default(uuid())
+  name         String
+  code         String
+  department   Department? @relation(fields: [departmentId], references: [deptId], onDelete: SetNull)
+  departmentId String?
+  teachers     User[]      @relation("UserSubjects")
+}
+
+// ================== ClassGroup ==================
+model ClassGroup {
+  classGroupId String    @id @default(uuid())
+  name         String
+  yearGroup    YearGroup @relation(fields: [yearGroupId], references: [yearGroupId], onDelete: Cascade)
+  yearGroupId  String
+  User         User[]
+}
+
+// ================== YearGroup ==================
+model YearGroup {
+  yearGroupId  String       @id @default(uuid())
+  year         Int
+  department   Department   @relation(fields: [departmentId], references: [deptId], onDelete: Cascade)
+  departmentId String
+  classGroups  ClassGroup[]
+}
+
+// ================== Classroom ==================
+model Classroom {
+  classroomId String        @id @default(uuid())
+  name        String
+  capacity    Int
+  type        ClassroomType
+  campus      Campus        @relation(fields: [campusId], references: [campusId], onDelete: Cascade)
+  campusId    String
+  openingTime String?
+  closingTime String?
+}
+
+// ================== PreferenceType ==================
+model PreferenceType {
+  preferenceTypeId String          @id @default(uuid())
+  key              String          @unique
+  description      String?
+  possibleValues   PossibleValue[]
+  Preference       Preference[]
+}
+
+// ================== PossibleValue ==================
+model PossibleValue {
+  possibleValueId  String         @id @default(uuid())
+  value            String
+  preferenceType   PreferenceType @relation(fields: [preferenceTypeId], references: [preferenceTypeId], onDelete: Cascade)
+  preferenceTypeId String
+  Preference       Preference[]
+}
+
+// ================== Preference ==================
+model Preference {
+  preferenceId     String         @id @default(uuid())
+  user             User           @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  userId           String
+  preferenceType   PreferenceType @relation(fields: [preferenceTypeId], references: [preferenceTypeId], onDelete: Cascade)
+  preferenceTypeId String
+  value            PossibleValue  @relation(fields: [possibleValueId], references: [possibleValueId], onDelete: Cascade)
+  possibleValueId  String
 }
