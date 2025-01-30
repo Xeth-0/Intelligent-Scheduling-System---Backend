@@ -30,14 +30,14 @@ COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 
-# Environment variables for runtime configuration
+# Environment variables
 ENV NODE_ENV=production
-ENV DATABASE_URL=${DATABASE_URL}
+# Remove hardcoded DATABASE_URL - will come from Render's environment
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
 
-# Generate Prisma client
+# Generate Prisma client and run migrations
 RUN npx prisma generate
-
-# Migration setup (adjust as needed)
 RUN npx prisma migrate deploy
 
 EXPOSE 3000
