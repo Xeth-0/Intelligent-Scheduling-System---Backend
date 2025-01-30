@@ -32,7 +32,8 @@ COPY --from=builder /app/prisma ./prisma
 
 # Environment variables
 ENV NODE_ENV=production
-# Remove hardcoded DATABASE_URL - will come from Render's environment
+ARG DATABASE_URL
+ENV DATABASE_URL=$DATABASE_URL
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
 
