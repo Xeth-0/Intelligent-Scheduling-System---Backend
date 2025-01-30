@@ -25,7 +25,7 @@ jobs:
         working-directory: backend/core
         run: npm ci
           
-      # - name: Lint # will re-enable later
+      # - name: Lint # will re-enable 
       #   working-directory: backend/core
       #   run: npm run lint
           
