@@ -1,3 +1,3 @@
 export interface IAuthController {
-    // define interface methods here.
+  // define interface methods here.
 }
