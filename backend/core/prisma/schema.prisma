@@ -46,6 +46,7 @@ model User {
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
   Preference   Preference[]
+  Schedule     Schedule[]
 }
 
 // ================== Department ==================
@@ -67,15 +68,17 @@ model Subject {
   department   Department? @relation(fields: [departmentId], references: [deptId], onDelete: SetNull)
   departmentId String?
   teachers     User[]      @relation("UserSubjects")
+  Schedule     Schedule[]
 }
 
 // ================== ClassGroup ==================
 model ClassGroup {
-  classGroupId String    @id @default(uuid())
+  classGroupId String     @id @default(uuid())
   name         String
-  yearGroup    YearGroup @relation(fields: [yearGroupId], references: [yearGroupId], onDelete: Cascade)
+  yearGroup    YearGroup  @relation(fields: [yearGroupId], references: [yearGroupId], onDelete: Cascade)
   yearGroupId  String
   User         User[]
+  Schedule     Schedule[]
 }
 
 // ================== YearGroup ==================
@@ -97,6 +100,25 @@ model Classroom {
   campusId    String
   openingTime String?
   closingTime String?
+  Schedule    Schedule[]
+}
+
+// ================== Schedule ==================
+model Schedule {
+  scheduleId   String      @id @default(uuid())
+  subject      Subject     @relation(fields: [subjectId], references: [subjectId], onDelete: Cascade)
+  subjectId    String
+  teacher      User        @relation(fields: [teacherId], references: [userId], onDelete: Cascade)
+  teacherId    String
+  classroom    Classroom?  @relation(fields: [classroomId], references: [classroomId], onDelete: SetNull)
+  classroomId  String?
+  startTime    DateTime
+  endTime      DateTime
+  isFinalized  Boolean     @default(false)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  classGroup   ClassGroup? @relation(fields: [classGroupId], references: [classGroupId], onDelete: SetNull)
+  classGroupId String?
 }
 
 // ================== PreferenceType ==================
