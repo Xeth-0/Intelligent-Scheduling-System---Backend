@@ -149,3 +149,13 @@ model Preference {
   value            PossibleValue  @relation(fields: [possibleValueId], references: [possibleValueId], onDelete: Cascade)
   possibleValueId  String
 }
+
+// ================== RefreshToken ==================
+model RefreshToken {
+  refreshTokenId String @id @default(uuid())
+  userId         String
+  token          String
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
+}
+
