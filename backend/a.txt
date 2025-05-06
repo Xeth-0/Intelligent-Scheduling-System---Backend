@@ -1,0 +1,80 @@
+the problem can be solved with many techniques including rule based, MIP, CP and meta heuristic approaches
+these approaches are enough to solve both hard and soft constraints as mentioned previously 
+this problem, the timetabling problem is a NP-complete problem that is complex to solve but easy to verify.
+we aim to solve this project from a different perspective, mainly Machine learning wiht possiblility of augmentation using metaheuristics
+although it doesn't add anything new to previous solutions as of now, it opens up a lot of possibilities for future 
+research and development. improvements such as integrating dynamic constraints like changing constraints and evolving system based on feedback loop
+we do not intend to include these features in this verison.
+
+
+
+rows as timeslots and columns as classes
+
+
+add one more class in prisma for classes that assign teachers to specific classGroups
+like for classgroup aait ai steam yr 5 assgn teacher 01 for computer vision subject lecture and teacher 02 for computer vision lab session etc.
+
+
+/*
+model class {
+  id          String
+  name        String
+  code        String
+  classGroupId String
+  classGroup  classGroup
+  subjectId   String
+  subject     Subject
+} 
+*/ 
+
+CSVs
+based on database tables
+
+departments.csv
+subjects.csv
+classGroups.csv
+classrooms.csv
+
+
+outputs
+
+student : arranged per classGroup and a week
+teacher : teacher, timeslot table 
+general : timeslot, classes or [::-1]
+
+
+
+general ideas
+
+"timeSlots": ["Mon_08:00", "Mon_09:00", ..., "Fri_17:00"],
+{"teacher": "T1", "room": "R1", "time": "Mon_08:00"},
+
+two ways of input: csv and manual for updates or late entries
+
+preference type and possible values will be entered by admin manually but individual preferences will be added by the teachers manually 
+csv files will be used to populate the database after cleaning. cleaning process must provide feedback to users if a problem occurs in it.
+
+divisible and indivisible classes must be identified. a lab can not be separated into  3 1hr long timeslot. but a 3 hr lecture can and should be separeted to 2 1.5hrs long timeslots.
+for this, one more column is needed in subject class and csv. if not provided assumtion based on subject type will be made.
+
+
+possible scheduling format
+
+{
+  "classId": "C1",
+  "subjectId": "S1",
+  "classGroupId": "CG1",
+  "size": 30,
+  "duration": 2,
+  "requiredRoomType": "Lecture",
+  "feasibleAssignments": [
+    {"teacherId": "T1", "classroomId": "R1", "startTime": "Mon_09:00", "preferenceScore": 1},
+    {"teacherId": "T2", "classroomId": "R1", "startTime": "Tue_10:00", "preferenceScore": 0}
+  ]
+}
+
+schedule:
+[
+  {"classId": "C1", "teacherId": "T1", "classroomId": "R1", "startTime": "Mon_09:00"},
+  {"classId": "C2", "teacherId": "T2", "classroomId": "R3", "startTime": "Tue_11:00"}
+]
