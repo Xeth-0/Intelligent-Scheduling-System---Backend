@@ -9,7 +9,14 @@ import { TokensService } from '../auth/tokens.service';
 import { RolesGuard } from 'src/common/guards';
 
 @Module({
-  providers: [UsersService, PrismaService, JwtAuthGuard, RolesGuard, JwtService, TokensService,],
+  providers: [
+    UsersService,
+    PrismaService,
+    JwtAuthGuard,
+    RolesGuard,
+    JwtService,
+    TokensService,
+  ],
   controllers: [UsersController],
   imports: [PrismaModule],
   exports: [UsersService],

@@ -31,4 +31,4 @@ export class RolesGuard implements CanActivate {
     console.log('Has required role:', hasRole);
     return hasRole;
   }
-} 
+}

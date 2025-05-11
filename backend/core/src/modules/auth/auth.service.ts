@@ -37,9 +37,9 @@ export class AuthService implements IAuthService {
       user.email,
       user.role,
     );
-    
+
     await this.tokensService.saveRefreshToken(user.userId, tokens.refreshToken);
-    
+
     return tokens;
   }
 
@@ -50,9 +50,11 @@ export class AuthService implements IAuthService {
     }
 
     const isFirstUser = await this.usersService.isFirstUser();
-    
+
     if (!isFirstUser && registerDto.role !== Role.STUDENT) {
-      throw new ForbiddenException('Only student accounts can be created publicly');
+      throw new ForbiddenException(
+        'Only student accounts can be created publicly',
+      );
     }
 
     const user = await this.usersService.createUser({
@@ -65,9 +67,9 @@ export class AuthService implements IAuthService {
       user.email,
       user.role,
     );
-    
+
     await this.tokensService.saveRefreshToken(user.userId, tokens.refreshToken);
-    
+
     return tokens;
   }
 

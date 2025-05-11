@@ -1,5 +1,5 @@
-import { LoginDto } from "../auth/dtos/login.dto";
-import { TokensDto } from "../auth/dtos/tokens.dto";
+import { LoginDto } from '../auth/dtos/login.dto';
+import { TokensDto } from '../auth/dtos/tokens.dto';
 
 export abstract class IAuthService {
   // service interface methods

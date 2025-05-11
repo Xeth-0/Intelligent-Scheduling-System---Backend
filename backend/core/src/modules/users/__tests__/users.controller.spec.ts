@@ -5,7 +5,7 @@ import { CreateUserDto, UpdateUserDto, UserResponseDto } from '../dtos';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { JwtAuthGuard, RolesGuard } from '../../../common/guards';
-import { CustomApiResponse } from '../../../common/response/api-response.dto';
+import { ApiResponse } from '../../../common/response/api-response.dto';
 
 jest.mock('../../../common/guards/jwt-auth.guard', () => ({
   JwtAuthGuard: jest.fn().mockImplementation(() => ({
@@ -65,9 +65,9 @@ describe('UsersController', () => {
         password: 'password123',
         role: Role.TEACHER,
       };
-      const mockResponse = new CustomApiResponse({
+      const mockResponse = new ApiResponse({
         success: true,
-        data: mockUser
+        data: mockUser,
       });
       usersService.createUser.mockResolvedValue(mockResponse.data);
 
@@ -113,7 +113,9 @@ describe('UsersController', () => {
     it('should throw NotFoundException for non-existent user', async () => {
       usersService.findUserById.mockRejectedValue(new NotFoundException());
 
-      await expect(controller.findOne('999')).rejects.toThrow(NotFoundException);
+      await expect(controller.findOne('999')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 

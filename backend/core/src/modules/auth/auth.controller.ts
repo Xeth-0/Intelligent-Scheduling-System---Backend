@@ -17,7 +17,7 @@ import {
   Get,
   UnauthorizedException,
 } from '@nestjs/common';
-import { CustomApiResponse } from '../../common/response/api-response.dto';
+import { ApiResponse } from '../../common/response/api-response.dto';
 import { RefreshJwtAuthGuard } from '../../common/guards/refresh-jwt-auth.guard';
 import { LogoutDocs } from '../../common/decorators/swagger/auth.swagger.docs';
 import { GetUser } from '../../common/decorators/auth';
@@ -35,9 +35,9 @@ export class AuthController {
   @LoginDocs()
   async login(
     @Body() loginDto: LoginDto,
-  ): Promise<CustomApiResponse<TokensDto>> {
+  ): Promise<ApiResponse<TokensDto>> {
     const tokens = await this.authService.login(loginDto);
-    return new CustomApiResponse({
+    return new ApiResponse({
       success: true,
       data: tokens,
       message: 'Login successful',
@@ -48,7 +48,7 @@ export class AuthController {
   @RegisterDocs()
   async register(
     @Body() registerDto: RegisterDto,
-  ): Promise<CustomApiResponse<TokensDto>> {
+  ): Promise<ApiResponse<TokensDto>> {
     // If the user is the first user, force role to be ADMIN
     const isFirstUser = await this.usersService.isFirstUser();
     if (isFirstUser) {
@@ -62,7 +62,7 @@ export class AuthController {
 
     const tokens = await this.authService.register(registerDto);
 
-    return new CustomApiResponse({
+    return new ApiResponse({
       success: true,
       data: tokens,
       message:
@@ -75,15 +75,16 @@ export class AuthController {
   @Post('refresh')
   @RefreshDocs()
   @UseGuards(RefreshJwtAuthGuard)
-  async refresh(
-    @Req() req: Request,
-  ): Promise<CustomApiResponse<TokensDto>> {
-    const refreshToken = req.get('authorization')?.replace('Bearer ', '').trim();
+  async refresh(@Req() req: Request): Promise<ApiResponse<TokensDto>> {
+    const refreshToken = req
+      .get('authorization')
+      ?.replace('Bearer ', '')
+      .trim();
     if (!refreshToken) {
       throw new UnauthorizedException('Refresh token is required');
     }
     const tokens = await this.authService.refreshTokens(refreshToken);
-    return new CustomApiResponse({
+    return new ApiResponse({
       success: true,
       data: tokens,
       message: 'Tokens refreshed successfully',
@@ -92,9 +93,9 @@ export class AuthController {
 
   @Get('logout')
   @LogoutDocs()
-  async logout(@GetUser() user: User): Promise<CustomApiResponse<void>> {
+  async logout(@GetUser() user: User): Promise<ApiResponse<void>> {
     await this.authService.logout(user.userId);
-    return new CustomApiResponse({
+    return new ApiResponse({
       success: true,
       message: 'Logout successful',
       data: undefined,

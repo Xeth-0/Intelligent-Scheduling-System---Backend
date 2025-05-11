@@ -13,7 +13,6 @@ import * as bcrypt from 'bcrypt';
 import { CreateUserDto } from '../dtos';
 import { UserResponseDto } from '../dtos/user-response.dto';
 
-
 // Mock bcrypt
 jest.mock('bcrypt');
 
@@ -45,11 +44,11 @@ describe('UsersService', () => {
   beforeEach(async () => {
     const mockPrismaService = {
       user: {
-        create: jest.fn() as jest.Mock,
-        findMany: jest.fn() as jest.Mock,
-        findUnique: jest.fn() as jest.Mock,
-        update: jest.fn() as jest.Mock,
-        delete: jest.fn() as jest.Mock,
+        create: jest.fn(),
+        findMany: jest.fn(),
+        findUnique: jest.fn(),
+        update: jest.fn(),
+        delete: jest.fn(),
       },
     };
 
@@ -117,7 +116,9 @@ describe('UsersService', () => {
         role: Role.STUDENT,
       };
 
-      (prismaService.user.create as jest.Mock).mockRejectedValue({ code: 'P2002' });
+      (prismaService.user.create as jest.Mock).mockRejectedValue({
+        code: 'P2002',
+      });
 
       await expect(service.createUser(createUserDto)).rejects.toThrow(
         ConflictException,
@@ -132,15 +133,17 @@ describe('UsersService', () => {
 
       const result = await service.findAllUsers();
 
-      expect(result).toEqual(mockUsers.map(user => ({
-        userId: user.userId,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        role: user.role,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
-      })));
+      expect(result).toEqual(
+        mockUsers.map((user) => ({
+          userId: user.userId,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          role: user.role,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt,
+        })),
+      );
     });
   });
 
@@ -221,7 +224,9 @@ describe('UsersService', () => {
     it('should throw NotFoundException when user not found', async () => {
       (prismaService.user.findUnique as jest.Mock).mockResolvedValue(null);
 
-      await expect(service.deleteUser('999')).rejects.toThrow(NotFoundException);
+      await expect(service.deleteUser('999')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 

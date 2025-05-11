@@ -36,15 +36,15 @@ export class RefreshJwtStrategy extends PassportStrategy(
     // Get all stored refresh tokens for the user
     const storedTokens = await this.prismaService.refreshToken.findMany({
       where: {
-        userId: payload.sub
-      }
+        userId: payload.sub,
+      },
     });
 
     // Compare incoming token with all stored hashes
     const validToken = await Promise.all(
       storedTokens.map(async (storedToken) => {
         return bcrypt.compare(refreshToken, storedToken.token);
-      })
+      }),
     ).then((results) => storedTokens[results.findIndex((result) => result)]);
 
     if (!validToken || new Date(validToken.expiresAt) < new Date()) {

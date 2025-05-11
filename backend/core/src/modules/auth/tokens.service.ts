@@ -6,7 +6,7 @@ import { Role } from '@prisma/client';
 import { ITokensService } from '../.interfaces/token.service.interface';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
-  
+
 @Injectable()
 export class TokensService implements ITokensService {
   constructor(
@@ -15,7 +15,11 @@ export class TokensService implements ITokensService {
     private readonly prismaService: PrismaService,
   ) {}
 
-  async generateTokens(userId: string, email: string, role: Role): Promise<TokensDto> {
+  async generateTokens(
+    userId: string,
+    email: string,
+    role: Role,
+  ): Promise<TokensDto> {
     const [accessToken, refreshToken] = await Promise.all([
       this.generateAccessToken(userId, email, role),
       this.generateRefreshToken(userId),
@@ -79,7 +83,7 @@ export class TokensService implements ITokensService {
         data: {
           userId,
           token: refreshTokenHash,
-          expiresAt: new Date(Date.now() + (7 * 24 * 60 * 60 * 1000)), // 7 days
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
         },
       });
     } catch (error) {
@@ -93,4 +97,4 @@ export class TokensService implements ITokensService {
       where: { userId },
     });
   }
-} 
+}

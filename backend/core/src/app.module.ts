@@ -1,4 +1,4 @@
-import "./common/sentry/instrument";
+import './common/sentry/instrument';
 
 import { Module } from '@nestjs/common';
 import { APP_FILTER } from '@nestjs/core';

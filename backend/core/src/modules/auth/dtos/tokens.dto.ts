@@ -6,4 +6,4 @@ export class TokensDto {
 
   @ApiProperty()
   refreshToken: string;
-} 
+}

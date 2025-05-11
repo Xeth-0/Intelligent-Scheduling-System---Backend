@@ -52,4 +52,4 @@ export class CreateUserDto {
   @IsString()
   @IsOptional()
   classGroupId?: string;
-} 
+}
