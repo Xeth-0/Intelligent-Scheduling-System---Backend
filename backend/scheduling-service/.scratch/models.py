@@ -30,6 +30,13 @@ class Course(BaseModel):
     sessionTypes: list[str]
     sessionsPerWeek: list[int]
 
+    # More than one student group can be assigned to the course.
+    # The list is a list of student groups for each session type. Each list item in the list is a list of student group ids that take the course together (at the same time and place).
+    # This is to account for the fact that some courses are taken by multiple student groups at the same time.
+    # For example, a course that is taught to year 1 and year 2 students, and year 3 students but at a different time will have:
+    #   studentGroupIds = [[SG_Y1, SG_Y2], [SG_Y3]]
+    studentGroupIds: list[list[str]]
+
 
 class Teacher(BaseModel):
     teacherId: str
@@ -37,7 +44,7 @@ class Teacher(BaseModel):
     email: str
     phone: str
     department: str
-    needsWheelchairAccessibleRoom: bool
+    needsWheelchairAccessibleRoom: bool = False
 
 
 class ScheduledItem(BaseModel):
@@ -48,7 +55,7 @@ class ScheduledItem(BaseModel):
 
     # Assigned groups
     teacherId: str
-    studentGroupId: str
+    studentGroupIds: list[str]
 
     # Classroom information
     classroomId: str
@@ -61,6 +68,9 @@ class ScheduledItem(BaseModel):
 
 
 class StudentGroup(BaseModel):
+    # Represents a student group. this can be a section, a year group, etc.
+    # ! We are assuming a student group is the lowest level of grouping.
+    # ! We are not considering sub-groups of a student group.
     studentGroupId: str
     name: str
     size: int

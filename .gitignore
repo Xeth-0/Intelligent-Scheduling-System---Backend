@@ -1,0 +1,20 @@
+# Scratch and references
+# **/.scratch/
+**/.references/
+
+# VSCode
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Cursor
+.cursor/
+!.cursor/settings.json
+!.cursor/tasks.json
+!.cursor/launch.json
+!.cursor/extensions.json
+
+**/.env.*
+!**/.env.*.example

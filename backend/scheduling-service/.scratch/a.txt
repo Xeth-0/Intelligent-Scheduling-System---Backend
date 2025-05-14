@@ -54,7 +54,7 @@ two ways of input: csv and manual for updates or late entries
 preference type and possible values will be entered by admin manually but individual preferences will be added by the teachers manually 
 csv files will be used to populate the database after cleaning. cleaning process must provide feedback to users if a problem occurs in it.
 
-divisible and indivisible classes must be identified. a lab can not be separated into  3 1hr long timeslot. but a 3 hr lecture can and should be separeted to 2 1.5hrs long timeslots.
+divisible and indivisible classes must be identified. a lab can not be separated into 3 1hr long timeslot. but a 3 hr lecture can and should be separeted to 2 1.5hrs long timeslots.
 for this, one more column is needed in subject class and csv. if not provided assumtion based on subject type will be made.
 
 
