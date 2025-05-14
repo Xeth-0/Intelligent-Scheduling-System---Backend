@@ -1,4 +1,4 @@
-from models import Classroom, Teacher, Course, StudentGroup
+from app.models.models import Classroom, Teacher, Course, StudentGroup
 
 rooms_json = [
     {
@@ -164,7 +164,7 @@ courses_json = [
         "courseId": "6",
         "name": "Artificial Intelligence",
         "description": "Artificial Intelligence",
-        "department": 5,
+        "department": "5",
         "ectsCredits": 5,
         "teacherId": "6",
         "sessionTypes": ["lecture", "lab"],
