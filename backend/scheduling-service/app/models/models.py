@@ -1,9 +1,5 @@
 from pydantic import BaseModel
 
-# Defining the core models to run the GA scheduling algorithm
-# ! These are not the final models. They will not be used for the API, only for the algorithm during the development phase.
-
-
 class Campus(BaseModel):  # useless for now
     campusId: str
     name: str
