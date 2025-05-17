@@ -3,11 +3,10 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql" // or "mysql", "sqlite", etc.
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-// ================== Enums ==================
 enum Role {
   ADMIN
   TEACHER
@@ -20,7 +19,15 @@ enum ClassroomType {
   SEMINAR
 }
 
-// ================== Campus ==================
+// ========== Building ==========
+model Building {
+  buildingId String      @id @default(uuid())
+  name       String
+  floor      Int
+  classrooms Classroom[]
+}
+
+// ========== Campus ==========
 model Campus {
   campusId         String       @id @default(uuid())
   name             String
@@ -30,132 +37,155 @@ model Campus {
   classrooms       Classroom[]
 }
 
-// ================== User ==================
+// ========== User ==========
 model User {
-  userId       String       @id @default(uuid())
-  firstName    String
-  lastName     String
-  email        String       @unique
-  passwordHash String
-  role         Role
+  userId                       String   @id @default(uuid())
+  firstName                    String
+  lastName                     String
+  email                        String   @unique
+  passwordHash                 String
+  role                         Role
+  phone                        String?
+  needWheelchairAccessibleRoom Boolean  @default(false)
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+  teacher                      Teacher?
+  student                      Student?
+  admin                        Admin?
+}
+
+// ========== Teacher ==========
+model Teacher {
+  teacherId    String       @id @default(uuid())
+  user         User         @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  userId       String       @unique
   department   Department?  @relation(fields: [departmentId], references: [deptId], onDelete: Restrict)
   departmentId String?
-  classGroup   ClassGroup?  @relation(fields: [classGroupId], references: [classGroupId], onDelete: Restrict)
-  classGroupId String?
-  subjects     Subject[]    @relation("UserSubjects")
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  Preference   Preference[]
-  Schedule     Schedule[]
+  courses      Course[]     @relation("CourseTeachers")
+  schedules    Schedule[]
+  preferences  Preference[]
 }
 
-// ================== Department ==================
+// ========== Student ==========
+model Student {
+  studentId      String        @id @default(uuid())
+  user           User          @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  userId         String        @unique
+  studentGroup   StudentGroup? @relation(fields: [studentGroupId], references: [studentGroupId], onDelete: Restrict)
+  studentGroupId String?
+}
+
+// ========== Admin ==========
+model Admin {
+  adminId String @id @default(uuid())
+  user    User   @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  userId  String @unique
+}
+
+// ========== Department ==========
 model Department {
-  deptId     String      @id @default(uuid())
-  name       String
-  campus     Campus      @relation(fields: [campusId], references: [campusId], onDelete: Cascade)
-  campusId   String
-  users      User[]
-  yearGroups YearGroup[]
-  Subject    Subject[]
+  deptId        String         @id @default(uuid())
+  name          String
+  campus        Campus         @relation(fields: [campusId], references: [campusId], onDelete: Cascade)
+  campusId      String
+  teachers      Teacher[]
+  studentGroups StudentGroup[]
+  courses       Course[]
 }
 
-// ================== Subject ==================
-model Subject {
-  subjectId    String      @id @default(uuid())
+// ========== Course ==========
+model Course {
+  courseId     String      @id @default(uuid())
   name         String
   code         String
   department   Department? @relation(fields: [departmentId], references: [deptId], onDelete: SetNull)
   departmentId String?
-  teachers     User[]      @relation("UserSubjects")
-  Schedule     Schedule[]
+  teachers     Teacher[]   @relation("CourseTeachers")
+  schedules    Schedule[]
 }
 
-// ================== ClassGroup ==================
-model ClassGroup {
-  classGroupId String     @id @default(uuid())
-  name         String
-  yearGroup    YearGroup  @relation(fields: [yearGroupId], references: [yearGroupId], onDelete: Cascade)
-  yearGroupId  String
-  User         User[]
-  Schedule     Schedule[]
+// ========== StudentGroup ==========
+model StudentGroup {
+  studentGroupId           String     @id @default(uuid())
+  name                     String
+  size                     Int
+  accessibilityRequirement Boolean    @default(false)
+  department               Department @relation(fields: [departmentId], references: [deptId], onDelete: Cascade)
+  departmentId             String
+  students                 Student[]
+  schedules                Schedule[]
 }
 
-// ================== YearGroup ==================
-model YearGroup {
-  yearGroupId  String       @id @default(uuid())
-  year         Int
-  department   Department   @relation(fields: [departmentId], references: [deptId], onDelete: Cascade)
-  departmentId String
-  classGroups  ClassGroup[]
-}
-
-// ================== Classroom ==================
+// ========== Classroom ==========
 model Classroom {
-  classroomId String        @id @default(uuid())
-  name        String
-  capacity    Int
-  type        ClassroomType
-  campus      Campus        @relation(fields: [campusId], references: [campusId], onDelete: Cascade)
-  campusId    String
-  openingTime String?
-  closingTime String?
-  Schedule    Schedule[]
+  classroomId            String        @id @default(uuid())
+  name                   String
+  capacity               Int
+  type                   ClassroomType
+  campus                 Campus        @relation(fields: [campusId], references: [campusId], onDelete: Cascade)
+  campusId               String
+  building               Building?     @relation(fields: [buildingId], references: [buildingId], onDelete: SetNull)
+  buildingId             String?
+  isWheelchairAccessible Boolean       @default(false)
+  openingTime            String?
+  closingTime            String?
+  schedules              Schedule[]
 }
 
-// ================== Schedule ==================
+// ========== Schedule ==========
 model Schedule {
-  scheduleId   String      @id @default(uuid())
-  subject      Subject     @relation(fields: [subjectId], references: [subjectId], onDelete: Cascade)
-  subjectId    String
-  teacher      User        @relation(fields: [teacherId], references: [userId], onDelete: Cascade)
-  teacherId    String
-  classroom    Classroom?  @relation(fields: [classroomId], references: [classroomId], onDelete: SetNull)
-  classroomId  String?
-  startTime    DateTime
-  endTime      DateTime
-  isFinalized  Boolean     @default(false)
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-  classGroup   ClassGroup? @relation(fields: [classGroupId], references: [classGroupId], onDelete: SetNull)
-  classGroupId String?
+  scheduleId     String        @id @default(uuid())
+  course         Course        @relation(fields: [courseId], references: [courseId], onDelete: Cascade)
+  courseId       String
+  teacher        Teacher       @relation(fields: [teacherId], references: [teacherId], onDelete: Cascade)
+  teacherId      String
+  classroom      Classroom?    @relation(fields: [classroomId], references: [classroomId], onDelete: SetNull)
+  classroomId    String?
+  studentGroup   StudentGroup? @relation(fields: [studentGroupId], references: [studentGroupId], onDelete: SetNull)
+  studentGroupId String?
+  startTime      DateTime
+  endTime        DateTime
+  isFinalized    Boolean       @default(false)
+  sessionType    String?
+  timeSlot       Int?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 }
 
-// ================== PreferenceType ==================
+// ========== PreferenceType ==========
 model PreferenceType {
   preferenceTypeId String          @id @default(uuid())
   key              String          @unique
   description      String?
   possibleValues   PossibleValue[]
-  Preference       Preference[]
+  preferences      Preference[]
 }
 
-// ================== PossibleValue ==================
+// ========== PossibleValue ==========
 model PossibleValue {
   possibleValueId  String         @id @default(uuid())
   value            String
   preferenceType   PreferenceType @relation(fields: [preferenceTypeId], references: [preferenceTypeId], onDelete: Cascade)
   preferenceTypeId String
-  Preference       Preference[]
+  preferences      Preference[]
 }
 
-// ================== Preference ==================
+// ========== Preference ==========
 model Preference {
   preferenceId     String         @id @default(uuid())
-  user             User           @relation(fields: [userId], references: [userId], onDelete: Cascade)
-  userId           String
+  teacher          Teacher        @relation(fields: [teacherId], references: [teacherId], onDelete: Cascade)
+  teacherId        String
   preferenceType   PreferenceType @relation(fields: [preferenceTypeId], references: [preferenceTypeId], onDelete: Cascade)
   preferenceTypeId String
   value            PossibleValue  @relation(fields: [possibleValueId], references: [possibleValueId], onDelete: Cascade)
   possibleValueId  String
 }
 
-// ================== RefreshToken ==================
+// ========== RefreshToken ==========
 model RefreshToken {
-  refreshTokenId String @id @default(uuid())
+  refreshTokenId String   @id @default(uuid())
   userId         String
   token          String
   expiresAt      DateTime
   createdAt      DateTime @default(now())
 }
-
