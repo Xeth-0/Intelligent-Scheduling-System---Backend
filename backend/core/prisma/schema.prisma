@@ -95,13 +95,14 @@ model Department {
 
 // ========== Course ==========
 model Course {
-  courseId     String      @id @default(uuid())
-  name         String
-  code         String
-  department   Department? @relation(fields: [departmentId], references: [deptId], onDelete: SetNull)
-  departmentId String?
-  teachers     Teacher[]   @relation("CourseTeachers")
-  schedules    Schedule[]
+  courseId      String         @id @default(uuid())
+  name          String
+  code          String
+  department    Department?    @relation(fields: [departmentId], references: [deptId], onDelete: SetNull)
+  departmentId  String?
+  teachers      Teacher[]      @relation("CourseTeachers")
+  schedules     Schedule[]
+  studentGroups StudentGroup[]
 }
 
 // ========== StudentGroup ==========
@@ -114,6 +115,7 @@ model StudentGroup {
   departmentId             String
   students                 Student[]
   schedules                Schedule[]
+  courses                  Course[]
 }
 
 // ========== Classroom ==========
