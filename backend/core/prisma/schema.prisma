@@ -3,11 +3,10 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql" // or "mysql", "sqlite", etc.
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-// ================== Enums ==================
 enum Role {
   ADMIN
   TEACHER
@@ -20,7 +19,15 @@ enum ClassroomType {
   SEMINAR
 }
 
-// ================== Campus ==================
+// ========== Building ==========
+model Building {
+  buildingId String      @id @default(uuid())
+  name       String
+  floor      Int
+  classrooms Classroom[]
+}
+
+// ========== Campus ==========
 model Campus {
   campusId         String       @id @default(uuid())
   name             String
@@ -30,143 +37,146 @@ model Campus {
   classrooms       Classroom[]
 }
 
-// ================== User ==================
+// ========== User ==========
 model User {
-  userId       String       @id @default(uuid())
-  firstName    String
-  lastName     String
-  email        String       @unique
-  passwordHash String
-  role         Role
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  teacher      Teacher?
-  admin        Admin?
-  student      Student?
-  Schedule     Schedule[]
-  Preference   Preference[]
+  userId                       String   @id @default(uuid())
+  firstName                    String
+  lastName                     String
+  email                        String   @unique
+  passwordHash                 String
+  role                         Role
+  phone                        String?
+  needWheelchairAccessibleRoom Boolean  @default(false)
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+  teacher                      Teacher?
+  student                      Student?
+  admin                        Admin?
 }
 
-// ================== Teacher ==================
+// ========== Teacher ==========
 model Teacher {
   teacherId    String       @id @default(uuid())
   user         User         @relation(fields: [userId], references: [userId], onDelete: Cascade)
   userId       String       @unique
+  department   Department?  @relation(fields: [departmentId], references: [deptId], onDelete: Restrict)
   departmentId String?
+  courses      Course[]     @relation("CourseTeachers")
+  schedules    Schedule[]
   preferences  Preference[]
-  subjects     Course[]
 }
 
-// ================== Student ==================
+// ========== Student ==========
 model Student {
-  studentId      String       @id @default(uuid())
-  user           User         @relation(fields: [userId], references: [userId], onDelete: Cascade)
-  userId         String       @unique
-  studentGroup   StudentGroup @relation(fields: [studentGroupId], references: [studentGroupId], onDelete: Cascade)
-  studentGroupId String
+  studentId      String        @id @default(uuid())
+  user           User          @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  userId         String        @unique
+  studentGroup   StudentGroup? @relation(fields: [studentGroupId], references: [studentGroupId], onDelete: Restrict)
+  studentGroupId String?
 }
 
-// ================== Admin ==================
+// ========== Admin ==========
 model Admin {
   adminId String @id @default(uuid())
   user    User   @relation(fields: [userId], references: [userId], onDelete: Cascade)
   userId  String @unique
 }
 
-// ================== Department ==================
+// ========== Department ==========
 model Department {
-  departmentId String         @id @default(uuid())
-  name         String
-  campus       Campus         @relation(fields: [campusId], references: [campusId], onDelete: Cascade)
-  campusId     String
-  subjects     Course[]
-  StudentGroup StudentGroup[]
+  deptId        String         @id @default(uuid())
+  name          String
+  campus        Campus         @relation(fields: [campusId], references: [campusId], onDelete: Cascade)
+  campusId      String
+  teachers      Teacher[]
+  studentGroups StudentGroup[]
+  courses       Course[]
 }
 
-// ================== Subject ==================
+// ========== Course ==========
 model Course {
-  subjectId       String         @id @default(uuid())
-  name            String
-  description     String?
-  code            String
-  sessionTypes    String[]
-  sessionsPerWeek Int[]
-  studentGroupIds StudentGroup[] // ! Should be a list, of a list of student groups
-  department      Department?    @relation(fields: [departmentId], references: [departmentId], onDelete: SetNull)
-  departmentId    String?
-  teacher         Teacher?       @relation(fields: [teacherId], references: [teacherId], onDelete: SetNull) // ! Should be a list of teachers
-  teacherId       String?
-  Schedule        Schedule[]
-	@@map("Subject")
+  courseId      String         @id @default(uuid())
+  name          String
+  code          String
+  department    Department?    @relation(fields: [departmentId], references: [deptId], onDelete: SetNull)
+  departmentId  String?
+  teachers      Teacher[]      @relation("CourseTeachers")
+  schedules     Schedule[]
+  studentGroups StudentGroup[]
 }
 
-// ================== StudentGroup ==================
+// ========== StudentGroup ==========
 model StudentGroup {
-  studentGroupId            String     @id @default(uuid())
-  name                      String
-  size                      Int
-  accessibilityRequirements Boolean
-  department                Department @relation(fields: [departmentId], references: [departmentId], onDelete: Cascade)
-  departmentId              String
-  students                  Student[]
-  Schedule                  Schedule[]
-  subjects                  Course[]
+  studentGroupId           String     @id @default(uuid())
+  name                     String
+  size                     Int
+  accessibilityRequirement Boolean    @default(false)
+  department               Department @relation(fields: [departmentId], references: [deptId], onDelete: Cascade)
+  departmentId             String
+  students                 Student[]
+  schedules                Schedule[]
+  courses                  Course[]
 }
 
-// ================== Classroom ==================
+// ========== Classroom ==========
 model Classroom {
-  classroomId String        @id @default(uuid())
-  name        String
-  capacity    Int
-  type        ClassroomType
-  campus      Campus        @relation(fields: [campusId], references: [campusId], onDelete: Cascade)
-  campusId    String
-  openingTime String?
-  closingTime String?
-  Schedule    Schedule[]
+  classroomId            String        @id @default(uuid())
+  name                   String
+  capacity               Int
+  type                   ClassroomType
+  campus                 Campus        @relation(fields: [campusId], references: [campusId], onDelete: Cascade)
+  campusId               String
+  building               Building?     @relation(fields: [buildingId], references: [buildingId], onDelete: SetNull)
+  buildingId             String?
+  isWheelchairAccessible Boolean       @default(false)
+  openingTime            String?
+  closingTime            String?
+  schedules              Schedule[]
 }
 
-// ================== Schedule ==================
+// ========== Schedule ==========
 model Schedule {
   scheduleId     String        @id @default(uuid())
-  subject        Course       @relation(fields: [subjectId], references: [subjectId], onDelete: Cascade)
-  subjectId      String
-  teacher        User          @relation(fields: [teacherId], references: [userId], onDelete: Cascade)
+  course         Course        @relation(fields: [courseId], references: [courseId], onDelete: Cascade)
+  courseId       String
+  teacher        Teacher       @relation(fields: [teacherId], references: [teacherId], onDelete: Cascade)
   teacherId      String
   classroom      Classroom?    @relation(fields: [classroomId], references: [classroomId], onDelete: SetNull)
   classroomId    String?
+  studentGroup   StudentGroup? @relation(fields: [studentGroupId], references: [studentGroupId], onDelete: SetNull)
+  studentGroupId String?
   startTime      DateTime
   endTime        DateTime
   isFinalized    Boolean       @default(false)
+  sessionType    String?
+  timeSlot       Int?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
-  studentGroup   StudentGroup? @relation(fields: [studentGroupId], references: [studentGroupId], onDelete: SetNull)
-  studentGroupId String?
 }
 
-// ================== PreferenceType ==================
+// ========== PreferenceType ==========
 model PreferenceType {
   preferenceTypeId String          @id @default(uuid())
   key              String          @unique
   description      String?
   possibleValues   PossibleValue[]
-  Preference       Preference[]
+  preferences      Preference[]
 }
 
-// ================== PossibleValue ==================
+// ========== PossibleValue ==========
 model PossibleValue {
   possibleValueId  String         @id @default(uuid())
   value            String
   preferenceType   PreferenceType @relation(fields: [preferenceTypeId], references: [preferenceTypeId], onDelete: Cascade)
   preferenceTypeId String
-  Preference       Preference[]
+  preferences      Preference[]
 }
 
-// ================== Preference ==================
+// ========== Preference ==========
 model Preference {
   preferenceId     String         @id @default(uuid())
-  user             User           @relation(fields: [userId], references: [userId], onDelete: Cascade)
-  userId           String
+  teacher          Teacher        @relation(fields: [teacherId], references: [teacherId], onDelete: Cascade)
+  teacherId        String
   preferenceType   PreferenceType @relation(fields: [preferenceTypeId], references: [preferenceTypeId], onDelete: Cascade)
   preferenceTypeId String
   value            PossibleValue  @relation(fields: [possibleValueId], references: [possibleValueId], onDelete: Cascade)
@@ -175,7 +185,7 @@ model Preference {
   teacherId        String?
 }
 
-// ================== RefreshToken ==================
+// ========== RefreshToken ==========
 model RefreshToken {
   refreshTokenId String   @id @default(uuid())
   userId         String
