@@ -120,8 +120,8 @@ class GeneticScheduler:
                 for student_group_id, session_num in zip(
                     course.studentGroupIds, range(course.sessionsPerWeek[i])
                 ):
-                    sg_name = "_".join(student_group_id)
-                    course_display_name = f"{course.name}({course.courseId})[{session_type[:3]}-{session_num+1}]{sg_name}"
+                    sg_name = "|".join(student_group_id)
+                    course_display_name = f"{course.name} [{session_type[:3]} - {session_num+1}] {sg_name}"
                     base_chromosome.append(
                         ScheduledItem(
                             courseId=course.courseId,
