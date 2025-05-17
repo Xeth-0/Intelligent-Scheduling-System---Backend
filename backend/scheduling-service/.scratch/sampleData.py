@@ -164,7 +164,7 @@ courses_json = [
         "courseId": "6",
         "name": "Artificial Intelligence",
         "description": "Artificial Intelligence",
-        "department": 5,
+        "department": "1",
         "ectsCredits": 5,
         "teacherId": "6",
         "sessionTypes": ["lecture", "lab"],
