@@ -19,6 +19,12 @@ enum ClassroomType {
   SEMINAR
 }
 
+enum SessionType {
+  LECTURE
+  LAB
+  SEMINAR
+}
+
 // ========== Building ==========
 model Building {
   buildingId String      @id @default(uuid())
@@ -95,14 +101,17 @@ model Department {
 
 // ========== Course ==========
 model Course {
-  courseId      String         @id @default(uuid())
-  name          String
-  code          String
-  department    Department?    @relation(fields: [departmentId], references: [deptId], onDelete: SetNull)
-  departmentId  String?
-  teachers      Teacher[]      @relation("CourseTeachers")
-  schedules     Schedule[]
-  studentGroups StudentGroup[]
+  courseId       String         @id @default(uuid())
+  name           String
+  code           String
+  department     Department?    @relation(fields: [departmentId], references: [deptId], onDelete: SetNull)
+  departmentId   String?
+  teachers       Teacher[]      @relation("CourseTeachers")
+  schedules      Schedule[]
+  studentGroups  StudentGroup[]
+  description    String?
+  sessionType    SessionType
+  sessionPerWeek Int
 }
 
 // ========== StudentGroup ==========
@@ -131,6 +140,7 @@ model Classroom {
   isWheelchairAccessible Boolean       @default(false)
   openingTime            String?
   closingTime            String?
+  floor                  Int
   schedules              Schedule[]
 }
 
@@ -152,6 +162,9 @@ model Schedule {
   timeSlot       Int?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
+  isValidHard    Boolean?
+  isValidSoft    Boolean?
+  day            String?
 }
 
 // ========== PreferenceType ==========

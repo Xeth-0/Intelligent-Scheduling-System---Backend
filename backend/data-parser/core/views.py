@@ -1,7 +1,7 @@
 import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from .utils.csv_validator import validate_csv
+from .utils.csv_validator import validate_csv, CONFIGS
 
 
 @csrf_exempt
@@ -10,16 +10,16 @@ def validate_csv_view(request):
         return JsonResponse({"error": "Only POST requests are allowed"}, status=405)
 
     # Check for required fields
-    if "csv_file" not in request.FILES or "config" not in request.POST:
-        return JsonResponse({"error": "Missing csv_file or config"}, status=400)
+    if "csv_file" not in request.FILES or "category" not in request.POST:
+        return JsonResponse({"error": "Missing csv_file or category"}, status=400)
 
     # Extract file and config
     csv_file = request.FILES["csv_file"]
+    category = json.loads(request.POST["category"])
     try:
         config = json.loads(request.POST["config"])
     except json.JSONDecodeError:
-        return JsonResponse({"error": "Invalid config JSON"}, status=400)
-
+        config = CONFIGS[category]
     # Save uploaded file temporarily
     import tempfile
 

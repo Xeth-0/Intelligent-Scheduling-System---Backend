@@ -1,1 +1,1 @@
-from .csv_validator import validate_csv, TEACHER_CONFIG
+from .csv_validator import validate_csv, CONFIGS
