@@ -1,0 +1,3 @@
+courseId,name,code,departmentId,description,sessionType,sessionsPerWeek
+crs-aaa111,Introduction to AI,AI101,dpt-1a2b3c,Foundations of AI,LECTURE,3
+crs-bbb222,Linear Algebra,LA201,dpt-4d5e6f,Matrix methods,LAB,2
