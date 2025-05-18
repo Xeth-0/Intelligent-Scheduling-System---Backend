@@ -155,8 +155,8 @@ model Schedule {
   classroomId    String?
   studentGroup   StudentGroup? @relation(fields: [studentGroupId], references: [studentGroupId], onDelete: SetNull)
   studentGroupId String?
-  startTime      DateTime
-  endTime        DateTime
+  startTime      String
+  endTime        String
   isFinalized    Boolean       @default(false)
   sessionType    String?
   timeSlot       Int?
