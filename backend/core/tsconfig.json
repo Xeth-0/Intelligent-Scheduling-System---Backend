@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
+    "module": "Commonjs",
     "declaration": true,
     "removeComments": true,
     "emitDecoratorMetadata": true,
@@ -18,10 +18,16 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
     "inlineSources": true,
+    "strict": true,
+    "esModuleInterop": true,
 
     // Set `sourceRoot` to  "/" to strip the build path prefix
     // from generated source code references.
     // This improves issue grouping in Sentry.
-    "sourceRoot": "/"
-  }
+    "sourceRoot": "/",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src/**/*.ts"]
 }

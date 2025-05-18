@@ -2,13 +2,12 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
-  HttpException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { IUsersService } from '../.interfaces/user.service.interface';
-import { Role, User } from '@prisma/client';
+import { Prisma, Role, User } from '@prisma/client';
 import { CreateUserDto, UpdateUserDto, UserResponseDto } from './dtos';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -30,7 +29,8 @@ export class UsersService implements IUsersService {
   }
 
   async createUser(createUserDto: CreateUserDto): Promise<UserResponseDto> {
-    const { departmentId, classGroupId, password, ...rest } = createUserDto;
+    const { password, ...rest } = createUserDto;
+    console.log('createUserDto: ', createUserDto);
     // Validate required fields
     if (!rest.role) {
       throw new ConflictException('Role is required');
@@ -48,20 +48,25 @@ export class UsersService implements IUsersService {
         data: {
           ...rest,
           passwordHash,
-          department: departmentId
-            ? { connect: { deptId: departmentId } }
-            : undefined,
-          classGroup: classGroupId ? { connect: { classGroupId } } : undefined,
-        },
-        include: {
-          department: true,
-          classGroup: true,
         },
       });
 
+      console.log('user created: ', user);
       return this.mapToResponse(user);
     } catch (error) {
-      this.handlePrismaError(error, 'User');
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2002') {
+          throw new ConflictException(`User with this email already exists`);
+        } else if (error.code === 'P2025') {
+          throw new NotFoundException(error.meta?.cause || 'User not found');
+        } else {
+          throw new InternalServerErrorException(
+            'An unexpected error occurred',
+          );
+        }
+      } else {
+        throw error;
+      }
     }
   }
 
@@ -70,25 +75,28 @@ export class UsersService implements IUsersService {
     return count === 0;
   }
 
-  private handlePrismaError(error: any, entity: string): never {
-    // Rethrow HttpExceptions (like BadRequest/Forbidden)
-    if (error instanceof HttpException) {
-      throw error;
-    }
+  // private handlePrismaError(
+  //   error: Prisma.PrismaClientKnownRequestError,
+  //   entity: string,
+  // ): never {
+  //   // Rethrow HttpExceptions (like BadRequest/Forbidden)
+  //   if (error instanceof HttpException) {
+  //     throw error;
+  //   }
 
-    if (error.code === 'P2002') {
-      throw new ConflictException(`${entity} with this email already exists`);
-    }
-    if (error.code === 'P2025') {
-      throw new NotFoundException(error.meta?.cause || `${entity} not found`);
-    }
+  //   if (error.code === 'P2002') {
+  //     throw new ConflictException(`${entity} with this email already exists`);
+  //   }
+  //   if (error.code === 'P2025') {
+  //     throw new NotFoundException(error.meta?.cause || `${entity} not found`);
+  //   }
 
-    throw new InternalServerErrorException('An unexpected error occurred');
-  }
+  //   throw new InternalServerErrorException('An unexpected error occurred');
+  // }
 
   async findAllUsers(): Promise<UserResponseDto[]> {
     const users = await this.prismaService.user.findMany();
-    return users.map(this.mapToResponse);
+    return users.map((user) => this.mapToResponse(user));
   }
 
   async findUserById(id: string): Promise<UserResponseDto> {
@@ -105,6 +113,11 @@ export class UsersService implements IUsersService {
   ): Promise<UserResponseDto> {
     try {
       const user = await this.findUserById(id);
+      if (!user) throw new NotFoundException('User not found');
+
+      if (updateUserDto.password) {
+        updateUserDto.password = await bcrypt.hash(updateUserDto.password, 10);
+      }
 
       const updatedUser = await this.prismaService.user.update({
         where: { userId: id },
@@ -112,7 +125,19 @@ export class UsersService implements IUsersService {
       });
       return this.mapToResponse(updatedUser);
     } catch (error) {
-      this.handlePrismaError(error, 'User');
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2002') {
+          throw new ConflictException(`User with this email already exists`);
+        } else if (error.code === 'P2025') {
+          throw new NotFoundException(error.meta?.cause || 'User not found');
+        } else {
+          throw new InternalServerErrorException(
+            'An unexpected error occurred',
+          );
+        }
+      } else {
+        throw error;
+      }
     }
   }
 
@@ -130,7 +155,19 @@ export class UsersService implements IUsersService {
       // Delete the user
       await this.prismaService.user.delete({ where: { userId: id } });
     } catch (error) {
-      this.handlePrismaError(error, 'User');
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2002') {
+          throw new ConflictException(`User with this email already exists`);
+        } else if (error.code === 'P2025') {
+          throw new NotFoundException(error.meta?.cause || 'User not found');
+        } else {
+          throw new InternalServerErrorException(
+            'An unexpected error occurred',
+          );
+        }
+      } else {
+        throw error;
+      }
     }
   }
 

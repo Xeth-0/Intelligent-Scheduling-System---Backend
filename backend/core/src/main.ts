@@ -1,4 +1,4 @@
-import './common/sentry/instrument';
+import '@/common/sentry/instrument';
 
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
@@ -24,4 +24,5 @@ async function bootstrap() {
 
   await app.listen(process.env.PORT ?? 3000);
 }
-bootstrap();
+
+void bootstrap();

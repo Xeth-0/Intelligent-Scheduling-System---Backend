@@ -1,3 +1,14 @@
+# Core API for ISS
+
+## TODO
+
+- [x] Refactor the auth module and the strategies
+- [x] Fix the configuration (config service and module, add zod for validation)
+- [x] Finish the schema migration (Users module needs a rewrite)
+- [x] Fix remaining eslint errors and other issues
+- [x] Maybe rewrite the tests
+- [ ] Add the scheduling api, and set up the microservice calls
+
 ## Project setup
 
 ```bash

@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from '../auth.controller';
 import { AuthService } from '../auth.service';
-import { LoginDto, RegisterDto, RefreshTokenDto, TokensDto } from '../dtos';
+import { LoginDto, RegisterDto, TokensDto } from '../dtos';
 import { UnauthorizedException, ConflictException } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { UsersService } from '../../users/users.service';
@@ -10,7 +10,6 @@ import { Request } from 'express';
 describe('AuthController', () => {
   let controller: AuthController;
   let authService: jest.Mocked<AuthService>;
-  let usersService: jest.Mocked<UsersService>;
 
   const mockTokens: TokensDto = {
     accessToken: 'mockAccess',
@@ -38,7 +37,6 @@ describe('AuthController', () => {
 
     controller = module.get<AuthController>(AuthController);
     authService = module.get(AuthService);
-    usersService = module.get(UsersService);
   });
 
   describe('login', () => {
@@ -51,8 +49,8 @@ describe('AuthController', () => {
 
       const result = await controller.login(loginDto);
 
-      expect(result.data).toEqual(mockTokens);
       expect(authService.login).toHaveBeenCalledWith(loginDto);
+      expect(result.data).toEqual(mockTokens);
     });
 
     it('should throw UnauthorizedException when credentials are invalid', async () => {

@@ -1,11 +1,12 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { TokensDto } from './dtos/tokens.dto';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { Role } from '@prisma/client';
+import { TokensDto } from './dtos/tokens.dto';
 import { ITokensService } from '../.interfaces/token.service.interface';
-import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuthenticatedUserPayload } from '@/common/request/express.request.d';
 
 @Injectable()
 export class TokensService implements ITokensService {
@@ -62,16 +63,16 @@ export class TokensService implements ITokensService {
   }
 
   // runs on login, verifies the access token
-  async verifyAccessToken(token: string) {
+  async verifyAccessToken(token: string): Promise<AuthenticatedUserPayload> {
     return this.jwtService.verifyAsync(token, {
-      secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
+      secret: this.configService.get<string>('jwt.access_secret'),
     });
   }
 
   // runs on refresh, verifies the refresh token
-  async verifyRefreshToken(token: string) {
+  async verifyRefreshToken(token: string): Promise<AuthenticatedUserPayload> {
     return this.jwtService.verifyAsync(token, {
-      secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+      secret: this.configService.get<string>('jwt.refresh_secret'),
     });
   }
 
@@ -86,8 +87,10 @@ export class TokensService implements ITokensService {
           expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
         },
       });
-    } catch (error) {
-      throw new InternalServerErrorException('Failed to save refresh token');
+    } catch {
+      throw new InternalServerErrorException(
+        `Failed to save refresh token for user ${userId}`,
+      );
     }
   }
 

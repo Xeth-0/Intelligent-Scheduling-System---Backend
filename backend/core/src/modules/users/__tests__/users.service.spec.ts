@@ -4,14 +4,12 @@ import { PrismaService } from '../../../prisma/prisma.service';
 import {
   ConflictException,
   NotFoundException,
-  InternalServerErrorException,
   BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
-import { Role } from '@prisma/client';
+import { Prisma, Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { CreateUserDto } from '../dtos';
-import { UserResponseDto } from '../dtos/user-response.dto';
 
 // Mock bcrypt
 jest.mock('bcrypt');
@@ -78,7 +76,6 @@ describe('UsersService', () => {
 
       const result = await service.createUser(createUserDto);
 
-      expect(result).toEqual(mockResponseUser);
       expect(prismaService.user.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
           firstName: createUserDto.firstName,
@@ -87,11 +84,8 @@ describe('UsersService', () => {
           passwordHash: 'hashedPassword',
           role: createUserDto.role,
         }),
-        include: {
-          department: true,
-          classGroup: true,
-        },
       });
+      expect(result).toEqual(mockResponseUser);
     });
 
     it('should throw BadRequestException when password is missing', async () => {
@@ -100,7 +94,7 @@ describe('UsersService', () => {
         lastName: 'Doe',
         email: 'test@example.com',
         role: Role.STUDENT,
-      } as any;
+      } as CreateUserDto;
 
       await expect(service.createUser(createUserDto)).rejects.toThrow(
         BadRequestException,
@@ -116,13 +110,44 @@ describe('UsersService', () => {
         role: Role.STUDENT,
       };
 
-      (prismaService.user.create as jest.Mock).mockRejectedValue({
-        code: 'P2002',
+      // Mock bcrypt hash to avoid actual hashing
+      (bcrypt.hash as jest.Mock).mockResolvedValue('hashedPassword');
+
+      // Mock Prisma error with more realistic error object
+      const prismaError = new Prisma.PrismaClientKnownRequestError(
+        'Unique constraint failed on the fields: (`email`)',
+        {
+          code: 'P2002',
+          clientVersion: '2.0.0',
+          meta: {
+            target: ['email'],
+          },
+        },
+      );
+      (prismaService.user.create as jest.Mock).mockRejectedValue(prismaError);
+
+      // Test the error and message
+      try {
+        await service.createUser(createUserDto);
+        fail('Should have thrown ConflictException');
+      } catch (error: any) {
+        expect(error).toBeInstanceOf(ConflictException);
+        expect(error.message).toBe('User with this email already exists');
+      }
+
+      // Verify create was called with correct data
+      expect(prismaService.user.create).toHaveBeenCalledWith({
+        data: {
+          firstName: createUserDto.firstName,
+          lastName: createUserDto.lastName,
+          email: createUserDto.email,
+          passwordHash: 'hashedPassword',
+          role: createUserDto.role,
+        },
       });
 
-      await expect(service.createUser(createUserDto)).rejects.toThrow(
-        ConflictException,
-      );
+      // Verify bcrypt was called
+      expect(bcrypt.hash).toHaveBeenCalledWith(createUserDto.password, 10);
     });
   });
 

@@ -4,7 +4,7 @@ import {
   RegisterDocs,
   RefreshDocs,
 } from '../../common/decorators/swagger/auth.swagger.docs';
-import { LoginDto, RegisterDto, RefreshTokenDto, TokensDto } from './dtos';
+import { LoginDto, RegisterDto, TokensDto } from './dtos';
 import { Role, User } from '@prisma/client';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
@@ -33,9 +33,7 @@ export class AuthController {
 
   @Post('login')
   @LoginDocs()
-  async login(
-    @Body() loginDto: LoginDto,
-  ): Promise<ApiResponse<TokensDto>> {
+  async login(@Body() loginDto: LoginDto): Promise<ApiResponse<TokensDto>> {
     const tokens = await this.authService.login(loginDto);
     return new ApiResponse({
       success: true,
@@ -61,7 +59,6 @@ export class AuthController {
     }
 
     const tokens = await this.authService.register(registerDto);
-
     return new ApiResponse({
       success: true,
       data: tokens,
@@ -103,7 +100,7 @@ export class AuthController {
   }
 
   @Get('test_exception')
-  async testException() {
+  testException() {
     throw new Error('Test exception');
   }
 }

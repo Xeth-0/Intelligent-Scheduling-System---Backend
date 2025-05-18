@@ -5,21 +5,21 @@ import { ApiProperty } from '@nestjs/swagger';
 export class RegisterDto {
   @ApiProperty()
   @IsString()
-  firstName: string;
+  firstName!: string;
 
   @ApiProperty()
   @IsString()
-  lastName: string;
+  lastName!: string;
 
   @ApiProperty()
   @IsEmail()
-  email: string;
+  email!: string;
 
   @ApiProperty()
   @IsString()
   @MinLength(6)
-  password: string;
+  password!: string;
 
   @ApiProperty()
-  role: Role;
+  role!: Role;
 }

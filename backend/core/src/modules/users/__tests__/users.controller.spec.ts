@@ -1,11 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { UsersController } from '../users.controller';
-import { UsersService } from '../users.service';
-import { CreateUserDto, UpdateUserDto, UserResponseDto } from '../dtos';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Role } from '@prisma/client';
-import { JwtAuthGuard, RolesGuard } from '../../../common/guards';
 import { ApiResponse } from '../../../common/response/api-response.dto';
+import { JwtAuthGuard, RolesGuard } from '../../../common/guards';
+import { CreateUserDto, UpdateUserDto, UserResponseDto } from '../dtos';
+import { UsersController } from '../users.controller';
+import { UsersService } from '../users.service';
 
 jest.mock('../../../common/guards/jwt-auth.guard', () => ({
   JwtAuthGuard: jest.fn().mockImplementation(() => ({
@@ -65,11 +65,11 @@ describe('UsersController', () => {
         password: 'password123',
         role: Role.TEACHER,
       };
-      const mockResponse = new ApiResponse({
+      const mockResponse: ApiResponse<UserResponseDto> = new ApiResponse({
         success: true,
         data: mockUser,
       });
-      usersService.createUser.mockResolvedValue(mockResponse.data);
+      usersService.createUser.mockResolvedValue(mockResponse.data!);
 
       const result = await controller.create(createDto);
       expect(result.data).toEqual(mockUser);
@@ -125,7 +125,7 @@ describe('UsersController', () => {
       usersService.updateUser.mockResolvedValue({ ...mockUser, ...updateDto });
 
       const result = await controller.update('1', updateDto);
-      expect(result.data.firstName).toBe('Updated');
+      expect(result.data?.firstName).toBe('Updated');
       expect(usersService.updateUser).toHaveBeenCalledWith('1', updateDto);
     });
   });

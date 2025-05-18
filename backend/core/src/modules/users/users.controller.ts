@@ -1,5 +1,4 @@
 import {
-  Controller,
   Get,
   Post,
   Body,
@@ -8,19 +7,23 @@ import {
   Delete,
   HttpCode,
   HttpStatus,
+  Controller,
   UseInterceptors,
   ClassSerializerInterceptor,
   UseGuards,
   ForbiddenException,
-  Request as Req,
 } from '@nestjs/common';
-import { Role } from '@prisma/client';
-import { UsersService } from './users.service';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
-import { JwtAuthGuard, RolesGuard } from '../../common/guards';
-import { Roles } from '../../common/decorators/auth/roles.decorator';
-import { ApiResponse } from '../../common/response/api-response.dto';
-import { CreateUserDto, UpdateUserDto, UserResponseDto } from './dtos';
+import { Role } from '@prisma/client';
+import { UsersService } from '@/modules/users/users.service';
+import {
+  CreateUserDto,
+  UpdateUserDto,
+  UserResponseDto,
+} from '@/modules/users/dtos';
+import { JwtAuthGuard, RolesGuard } from '@/common/guards';
+import { Roles } from '@/common/decorators/auth/roles.decorator';
+import { ApiResponse } from '@/common/response/api-response.dto';
 import {
   GetProfileDocs,
   CreateUserDocs,
@@ -28,8 +31,8 @@ import {
   GetUserByIdDocs,
   UpdateUserDocs,
   DeleteUserDocs,
-} from '../../common/decorators/swagger/users.swagger.docs';
-import { ApiRequest } from '../../common/request/api-request.dto';
+} from '@/common/decorators/swagger/users.swagger.docs';
+import { GetUser } from '@/common/decorators/auth/get-user.decorator';
 
 @Controller('users')
 @ApiBearerAuth()
@@ -43,9 +46,9 @@ export class UsersController {
   @Roles(Role.ADMIN, Role.TEACHER, Role.STUDENT)
   @GetProfileDocs()
   async getProfile(
-    @Req() req: ApiRequest,
+    @GetUser('sub') userId: string,
   ): Promise<ApiResponse<UserResponseDto>> {
-    const user = await this.usersService.findUserById(req.user.userId);
+    const user = await this.usersService.findUserById(userId);
     return new ApiResponse({ success: true, data: user });
   }
 

@@ -8,7 +8,7 @@ import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
-import { JwtPayload } from 'jsonwebtoken';
+import { AuthenticatedUserPayload } from '@/common/request/express.request.d';
 import { IS_PUBLIC_KEY } from '../decorators/auth/public.decorator';
 
 @Injectable()
@@ -35,13 +35,14 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     try {
-      const payload = await this.jwtService.verifyAsync<JwtPayload>(token, {
-        secret: this.config.get('JWT_ACCESS_SECRET'),
-      });
+      const payload: AuthenticatedUserPayload =
+        await this.jwtService.verifyAsync<AuthenticatedUserPayload>(token, {
+          secret: this.config.get('JWT_ACCESS_SECRET'),
+        });
       request.user = payload;
       return true;
     } catch (error) {
-      console.log(error);
+      console.error(error);
       throw new UnauthorizedException();
     }
   }
