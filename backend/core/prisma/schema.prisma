@@ -53,8 +53,8 @@ model User {
   role                         Role
   phone                        String?
   needWheelchairAccessibleRoom Boolean  @default(false)
-  createdAt                    String @default(now())
-  updatedAt                    String @updatedAt
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
   teacher                      Teacher?
   student                      Student?
   admin                        Admin?
@@ -155,13 +155,13 @@ model Schedule {
   classroomId    String?
   studentGroup   StudentGroup? @relation(fields: [studentGroupId], references: [studentGroupId], onDelete: SetNull)
   studentGroupId String?
-  startTime      String
-  endTime        String
+  startTime      DateTime
+  endTime        DateTime
   isFinalized    Boolean       @default(false)
   sessionType    String?
   timeSlot       Int?
-  createdAt      String      @default(now())
-  updatedAt      String      @updatedAt
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
   isValidHard    Boolean?
   isValidSoft    Boolean?
   day            String?
@@ -201,6 +201,6 @@ model RefreshToken {
   refreshTokenId String   @id @default(uuid())
   userId         String
   token          String
-  expiresAt      String
-  createdAt      String @default(now())
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
 }
