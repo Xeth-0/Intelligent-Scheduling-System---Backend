@@ -2,35 +2,35 @@ import { IsNotEmpty, IsString, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
 // Interface for the schedule details (teacherId, subjectId, classroomId)
-export class ScheduleDetailsDto {
+export class ScheduleItem {
   @IsString()
   @IsNotEmpty()
-  teacherId: string;
+  teacherId!: string;
 
   @IsString()
   @IsNotEmpty()
-  subjectId: string;
+  subjectId!: string;
 
   @IsString()
   @IsNotEmpty()
-  classroomId: string;
+  classroomId!: string;
+}
+
+// Interface for the full general schedule (classGroupId -> timeslot -> details)
+export interface Schedule {
+  [classGroupId: string]: ClassGroupSchedule;
 }
 
 // Interface for a single class group's schedule (timeslot -> details)
 export interface ClassGroupSchedule {
-  [timeslot: number]: ScheduleDetailsDto;
-}
-
-// Interface for the full general schedule (classGroupId -> timeslot -> details)
-export interface GeneralSchedule {
-  [classGroupId: string]: ClassGroupSchedule;
+  [timeslot: number]: ScheduleItem;
 }
 
 // Wrapper class for validation and serialization
 export class GeneralScheduleWrapperDto {
   @ValidateNested({ each: true })
-  @Type(() => ScheduleDetailsDto)
-  schedule: GeneralSchedule;
+  @Type(() => ScheduleItem)
+  schedule!: Schedule;
 }
 
 export const generalMockSchedule = {

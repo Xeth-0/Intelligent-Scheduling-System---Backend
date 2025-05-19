@@ -7,17 +7,15 @@ export class TeacherScheduleDetailsDto {
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  classGroupId: string;
+  classGroupId!: string;
   @ApiProperty()
-
   @IsString()
   @IsNotEmpty()
-  subjectId: string;
+  subjectId!: string;
   @ApiProperty()
-
   @IsString()
   @IsNotEmpty()
-  classroomId: string;
+  classroomId!: string;
 }
 
 // Interface for a single teacher's schedule (timeslot -> details)
@@ -35,7 +33,7 @@ export class TeacherScheduleWrapperDto {
   @ApiProperty()
   @ValidateNested({ each: true })
   @Type(() => TeacherScheduleDetailsDto)
-  schedule: TeacherSchedule;
+  schedule!: TeacherSchedule;
 }
 
 export const teacherMockSchedule = {
