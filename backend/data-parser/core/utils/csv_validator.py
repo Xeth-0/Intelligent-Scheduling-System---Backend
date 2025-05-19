@@ -296,7 +296,6 @@ TEACHER_CONFIG = {
     },
     "value_ranges": {"role": ["TEACHER"]},
     "length_checks": {"firstName": 50, "lastName": 50, "phone": 15},
-    "numerical_checks": {"departmentId": "non_negative_integer"},
 }
 
 STUDENTGROUP_CONFIG = {

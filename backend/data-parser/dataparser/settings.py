@@ -25,8 +25,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
+DEBUG = config("DEBUG", default=True, cast=bool)
 
 # Application definition
 
@@ -53,7 +52,6 @@ MIDDLEWARE = [
     "core.middleware.RestrictAPIMiddleware",
 ]
 
-DEBUG = config("DEBUG", default=True, cast=bool)
 SECURE_SSL_REDIRECT = True if not DEBUG else False  # HTTPS in production
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https") if not DEBUG else None
 SESSION_COOKIE_SECURE = True if not DEBUG else False
