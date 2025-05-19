@@ -139,7 +139,8 @@ courses_json = [
         "sessionTypes": ["lecture", "lab"],
         "sessionsPerWeek": [1, 1],
         "studentGroupIds": [
-            ["SG_Y3_SE_S1", "SG_Y3_SE_S2", "SG_Y3_SE_S3", "SG_Y3_SE_S4"]
+            ["SG_Y3_SE_S1", "SG_Y3_SE_S2"],
+            ["SG_Y3_SE_S3", "SG_Y3_SE_S4"],
         ],
     },
     {
@@ -152,7 +153,8 @@ courses_json = [
         "sessionTypes": ["lecture"],
         "sessionsPerWeek": [2],
         "studentGroupIds": [
-            ["SG_Y3_SE_S1", "SG_Y3_SE_S2", "SG_Y3_SE_S3", "SG_Y3_SE_S4"]
+            ["SG_Y3_SE_S1", "SG_Y3_SE_S2"],
+            ["SG_Y3_SE_S3", "SG_Y3_SE_S4"],
         ],
     },
     {
@@ -165,7 +167,8 @@ courses_json = [
         "sessionTypes": ["lecture", "lab"],
         "sessionsPerWeek": [1, 1],
         "studentGroupIds": [
-            ["SG_Y3_SE_S1", "SG_Y3_SE_S2", "SG_Y3_SE_S3", "SG_Y3_SE_S4"]
+            ["SG_Y3_SE_S1", "SG_Y3_SE_S2"],
+            ["SG_Y3_SE_S3", "SG_Y3_SE_S4"],
         ],
     },
     {
@@ -178,7 +181,8 @@ courses_json = [
         "sessionTypes": ["lecture"],
         "sessionsPerWeek": [2],
         "studentGroupIds": [
-            ["SG_Y3_SE_S1", "SG_Y3_SE_S2", "SG_Y3_SE_S3", "SG_Y3_SE_S4"]
+            ["SG_Y3_SE_S1", "SG_Y3_SE_S2"],
+            ["SG_Y3_SE_S3", "SG_Y3_SE_S4"],
         ],
     },
     {
@@ -191,7 +195,8 @@ courses_json = [
         "sessionTypes": ["lecture", "lab"],
         "sessionsPerWeek": [1, 1],
         "studentGroupIds": [
-            ["SG_Y3_SE_S1", "SG_Y3_SE_S2", "SG_Y3_SE_S3", "SG_Y3_SE_S4"]
+            ["SG_Y3_SE_S1", "SG_Y3_SE_S2"],
+            ["SG_Y3_SE_S3", "SG_Y3_SE_S4"],
         ],
     },
     {
@@ -247,7 +252,10 @@ courses_json = [
         "sessionTypes": ["lecture"],
         "sessionsPerWeek": [1],
         "studentGroupIds": [
-            ["SG_Y4_SE_S1", "SG_Y4_SE_S2", "SG_Y4_AI", "SG_Y4_CY", "SG_Y4_IT"]
+            ["SG_Y4_SE_S1", "SG_Y4_SE_S2"],
+            ["SG_Y4_AI"],
+            ["SG_Y4_CY"],
+            ["SG_Y4_IT"],
         ],
     },
     {

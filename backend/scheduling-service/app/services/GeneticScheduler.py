@@ -1,5 +1,5 @@
 from pydantic import BaseModel  # Assuming models.py is structured like this
-from models import StudentGroup, Course, Teacher, Classroom, ScheduledItem
+from app.models.models import StudentGroup, Course, Teacher, Classroom, ScheduledItem
 import time
 import random
 
@@ -115,42 +115,56 @@ class GeneticScheduler:
 
         # Base
         base_chromosome = []
+        # for course in self.courses:
+        #     for i, session_type in enumerate(course.sessionTypes):
+        #         for student_group_id, session_num in zip(
+        #             course.studentGroupIds, range(course.sessionsPerWeek[i])
+        #         ):
+        #             sg_name = "_".join(student_group_id)
+        #             course_display_name = f"{course.name}({course.courseId})[{session_type[:3]}-{session_num+1}]{sg_name}"
+        #             base_chromosome.append(
+        #                 ScheduledItem(
+        #                     courseId=course.courseId,
+        #                     courseName=course_display_name,
+        #                     sessionType=session_type,
+        #                     teacherId=course.teacherId,
+        #                     studentGroupIds=student_group_id,
+        #                     classroomId="",
+        #                     timeslot="",
+        #                     day="",
+        #                 )
+        #             )
         for course in self.courses:
-            for i, session_type in enumerate(course.sessionTypes):
-                for student_group_id, session_num in zip(
-                    course.studentGroupIds, range(course.sessionsPerWeek[i])
-                ):
-                    sg_name = "_".join(student_group_id)
-                    course_display_name = f"{course.name}({course.courseId})[{session_type[:3]}-{session_num+1}]{sg_name}"
-                    base_chromosome.append(
-                        ScheduledItem(
-                            courseId=course.courseId,
-                            courseName=course_display_name,
-                            sessionType=session_type,
-                            teacherId=course.teacherId,
-                            studentGroupIds=student_group_id,
-                            classroomId="",
-                            timeslot="",
-                            day="",
-                        )
-                    )
+            sg_name = "|".join(course.studentGroupIds)
+            course_display_name = f"{course.name} - [{course.sessionType[:3]}] | {sg_name}"
+            base_chromosome.append(
+                ScheduledItem(
+                    courseId=course.courseId,
+                    courseName=course_display_name,
+                    sessionType=course.sessionType,
+                    teacherId=course.teacherId,
+                    studentGroupIds=course.studentGroupIds,
+                    classroomId=random.choice(self.rooms).classroomId,
+                    timeslot=random.choice(self.timeslots),
+                    day=random.choice(self.days),
+                )
+            )
 
         self.base_chromosome = base_chromosome
 
         population = []
         for i in range(self.population_size):
-            chromosome = self.initialize_chromosome(base_chromosome)
+            chromosome = self.initialize_chromosome()
             population.append(chromosome)
         return population
 
-
-    def initialize_chromosome(self, base_chromosome):
+    def initialize_chromosome(self):
         """
         Initializes a chromosome by assigning a random timeslot, day, and a heuristically chosen room
         to each base scheduled item.
         """
         chromosome = []
-        for base_gene in base_chromosome:
+        for base_gene in self.base_chromosome:
             new_gene = base_gene.copy()  # Start with a copy of the template
 
             # Heuristic for room selection: try to match room type
@@ -354,6 +368,9 @@ class GeneticScheduler:
                         "student_group_conflict"
                     ]  # Or a specific "data_missing" penalty
 
+            if scheduled_item.timeslot == "" or scheduled_item.day == "":
+                item_penalty += penalties["course_not_scheduled"] * 5
+
             # Hard Constraint 1. Room Capacity
             if room.capacity < student_group_count:
                 item_penalty += penalties["room_capacity"]
@@ -400,6 +417,15 @@ class GeneticScheduler:
 
             # Student Group Conflicts
             for sg_id in scheduled_item.studentGroupIds:
+                student_group = self.student_group_map.get(sg_id)
+                if not student_group:
+                    # This indicates a severe problem with chromosome generation/crossover/mutation
+                    # if chromosomes can change length or lose/gain essential items.
+                    # With the current base_scheduled_items_template approach, this shouldn't happen.
+                    total_penalty += penalties["course_not_scheduled"] * abs(
+                        len(chromosome) - len(self.base_chromosome)
+                    )
+                    continue
 
                 # Hard Constraint 6. Student Group Conflict
                 time_key_student_group = (

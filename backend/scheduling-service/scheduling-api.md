@@ -20,6 +20,10 @@
 - [ ] Add a simple validity check before the algorithm runs to ensure that the given courses CAN be scheduled. (Having more courses than timeslots and available rooms for instance)
 - [ ] Improve the algorithm stopping conditions. (for instance: For harder problems, letting the algorithm run for a limited time would be better if each generation takes a long time. other methods should be explored as well)
 
+## Abandoned
+
+- [ ] Assigning instructors to courses? (nah fuck this one)
+
 ## Algorithm Design
 
 We will use a genetic algorithm to schedule the courses.

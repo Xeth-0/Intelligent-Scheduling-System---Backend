@@ -1,9 +1,10 @@
 from pydantic import BaseModel
 
-class Campus(BaseModel):  # useless for now
-    campusId: str
-    name: str
-    location: str
+
+# class Campus(BaseModel):  # useless for now
+#     campusId: str
+#     name: str
+#     location: str
 
 
 class Classroom(BaseModel):
@@ -23,17 +24,16 @@ class Course(BaseModel):
     ectsCredits: int
     department: str
     teacherId: str  # Teacher is assigned, we're trying to schedule the course
-    sessionTypes: list[str]
-    sessionsPerWeek: list[int]
+    sessionType: str
+    sessionsPerWeek: int
+    studentGroupIds: list[str]
 
-    
     # More than one student group can be assigned to the course.
-    # The list is a list of student groups for each session type. Each list item in the list is a list of student group ids that take the course together 
+    # The list is a list of student groups for each session type. Each list item in the list is a list of student group ids that take the course together
     # (at the same time and place).
     # This is to account for the fact that some courses are taken by multiple student groups at the same time.
     # For example, a course that is taught to year 1 and year 2 students, and year 3 students but at a different time will have:
     #   studentGroupIds = [[SG_Y1, SG_Y2], [SG_Y3]]
-    studentGroupIds: list[list[str]]
 
 
 class Teacher(BaseModel):
@@ -75,3 +75,13 @@ class StudentGroup(BaseModel):
     size: int
     department: str
     accessibilityRequirement: bool  # blanket requirement for all reqs # ! for now
+
+
+class ScheduleApiRequest(BaseModel):
+    courses: list[Course]
+    teachers: list[Teacher]
+    studentGroups: list[StudentGroup]
+    rooms: list[Classroom]
+
+class ExamplePayload(BaseModel):
+    something: list[int]

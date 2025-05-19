@@ -1,33 +1,31 @@
-from fastapi import APIRouter, HTTPException
-from app.services.scheduling import GeneticScheduler
-from app.models.models import Course, Teacher, Classroom, StudentGroup
-from app.services.sampleData import SampleData
+from fastapi import APIRouter
+from app.services.GeneticScheduler import GeneticScheduler
+from app.models.models import (
+    ScheduleApiRequest,
+)
 
 router = APIRouter(prefix="/scheduler")
 
 
-@router.get("/")
-async def schedule():
-    """
-    Schedule a task to be executed at a specific time.
+@router.post("/", status_code=201)
+async def generate_schedule(request: ScheduleApiRequest):
+    print("Received request: ", request)
 
-    Returns:
-        dict: A dictionary containing the scheduled task details.
-
-    ! This endpoint is not yet implemented. Right now, it'll return a schedule generated from dummy data.
-    """
-    # ! Dummy data
-    print("Generating sample data...")
-    sampleData = SampleData()
-    timeslots = ["08:00-09:30", "09:40-11:10", "11:20-12:50", "13:30-15:00", "15:10-16:40"]
+    timeslots = [
+        "08:00-09:30",
+        "09:40-11:10",
+        "11:20-12:50",
+        "13:30-15:00",
+        "15:10-16:40",
+    ]
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
 
-
+    print("Initializing scheduler...")
     scheduler = GeneticScheduler(
-        courses=sampleData.courses,
-        teachers=sampleData.teachers,
-        rooms=sampleData.rooms,
-        student_groups=sampleData.student_groups,
+        courses=request.courses,
+        teachers=request.teachers,
+        rooms=request.rooms,
+        student_groups=request.studentGroups,
         timeslots=timeslots,
         days=days,
         population_size=100,
@@ -36,12 +34,9 @@ async def schedule():
     print("Running scheduler...")
     best_schedule, best_fitness = scheduler.run()
     print("Scheduler finished running.")
-    print("best_schedule: ", best_schedule)
-    print("best_fitness: ", best_fitness)
-
     return {
         "status": "success",
-        "message": "Scheduler finished running.",
+        "message": "Schedule generated successfully.",
         "data": {
             "best_schedule": best_schedule,
             "best_fitness": best_fitness,
