@@ -26,13 +26,28 @@ def check_headers(df, expected_columns):
     return errors
 
 
+def check_data_types(df, type_checks):
+    errors = []
+    for col, expected_type in type_checks.items():
+        if col not in df.columns:
+            continue
+        if expected_type == "numeric":
+            if not pd.api.types.is_numeric_dtype(df[col]):
+                errors.append(f"Column '{col}' must be numeric")
+        elif expected_type == "string":
+            if not pd.api.types.is_string_dtype(df[col]):
+                errors.append(f"Column '{col}' must be a string")
+    return errors
+
+
 # 4: Function to check for empty values
 def check_empty(df, required_columns):
     errors = []
     for col in required_columns:
         if col not in df.columns:
             continue
-        missing = df[df[col].isnull()]
+        # missing = df[df[col].isnull()]
+        missing = df[df[col].isnull() | (df[col].astype(str).str.strip() == "")]
         for idx in missing.index:
             errors.append(f"Missing value in row {idx+1}, column '{col}'")
     return errors
@@ -40,13 +55,31 @@ def check_empty(df, required_columns):
 
 # 5: Helper function to validate email format
 def validate_email(email):
-    if pd.isnull(email):
+    if pd.isnull(email) or not isinstance(email, str):
         return False
+    email = email.strip()
     pattern = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
     return bool(re.match(pattern, email))
 
 
 # 6: Function to check format-specific validations
+# def check_formats(df, format_checks):
+#     errors = []
+#     for col, format_type in format_checks.items():
+#         if col not in df.columns:
+#             continue
+#         if format_type == "email":
+#             invalid = df[~df[col].apply(validate_email)]
+#             for idx, row in invalid.iterrows():
+#                 errors.append(f"Invalid email format in row {idx+1}: '{row[col]}'")
+#         if format_type == 'boolean':
+#             invalid = df[~df[col].apply(lambda x: isinstance(x, bool))]
+#             for idx, row in invalid.iterrows():
+#                 errors.append(f"Invalid boolean format in row {idx+1}: '{row[col]}'")
+#     return errors
+import uuid
+
+
 def check_formats(df, format_checks):
     errors = []
     for col, format_type in format_checks.items():
@@ -56,6 +89,27 @@ def check_formats(df, format_checks):
             invalid = df[~df[col].apply(validate_email)]
             for idx, row in invalid.iterrows():
                 errors.append(f"Invalid email format in row {idx+1}: '{row[col]}'")
+        elif format_type == "uuid":
+
+            def validate_uuid(value):
+                try:
+                    uuid.UUID(str(value))
+                    return True
+                except ValueError:
+                    return False
+
+            invalid = df[~df[col].apply(validate_uuid)]
+            for idx, row in invalid.iterrows():
+                errors.append(
+                    f"Invalid UUID in row {idx+1}, column '{col}': '{row[col]}'"
+                )
+        elif format_type == "boolean":
+            valid_bools = [True, False, 1, 0, "True", "False", "1", "0"]
+            invalid = df[~df[col].isin(valid_bools)]
+            for idx, row in invalid.iterrows():
+                errors.append(
+                    f"Invalid boolean in row {idx+1}, column '{col}': '{row[col]}'"
+                )
     return errors
 
 
@@ -108,13 +162,16 @@ def check_numerical_constraints(df, numerical_checks):
     for col, constraint in numerical_checks.items():
         if col not in df.columns:
             continue
+        # First, ensure the column is numeric
+        if not pd.api.types.is_numeric_dtype(df[col]):
+            errors.append(f"Column '{col}' must be numeric")
+            continue
+        # Then, apply the constraint
         if constraint == "positive_integer":
-            invalid = df[
-                (df[col] < 0) | (~df[col].apply(lambda x: isinstance(x, (int, float))))
-            ]
+            invalid = df[df[col] <= 0]  # Changed to <= 0 to exclude zero
             for idx, row in invalid.iterrows():
                 errors.append(
-                    f"Invalid value in row {idx+1}, column '{col}': '{row[col]}' (must be positive number)"
+                    f"Invalid value in row {idx+1}, column '{col}': '{row[col]}' (must be a non negative integer)"
                 )
     return errors
 
@@ -128,6 +185,10 @@ def check_duplicate_rows(df):
             errors.append(f"Duplicate row at {idx+1}")
         return errors
     return []
+
+
+def parse(df) -> list[dict]:
+    return df.to_dict(orient="records")
 
 
 # 12: Pipeline function to validate CSV
@@ -150,6 +211,7 @@ def validate_csv(file_path, config):
     if not header_errors:
         errors.extend(check_empty(df, config.get("required_columns", [])))
         errors.extend(check_formats(df, config.get("format_checks", {})))
+        errors.extend(check_data_types(df, config.get("type_checks", {})))
         errors.extend(check_unique(df, config.get("unique_columns", [])))
         errors.extend(check_value_ranges(df, config.get("value_ranges", {})))
         errors.extend(check_lengths(df, config.get("length_checks", {})))
@@ -159,49 +221,199 @@ def validate_csv(file_path, config):
         errors.extend(check_duplicate_rows(df))
 
     success = len(errors) == 0
-    return {"success": success, "errors": errors}
+    data = []
+    if (success): 
+        data = parse(df)
+    return {"success": success, "errors": errors, "data": data}
+
+
+DEPARTMENT_CONFIG = {
+    "expected_columns": [
+        "departmentId",  # Will be converted to UUID later if needed
+        "name",
+        "campusId",
+    ],
+    "required_columns": ["departmentId", "name", "campusId"],
+    "unique_columns": ["departmentId", "name"],
+    "length_checks": {
+        "name": 100  # Adjust max length based on your schema constraints
+    },
+}
+
+COURSE_CONFIG = {
+    "expected_columns": [
+        "courseId",  # Will be converted to UUID later
+        "name",
+        "code",
+        "departmentId",  # FK to Department
+        "description",  # Optional
+        "sessionType",
+        "sessionsPerWeek",
+    ],
+    "required_columns": [
+        "courseId",
+        "name",
+        "code",
+        "departmentId",
+        "sessionType",
+        "sessionsPerWeek",
+    ],
+    "unique_columns": ["courseId", "code"],
+    "length_checks": {
+        "name": 100,
+        "code": 20,
+        "description": 500,  # Optional but still enforce a max length
+    },
+    "value_ranges": {"sessionType": ["LECTURE", "LAB", "SEMINAR"]},
+    "numerical_checks": {"sessionsPerWeek": "non_negative_integer"},
+}
+
 TEACHER_CONFIG = {
-        "expected_columns": [
-            "userId",
-            "firstName",
-            "lastName",
-            "email",
-            "departmentId",
-            "role",
-        ],
-        "required_columns": [
-            "userId",
-            "firstName",
-            "lastName",
-            "email",
-            "departmentId",
-        ],
-        "unique_columns": ["userId", "email"],
-        "format_checks": {"email": "email"},
-        "value_ranges": {"role": ["ADMIN", "TEACHER", "STUDENT"]},
-        "length_checks": {"firstName": 50, "lastName": 50},
-        "numerical_checks": {"departmentId": "positive_integer"},
-    }
+    "expected_columns": [
+        "teacherId",  # Will be converted to UUID later if needed
+        "firstName",
+        "lastName",
+        "email",
+        "password",  # Optional
+        "phone",
+        "role",
+        "departmentId",
+        "needWheelchairAccessibleRoom",  # Optional
+    ],
+    "required_columns": [
+        "teacherId",
+        "firstName",
+        "lastName",
+        "email",
+        "phone",
+        "role",
+        "departmentId",
+    ],
+    "unique_columns": ["teacherId", "email"],
+    "format_checks": {
+        "email": "email",
+        "needWheelchairAccessibleRoom": "boolean",
+    },
+    "value_ranges": {"role": ["TEACHER"]},
+    "length_checks": {"firstName": 50, "lastName": 50, "phone": 15},
+}
+
+STUDENTGROUP_CONFIG = {
+    "expected_columns": [
+        "studentGroupId",  # Will be converted to UUID later
+        "name",
+        "size",
+        "accessibilityRequirement",
+        "departmentId",  # FK to Department
+    ],
+    "required_columns": ["studentGroupId", "name", "size", "departmentId"],
+    "unique_columns": ["studentGroupId", "name"],
+    "length_checks": {"name": 100},
+    "numerical_checks": {"size": "non_negative_integer"},
+    "format_checks": {
+        "accessibilityRequirement": "boolean",
+        "size": "non_negative_integer",
+    },
+}
+
+CLASSROOM_CONFIG = {
+    "expected_columns": [
+        "classroomId",  # Will be converted to UUID later
+        "name",
+        "capacity",
+        "type",
+        "campusId",
+        "buildingId",  # Optional
+        "isWheelchairAccessible",  # Optional Boolean
+        "openingTime",  # Optional (expected as String - format can be validated separately)
+        "closingTime",  # Optional (same)
+        "floor",
+    ],
+    "required_columns": [
+        "classroomId",
+        "name",
+        "capacity",
+        "type",
+        "campusId",
+        "floor",
+    ],
+    "unique_columns": ["classroomId", "name"],
+    "length_checks": {"name": 100},
+    "type_checks": {"capacity": "numeric", "name": "string"},
+    "numerical_checks": {
+        "capacity": "non_negative_integer",
+        "floor": "non_negative_integer",
+    },
+    "value_ranges": {"type": ["LECTURE", "LAB", "SEMINAR"]},
+    "format_checks": {"isWheelchairAccessible": "boolean"},
+}
+
+STUDENT_CONFIG = {
+    "expected_columns": [
+        "studentId",  # Will be converted to UUID later
+        "firstName",
+        "lastName",
+        "email",
+        "password",  # Optional
+        "phone",
+        "role",
+        "needWheelchairAccessibleRoom",  # Optional Boolean
+        "studentGroupId",
+    ],
+    "required_columns": [
+        "studentId",
+        "firstName",
+        "lastName",
+        "email",
+        "phone",
+        "role",
+        "studentGroupId",
+    ],
+    "unique_columns": ["studentId", "email"],
+    "length_checks": {"firstName": 50, "lastName": 50, "phone": 20},
+    "value_ranges": {"role": ["STUDENT"]},
+    "format_checks": {"email": "email", "needWheelchairAccessibleRoom": "boolean"},
+}
+
+SGCOURSE_CONFIG = {
+    "expected_columns": ["studentGroupId", "courseId"],
+    "required_columns": ["studentGroupId", "courseId"],
+    # "format_checks": {"studentGroupId": "uuid", "courseId": "uuid"},
+    "unique_columns": ["studentGroupId", "courseId"],
+}
+
+
+CONFIGS = {
+    "DEPARTMENT": DEPARTMENT_CONFIG,
+    "COURSE": COURSE_CONFIG,
+    "TEACHER": TEACHER_CONFIG,
+    "STUDENTGROUP": STUDENTGROUP_CONFIG,
+    "CLASSROOM": CLASSROOM_CONFIG,
+    "STUDENT": STUDENT_CONFIG,
+    "SGCOURSE": SGCOURSE_CONFIG,
+}
+
+import sys
 
 def main():
-
-    # 13: Example usage with sample configuration
-    
-
-    result = validate_csv("../a.csv", TEACHER_CONFIG)
+    if len(sys.argv) != 3:
+        print("Usage: python script.py <file_path> <config_name>")
+        return
+    file_path = sys.argv[1]
+    config_name = sys.argv[2].upper()
+    config = CONFIGS.get(config_name)
+    if not config:
+        print(f"Invalid config: {config_name}")
+        return
+    result = validate_csv(file_path, config)
     if result["success"]:
         print("Validation successful")
+        print(result['data'])
     else:
         print("Validation errors:")
         for error in result["errors"]:
             print(error)
-
+        
 
 if __name__ == "__main__":
     main()
-
-"""
-3 mock data, endpoints, schemas
-database populate
-
-"""

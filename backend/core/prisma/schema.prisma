@@ -151,6 +151,7 @@ model Classroom {
   openingTime            String?
   closingTime            String?
   scheduleItems          ScheduleItem[]
+  floor                  Int
 }
 
 // ========== ScheduleItem ==========

@@ -1,0 +1,3 @@
+studentId,firstName,lastName,email,password,phone,role,needWheelchairAccessibleRoom,studentGroupId
+std-aaa111,Charlie,Brown,charlie.brown@example.com,myPass!,555-0300,STUDENT,false,sgp-111aaa
+std-bbb222,Dana,White,dana.white@example.com,,555-0400,STUDENT,true,sgp-222bbb

@@ -159,3 +159,103 @@ classGroup:
 
 user:
   add all. 
+
+
+  ////////////////// CSVs /////////////////////////
+  Department
+  departmentId: change it to uuid later
+  name: String
+  campusId: from Campus
+
+
+
+  Course  
+  courseId: change ot uuid later
+  name: string
+  code: string
+  departmentId: Department.id
+  description: String?
+  sessionType: String
+  sessionsPerWeek: Int 
+
+
+
+  Teacher (encapsulate teacher and user together)
+  teacherId: change to uuid later
+  firstName: String
+  lastName: String
+  email: email
+  password: string?
+  phone: String
+  role: Admin | teacher | student
+  departmentId: Department.id
+  needWheelchairAccessibleRoom: boolean
+  
+
+  StudentGroup
+  studentGroupId: change to uuid later
+  name: string
+  size: Int
+  accessibilityRequirement: boolean?
+  departmentId: Department.id
+
+  Classroom
+  classroomId: change to uuid later
+  name: string
+  capacity: int
+  type: LECTURE | LAB | SEMINAR
+  campusId: Campus.id
+  buildingId: String?
+  isWheelchairAccessible: Boolean?
+  openingTime: String?
+  closingTime: String?
+  floor: Int
+
+  Student
+  studentId: change to uuid later
+  firstName: String
+  lastName: String
+  email: email
+  password: string?
+  phone: String
+  role: Admin | teacher | student
+  needWheelchairAccessibleRoom: boolean?
+  studentGroupId: StudentGroup.id
+
+
+  StudentGroup <-> course csv
+  studentGroupId: String
+  courseId: String
+
+
+
+
+
+
+
+
+/////////// flow ////////////
+
+in request:
+data: csv file
+config: {}?
+category: DEPARTMENT | COURSE | TEACHER | STUDENTGROUP | CLASSROOM | STUDENT | SGCOURSE
+
+-> use config or set config to constant values in server based on kind
+-> pass through the pipeline
+-> if no error parse the csv and send json back
+-> if error send the error back and don't populate
+
+
+
+//////////// response Json format ////////////
+[
+  {
+    col1: value
+    col2: value
+  },  {
+    col1: value
+    col2: value
+  }
+]
+why: easier to populate using ... operator
