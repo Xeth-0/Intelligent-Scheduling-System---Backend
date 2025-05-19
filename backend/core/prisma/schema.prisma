@@ -19,6 +19,22 @@ enum ClassroomType {
   SEMINAR
 }
 
+enum SessionType {
+  LECTURE
+  LAB
+  SEMINAR
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
 // ========== Building ==========
 model Building {
   buildingId String      @id @default(uuid())
@@ -56,14 +72,14 @@ model User {
 
 // ========== Teacher ==========
 model Teacher {
-  teacherId    String       @id @default(uuid())
-  user         User         @relation(fields: [userId], references: [userId], onDelete: Cascade)
-  userId       String       @unique
-  department   Department?  @relation(fields: [departmentId], references: [deptId], onDelete: Restrict)
-  departmentId String?
-  courses      Course[]     @relation("CourseTeachers")
-  schedules    Schedule[]
-  preferences  Preference[]
+  teacherId     String         @id @default(uuid())
+  user          User           @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  userId        String         @unique
+  department    Department     @relation(fields: [departmentId], references: [deptId], onDelete: Restrict)
+  departmentId  String
+  courses       Course[]       @relation("CourseTeachers")
+  scheduleItems ScheduleItem[]
+  preferences   Preference[]
 }
 
 // ========== Student ==========
@@ -95,48 +111,59 @@ model Department {
 
 // ========== Course ==========
 model Course {
-  courseId      String         @id @default(uuid())
-  name          String
-  code          String
-  department    Department?    @relation(fields: [departmentId], references: [deptId], onDelete: SetNull)
-  departmentId  String?
-  teachers      Teacher[]      @relation("CourseTeachers")
-  schedules     Schedule[]
-  studentGroups StudentGroup[]
+  courseId        String         @id @default(uuid())
+  name            String
+  code            String
+  department      Department?    @relation(fields: [departmentId], references: [deptId], onDelete: SetNull)
+  departmentId    String?
+  teachers        Teacher[]      @relation("CourseTeachers")
+  scheduleItems   ScheduleItem[]
+  studentGroups   StudentGroup[]
+  description     String?
+  sessionType     SessionType    @default(LECTURE)
+  sessionsPerWeek Int
 }
 
 // ========== StudentGroup ==========
 model StudentGroup {
-  studentGroupId           String     @id @default(uuid())
+  studentGroupId           String         @id @default(uuid())
   name                     String
   size                     Int
-  accessibilityRequirement Boolean    @default(false)
-  department               Department @relation(fields: [departmentId], references: [deptId], onDelete: Cascade)
+  accessibilityRequirement Boolean        @default(false)
+  department               Department     @relation(fields: [departmentId], references: [deptId], onDelete: Cascade)
   departmentId             String
   students                 Student[]
-  schedules                Schedule[]
+  scheduleItems            ScheduleItem[]
   courses                  Course[]
 }
 
 // ========== Classroom ==========
 model Classroom {
-  classroomId            String        @id @default(uuid())
+  classroomId            String         @id @default(uuid())
   name                   String
   capacity               Int
   type                   ClassroomType
-  campus                 Campus        @relation(fields: [campusId], references: [campusId], onDelete: Cascade)
+  campus                 Campus         @relation(fields: [campusId], references: [campusId], onDelete: Cascade)
   campusId               String
-  building               Building?     @relation(fields: [buildingId], references: [buildingId], onDelete: SetNull)
+  building               Building?      @relation(fields: [buildingId], references: [buildingId], onDelete: SetNull)
   buildingId             String?
-  isWheelchairAccessible Boolean       @default(false)
+  isWheelchairAccessible Boolean        @default(false)
   openingTime            String?
   closingTime            String?
-  schedules              Schedule[]
+  scheduleItems          ScheduleItem[]
 }
 
-// ========== Schedule ==========
-model Schedule {
-  scheduleId     String        @id @default(uuid())
+// ========== ScheduleItem ==========
+model ScheduleItem {
+  scheduleItemId String        @id @default(uuid())
+  startTime      String
+  endTime        String
+  isFinalized    Boolean       @default(false)
+  sessionType    SessionType?
+  timeSlot       Int?
+  day            DayOfWeek
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
   course         Course        @relation(fields: [courseId], references: [courseId], onDelete: Cascade)
   courseId       String
   teacher        Teacher       @relation(fields: [teacherId], references: [teacherId], onDelete: Cascade)
@@ -145,13 +172,18 @@ model Schedule {
   classroomId    String?
   studentGroup   StudentGroup? @relation(fields: [studentGroupId], references: [studentGroupId], onDelete: SetNull)
   studentGroupId String?
-  startTime      String
-  endTime        String
-  isFinalized    Boolean       @default(false)
-  sessionType    String?
-  timeSlot       Int?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  schedule       Schedule      @relation(fields: [scheduleId], references: [scheduleId], onDelete: Cascade)
+  scheduleId     String
+
+  @@map("ScheduleItem")
+}
+
+// ========== Schedule ==========
+model Schedule {
+  scheduleId    String         @id @default(uuid())
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  scheduleItems ScheduleItem[]
 }
 
 // ========== PreferenceType ==========
