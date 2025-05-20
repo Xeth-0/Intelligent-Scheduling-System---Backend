@@ -12,7 +12,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { HealthModule } from './modules/health/health.module';
 import { SchedulingModule } from './modules/scheduling/scheduling.module';
-import { dbConfig, jwtConfig, validateEnv } from './config';
+import { dbConfig, jwtConfig, validateEnv, servicesConfig } from './config';
 
 @Module({
   imports: [
@@ -20,7 +20,7 @@ import { dbConfig, jwtConfig, validateEnv } from './config';
     ConfigModule.forRoot({
       isGlobal: true,
       cache: true,
-      load: [dbConfig, jwtConfig],
+      load: [dbConfig, jwtConfig, servicesConfig],
       validate: validateEnv,
     }),
     PrismaModule, // Injectable anywhere for orm queries

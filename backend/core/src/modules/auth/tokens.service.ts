@@ -16,6 +16,20 @@ export class TokensService implements ITokensService {
     private readonly prismaService: PrismaService,
   ) {}
 
+  private readonly JWT_EXPIRATION = this.configService.get<string>(
+    'jwt.accessToken.expiresIn',
+  );
+  private readonly JWT_REFRESH_EXPIRATION = this.configService.get<string>(
+    'jwt.refreshToken.expiresIn',
+  );
+  private readonly JWT_IGNORE_EXPIRATION = this.configService.get<boolean>(
+    'jwt.ignoreExpiration',
+  );
+  private readonly JWT_ACCESS_SECRET =
+    this.configService.get<string>('jwt.accessSecret');
+  private readonly JWT_REFRESH_SECRET =
+    this.configService.get<string>('jwt.refreshSecret');
+
   async generateTokens(
     userId: string,
     email: string,
@@ -45,8 +59,8 @@ export class TokensService implements ITokensService {
     };
 
     return this.jwtService.signAsync(payload, {
-      secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
-      expiresIn: '15m',
+      secret: this.JWT_ACCESS_SECRET,
+      expiresIn: this.JWT_EXPIRATION,
     });
   }
 
@@ -57,26 +71,25 @@ export class TokensService implements ITokensService {
     };
 
     return this.jwtService.signAsync(payload, {
-      secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
-      expiresIn: '7d',
+      secret: this.JWT_REFRESH_SECRET,
+      expiresIn: this.JWT_REFRESH_EXPIRATION,
     });
   }
 
-  // runs on login, verifies the access token
   async verifyAccessToken(token: string): Promise<AuthenticatedUserPayload> {
     return this.jwtService.verifyAsync(token, {
-      secret: this.configService.get<string>('jwt.access_secret'),
+      secret: this.JWT_ACCESS_SECRET,
+      ignoreExpiration: this.JWT_IGNORE_EXPIRATION,
     });
   }
 
-  // runs on refresh, verifies the refresh token
   async verifyRefreshToken(token: string): Promise<AuthenticatedUserPayload> {
     return this.jwtService.verifyAsync(token, {
-      secret: this.configService.get<string>('jwt.refresh_secret'),
+      secret: this.JWT_REFRESH_SECRET,
+      ignoreExpiration: this.JWT_IGNORE_EXPIRATION,
     });
   }
 
-  // runs on login, saves the refresh token for the user
   async saveRefreshToken(userId: string, refreshToken: string): Promise<void> {
     const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
     try {
@@ -94,7 +107,6 @@ export class TokensService implements ITokensService {
     }
   }
 
-  // runs on logout, deletes all refresh tokens for the user
   async deleteRefreshToken(userId: string): Promise<void> {
     await this.prismaService.refreshToken.deleteMany({
       where: { userId },

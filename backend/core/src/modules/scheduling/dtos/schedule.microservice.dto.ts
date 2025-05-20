@@ -1,5 +1,7 @@
+// ! This is for the microservice communication.
+
 import { DayOfWeek, SessionType } from '@prisma/client';
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsString,
   IsNotEmpty,
@@ -8,9 +10,34 @@ import {
   ArrayNotEmpty,
   Matches,
   IsBoolean,
+  ValidateNested,
+  IsObject,
 } from 'class-validator';
 
-export class ScheduledItemDto {
+class SchedulingData {
+  @Type(() => ScheduledSessionResponseDto)
+  best_schedule!: ScheduledSessionResponseDto[];
+
+  best_fitness!: number;
+}
+
+export class SchedulingApiResponseDto {
+  @IsString()
+  @IsNotEmpty()
+  status!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  message!: string;
+
+  @IsObject()
+  @IsNotEmpty()
+  @ValidateNested()
+  @Type(() => SchedulingData)
+  data!: SchedulingData;
+}
+
+export class ScheduledSessionResponseDto {
   @IsString()
   @IsNotEmpty()
   courseId!: string;
@@ -57,9 +84,9 @@ export class ScheduledItemDto {
   is_valid_soft!: boolean;
 
   // Note: startTime and endTime fields were removed from this DTO.
-  // They are not part of the Python ScheduledItem model received from the scheduling service.
+  // They are not part of the Python scheduledSession model received from the scheduling service.
   // Instead, they are derived from the `timeslot` field within scheduling.service.ts
   // before saving to the database.
 }
 
-export type ScheduledItem = ScheduledItemDto;
+export type ScheduledSessionResponse = ScheduledSessionResponseDto;

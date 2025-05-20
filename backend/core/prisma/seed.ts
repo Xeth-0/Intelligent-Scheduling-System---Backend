@@ -1,6 +1,12 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { PrismaClient, ClassroomType, Role, SessionType } from '@prisma/client';
+import {
+  PrismaClient,
+  ClassroomType,
+  Role,
+  SessionType,
+  type Teacher,
+} from '@prisma/client';
 import { hash } from 'bcrypt';
 
 const prisma = new PrismaClient();
@@ -41,6 +47,49 @@ async function main() {
 
   console.log('Created department:', department.name);
 
+  // Create admin users
+  const createAdmin = async (
+    id: string,
+    firstName: string,
+    lastName: string,
+  ) => {
+    const email = `admin${id}@email.email`;
+    const passwordHash = await hash(`adminpassword${id}`, 10);
+
+    // Create user first
+    const user = await prisma.user.create({
+      data: {
+        userId: `user-admin-${id}`,
+        firstName,
+        lastName,
+        email,
+        passwordHash,
+        role: Role.ADMIN,
+        phone: `+251911${id}${id}${id}${id}`,
+      },
+    });
+
+    // Create admin linked to user and campus
+    const admin = await prisma.admin.create({
+      data: {
+        adminId: `admin-${id}`,
+        userId: user.userId,
+        campusId: campus.campusId,
+      },
+    });
+
+    return admin;
+  };
+
+  // Create three admin users
+  const admins = [
+    await createAdmin('1', 'Samrawit', 'Elias'),
+    await createAdmin('2', 'Daniel', 'Mekonnen'),
+    await createAdmin('3', 'Rahel', 'Abebe'),
+  ];
+
+  console.log('Created admins:', admins.length);
+
   // Create teacher users with passwords
   const createTeacher = async (
     id: string,
@@ -51,7 +100,7 @@ async function main() {
     needsAccessible: boolean,
   ) => {
     // Create user first
-    const passwordHash = await hash('password123', 10);
+    const passwordHash = await hash(`teacher${id}password`, 10);
 
     const user = await prisma.user.create({
       data: {
@@ -81,11 +130,11 @@ async function main() {
   // Create teachers with clear first and last names
   const teachers = [
     await createTeacher(
-      '001',
+      '1',
       'Abrham',
       'Gebremedhin',
-      'abrham@gmail.com',
-      '1234567890',
+      'teacher1@email.email',
+      '01234567890',
       true,
     ),
     await createTeacher(
@@ -279,6 +328,204 @@ async function main() {
 
   console.log('Created student groups:', studentGroups.length);
 
+  // Create student users for each student group
+  console.log('Creating student accounts...');
+
+  // First name pools for generating random student names
+  const maleFirstNames = [
+    'Abebe',
+    'Bekele',
+    'Dawit',
+    'Ephrem',
+    'Fikru',
+    'Girma',
+    'Hailu',
+    'Iskinder',
+    'Jemal',
+    'Kebede',
+    'Lemma',
+    'Melaku',
+    'Negash',
+    'Omer',
+    'Petros',
+    'Robel',
+    'Samuel',
+    'Tadesse',
+    'Worku',
+    'Yonas',
+    'Zelalem',
+    'Amanuel',
+    'Berhanu',
+    'Dereje',
+    'Endalkachew',
+    'Fasil',
+    'Getachew',
+    'Henok',
+    'Ibrahim',
+    'Kirubel',
+    'Liya',
+    'Mekonnen',
+  ];
+
+  const femaleFirstNames = [
+    'Abeba',
+    'Bethlehem',
+    'Desta',
+    'Eden',
+    'Feven',
+    'Genet',
+    'Hanna',
+    'Rahel',
+    'Jerusalem',
+    'Kidist',
+    'Liya',
+    'Meron',
+    'Nardos',
+    'Rahel',
+    'Sara',
+    'Tigist',
+    'Wubet',
+    'Yordanos',
+    'Zemenay',
+    'Almaz',
+    'Bezawit',
+    'Dagmawit',
+    'Eyerusalem',
+    'Frehiwot',
+    'Gelila',
+    'Haregewoin',
+    'Iman',
+    'Konjit',
+    'Lidya',
+    'Mahlet',
+  ];
+
+  const lastNames = [
+    'Abebe',
+    'Bekele',
+    'Chala',
+    'Demeke',
+    'Endale',
+    'Fikadu',
+    'Girma',
+    'Hailu',
+    'Ibrahim',
+    'Jemal',
+    'Kebede',
+    'Lemma',
+    'Megersa',
+    'Negash',
+    'Olana',
+    'Petros',
+    'Regassa',
+    'Sahle',
+    'Tadesse',
+    'Umer',
+    'Woldemariam',
+    'Yilma',
+    'Zeleke',
+    'Assefa',
+    'Bogale',
+    'Desalegn',
+    'Endalkachew',
+    'Fantahun',
+    'Gebre',
+    'Haddis',
+    'Iyasu',
+  ];
+
+  // Helper function to create a student
+  const createStudent = async (
+    id: string,
+    firstName: string,
+    lastName: string,
+    email: string,
+    studentGroupId: string,
+    groupIdentifier: string,
+  ) => {
+    // Create user first
+    const passwordHash = await hash(
+      `student${groupIdentifier}password${id}`,
+      10,
+    );
+
+    const user = await prisma.user.create({
+      data: {
+        userId: `user-student-${groupIdentifier}-${id}`,
+        firstName,
+        lastName,
+        email,
+        passwordHash,
+        role: Role.STUDENT,
+        phone: `+251922${id.padStart(6, '0')}`,
+      },
+    });
+
+    // Create student linked to user and student group
+    const student = await prisma.student.create({
+      data: {
+        studentId: `student-${groupIdentifier}-${id}`,
+        userId: user.userId,
+        studentGroupId,
+      },
+    });
+
+    return student;
+  };
+
+  // Function to get a random name
+  const getRandomName = (isFemale: boolean) => {
+    const firstName = isFemale
+      ? femaleFirstNames[Math.floor(Math.random() * femaleFirstNames.length)]
+      : maleFirstNames[Math.floor(Math.random() * maleFirstNames.length)];
+    const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+    return { firstName, lastName };
+  };
+
+  // Create students for each student group
+  let totalStudentsCreated = 0;
+  for (const group of studentGroups) {
+    // Extract a simple identifier from the group ID
+    const groupIdentifier = group.studentGroupId.replace('sg-', '');
+
+    // Create the specified number of students for this group
+    const studentsToCreate = group.size;
+    console.log(
+      `Creating ${studentsToCreate} students for group: ${group.name}`,
+    );
+
+    for (let i = 1; i <= studentsToCreate; i++) {
+      // Alternate between male and female names
+      const isFemale = i % 2 === 0;
+      const { firstName, lastName } = getRandomName(isFemale);
+
+      // Create unique ID and email for each student
+      const studentNumber = totalStudentsCreated + i;
+      const studentId = studentNumber.toString().padStart(3, '0');
+      const email = `student${groupIdentifier}${studentId}@email.email`;
+
+      await createStudent(
+        studentId,
+        firstName,
+        lastName,
+        email,
+        group.studentGroupId,
+        groupIdentifier,
+      );
+
+      // Log progress for every 50 students
+      if (i % 50 === 0) {
+        console.log(
+          `  Created ${i}/${studentsToCreate} students for ${group.name}`,
+        );
+      }
+    }
+
+    totalStudentsCreated += studentsToCreate;
+  }
+
+  console.log(`Total students created: ${totalStudentsCreated}`);
+
   // Create classrooms with custom IDs
   const classrooms = await Promise.all([
     prisma.classroom.create({
@@ -292,6 +539,7 @@ async function main() {
         isWheelchairAccessible: true,
         openingTime: '08:00',
         closingTime: '18:00',
+        floor: 2,
       },
     }),
     prisma.classroom.create({
@@ -305,6 +553,7 @@ async function main() {
         isWheelchairAccessible: true,
         openingTime: '08:00',
         closingTime: '18:00',
+        floor: 2,
       },
     }),
     prisma.classroom.create({
@@ -318,6 +567,7 @@ async function main() {
         isWheelchairAccessible: false,
         openingTime: '08:00',
         closingTime: '18:00',
+        floor: 2,
       },
     }),
     prisma.classroom.create({
@@ -331,6 +581,7 @@ async function main() {
         isWheelchairAccessible: true,
         openingTime: '08:00',
         closingTime: '18:00',
+        floor: 2,
       },
     }),
     prisma.classroom.create({
@@ -344,6 +595,7 @@ async function main() {
         isWheelchairAccessible: false,
         openingTime: '08:00',
         closingTime: '18:00',
+        floor: 2,
       },
     }),
   ]);
@@ -357,9 +609,9 @@ async function main() {
       name: 'Fundamental of Electrical Circuits and Electronics',
       code: 'ECE301',
       description: 'Fundamental of Electrical Circuits and Electronics',
-      teacherEmail: 'abrham@gmail.com',
+      teacherEmail: 'teacher1@email.email',
       sessionTypes: ['LECTURE', 'LAB'],
-      sessionsPerWeek: [1, 1],
+      sessionsPerWeek: [2, 1],
       studentGroups: [
         ['sg-y3-se-s1', 'sg-y3-se-s2'],
         ['sg-y3-se-s3', 'sg-y3-se-s4'],
@@ -370,7 +622,7 @@ async function main() {
       name: 'Computer Architecture and Organization',
       code: 'CS302',
       description: 'Computer Architecture and Organization',
-      teacherEmail: 'abrham@gmail.com',
+      teacherEmail: 'teacher1@email.email',
       sessionTypes: ['LECTURE'],
       sessionsPerWeek: [2],
       studentGroups: [
@@ -385,7 +637,7 @@ async function main() {
       description: 'Web Design and Development',
       teacherEmail: 'natinael@gmail.com',
       sessionTypes: ['LECTURE', 'LAB'],
-      sessionsPerWeek: [1, 1],
+      sessionsPerWeek: [2, 1],
       studentGroups: [
         ['sg-y3-se-s1', 'sg-y3-se-s2'],
         ['sg-y3-se-s3', 'sg-y3-se-s4'],
@@ -396,7 +648,7 @@ async function main() {
       name: 'Human Computer Interaction',
       code: 'CS304',
       description: 'Human Computer Interaction',
-      teacherEmail: 'abrham@gmail.com',
+      teacherEmail: 'teacher1@email.email',
       sessionTypes: ['LECTURE'],
       sessionsPerWeek: [2],
       studentGroups: [
@@ -411,7 +663,7 @@ async function main() {
       description: 'Fundamentals of Software Engineering',
       teacherEmail: 'nebiat@gmail.com',
       sessionTypes: ['LECTURE', 'LAB'],
-      sessionsPerWeek: [1, 1],
+      sessionsPerWeek: [2, 1],
       studentGroups: [
         ['sg-y3-se-s1', 'sg-y3-se-s2'],
         ['sg-y3-se-s3', 'sg-y3-se-s4'],
@@ -422,7 +674,7 @@ async function main() {
       name: 'Software Project Management',
       code: 'SE401',
       description: 'Software Project Management',
-      teacherEmail: 'abrham@gmail.com',
+      teacherEmail: 'teacher1@email.email',
       sessionTypes: ['LECTURE'],
       sessionsPerWeek: [2],
       studentGroups: [
@@ -438,7 +690,7 @@ async function main() {
       description: 'Enterprise Application Development',
       teacherEmail: 'natinael@gmail.com',
       sessionTypes: ['LECTURE', 'LAB'],
-      sessionsPerWeek: [1, 1],
+      sessionsPerWeek: [2, 1],
       studentGroups: [['sg-y4-se-s1', 'sg-y4-se-s2']],
     },
     {
@@ -448,7 +700,7 @@ async function main() {
       description: 'History of Ethiopia and the Horn',
       teacherEmail: 'amanuel@gmail.com',
       sessionTypes: ['LECTURE'],
-      sessionsPerWeek: [1],
+      sessionsPerWeek: [2],
       studentGroups: [
         ['sg-y4-se-s1', 'sg-y4-se-s2'],
         ['sg-y4-ai'],
@@ -463,13 +715,13 @@ async function main() {
       description: 'Machine Learning and Big Data',
       teacherEmail: 'teacher5@gmail.com',
       sessionTypes: ['LECTURE', 'LAB'],
-      sessionsPerWeek: [1, 1],
+      sessionsPerWeek: [2, 1],
       studentGroups: [['sg-y4-se-s1', 'sg-y4-se-s2', 'sg-y4-cy']],
     },
   ];
 
   // Get teacher mapping by email for easier reference
-  const teacherMap: Record<string, any> = {};
+  const teacherMap: Record<string, Teacher> = {};
   for (const teacher of teachers) {
     const user = await prisma.user.findUnique({
       where: { userId: teacher.userId },

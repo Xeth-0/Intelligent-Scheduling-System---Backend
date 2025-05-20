@@ -1,6 +1,6 @@
-import { Role } from '@prisma/client';
-import { AuthenticatedUserPayload } from '@/common/request/express.request.d';
-import { TokensDto } from '../auth/dtos/tokens.dto';
+import { type Role } from '@prisma/client';
+import { type AuthenticatedUserPayload } from '@/common/request/express.request.d';
+import { type TokensDto } from '../auth/dtos/tokens.dto';
 
 export interface ITokensService {
   generateTokens(userId: string, email: string, role: Role): Promise<TokensDto>;

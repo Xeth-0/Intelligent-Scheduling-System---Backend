@@ -67,7 +67,6 @@ export const GetTeacherScheduleDocs = () => {
     ApiParam({ name: 'teacherId', description: 'teacher ID', required: false }),
   );
 };
-
 // export const GetUserByIdDocs = () => {
 //   return applyDecorators(
 //     ApiOperation({ summary: 'Get user by ID' }),
@@ -108,3 +107,4 @@ export const GetTeacherScheduleDocs = () => {
 //     ApiParam({ name: 'id', description: 'User ID' }),
 //   );
 // };
+

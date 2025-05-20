@@ -1,4 +1,3 @@
-from pydantic import BaseModel  # Assuming models.py is structured like this
 from app.models.models import StudentGroup, Course, Teacher, Classroom, ScheduledItem
 import time
 import random
@@ -37,9 +36,9 @@ class GeneticScheduler:
         student_groups: list[StudentGroup],
         timeslots: list[str],  # List of valid timeslot IDs
         days: list[str],  # List of valid day strings
-        population_size=CHROMOSOME_POPULATION_SIZE,
-        gene_mutation_rate=GENE_MUTATION_RATE,
-        chromosome_mutation_rate=CHROMOSOME_MUTATION_RATE,
+        population_size: int = CHROMOSOME_POPULATION_SIZE,
+        gene_mutation_rate: float = GENE_MUTATION_RATE,
+        chromosome_mutation_rate: float = CHROMOSOME_MUTATION_RATE,
     ):
         self.courses = courses
         self.teachers = teachers
@@ -57,86 +56,74 @@ class GeneticScheduler:
         self.course_map = {course.courseId: course for course in courses}
         self.student_group_map = {sg.studentGroupId: sg for sg in student_groups}
 
-    def run(self, generations=MAX_GENERATIONS):
+    def run(
+        self, generations: int = MAX_GENERATIONS
+    ) -> tuple[list[ScheduledItem] | None, float]:
         population = self.initialize_population()
         best_solution_overall = None
         best_fitness_overall = float("inf")
 
         start_time = time.time()
-        for generation in range(generations):
+        generation = 0
+
+        while generation < generations:
             fitness_scores = [self.fitness(chromosome) for chromosome in population]
 
             # Find current best in this generation
             min_fitness_current_gen = min(fitness_scores)
             idx_min_fitness_current_gen = fitness_scores.index(min_fitness_current_gen)
 
+            elapsed_time = time.time() - start_time
+
             if min_fitness_current_gen < best_fitness_overall:
                 best_fitness_overall = min_fitness_current_gen
-                # Deepcopy might be safer if ScheduledItem objects are mutated directly elsewhere,
-                # but current mutation creates new lists/items.
                 best_solution_overall = [
-                    item.copy() for item in population[idx_min_fitness_current_gen]
+                    item.model_copy()
+                    for item in population[idx_min_fitness_current_gen]
                 ]
-                print(
-                    f"Generation {generation}: New best fitness = {best_fitness_overall:.2f}"
-                )
 
-            if best_fitness_overall == 0:
-                print(
-                    f"Perfect solution found! Generations: {generation}/{generations}, Fitness: {best_fitness_overall}"
-                )
+                print(f"Generation {generation} / {generations}", end=" ")
+                print(f"New Best Fitness: {best_fitness_overall:.2f}", end=" ")
+                print(f"Time: {elapsed_time:.2f}s")
+
+            if best_fitness_overall == 0:  # Check for perfect solution
+                print(f"Perfect solution found!", end=" ")
+                print(f"Generations: {generation}/{generations}", end=" ")
+                print(f"Fitness: {best_fitness_overall}", end=" ")
+                print(f"Time: {elapsed_time:.2f}s")
                 break
-
-            elapsed_time = time.time() - start_time
-            if elapsed_time > MAX_DURATION_SECONDS:
-                print(
-                    f"Max duration ({MAX_DURATION_SECONDS}s) reached. Generations: {generation}/{generations}, Fitness: {best_fitness_overall}"
-                )
+            elif elapsed_time > MAX_DURATION_SECONDS:  # Check for timeout
+                print(f"Time limit reached after {generation} generations", end=" ")
+                print(f"Best fitness: {best_fitness_overall}", end=" ")
+                print(f"Time: {elapsed_time:.2f}s")
                 break
-
-            if generation % 100 == 0 and generation > 0:  # Log progress
-                print(
-                    f"Generation {generation}, Best Fitness: {best_fitness_overall:.2f}, Time: {elapsed_time:.2f}s"
-                )
+            elif generation > 0 and generation % 100 == 0:  # Just log progress
+                print(f"Generation {generation:>4d}", end=" ")
+                print(f"Fitness: {best_fitness_overall}", end=" ")
+                print(f"Time: {elapsed_time:.2f}s")
 
             population = self.evolve(population, fitness_scores)
+            generation += 1
 
         final_elapsed_time = time.time() - start_time
         if best_fitness_overall > 0:
-            print(
-                f"Optimal solution (fitness 0) not found after {generation+1} generations. Time: {final_elapsed_time:.2f}s"
-            )
+            print(f"Optimal solution not found after {generation+1} generations.")
+            print(f"Time: {final_elapsed_time:.2f}s")
+            print(f"Best fitness: {best_fitness_overall}")
 
         return best_solution_overall, best_fitness_overall
 
-    def initialize_population(self):
+    def initialize_population(self) -> list[list[ScheduledItem]]:
         if len(self.courses) == 0:
             raise ValueError("No courses to schedule.")
 
         # Base
-        base_chromosome = []
-        # for course in self.courses:
-        #     for i, session_type in enumerate(course.sessionTypes):
-        #         for student_group_id, session_num in zip(
-        #             course.studentGroupIds, range(course.sessionsPerWeek[i])
-        #         ):
-        #             sg_name = "_".join(student_group_id)
-        #             course_display_name = f"{course.name}({course.courseId})[{session_type[:3]}-{session_num+1}]{sg_name}"
-        #             base_chromosome.append(
-        #                 ScheduledItem(
-        #                     courseId=course.courseId,
-        #                     courseName=course_display_name,
-        #                     sessionType=session_type,
-        #                     teacherId=course.teacherId,
-        #                     studentGroupIds=student_group_id,
-        #                     classroomId="",
-        #                     timeslot="",
-        #                     day="",
-        #                 )
-        #             )
+        base_chromosome: list[ScheduledItem] = []
         for course in self.courses:
             sg_name = "|".join(course.studentGroupIds)
-            course_display_name = f"{course.name} - [{course.sessionType[:3]}] | {sg_name}"
+            course_display_name = (
+                f"{course.name} - [{course.sessionType[:3]}] | {sg_name}"
+            )
             base_chromosome.append(
                 ScheduledItem(
                     courseId=course.courseId,
@@ -152,20 +139,21 @@ class GeneticScheduler:
 
         self.base_chromosome = base_chromosome
 
-        population = []
-        for i in range(self.population_size):
+        population: list[list[ScheduledItem]] = []
+        for _ in range(self.population_size):
             chromosome = self.initialize_chromosome()
             population.append(chromosome)
         return population
 
-    def initialize_chromosome(self):
+    def initialize_chromosome(self) -> list[ScheduledItem]:
         """
         Initializes a chromosome by assigning a random timeslot, day, and a heuristically chosen room
         to each base scheduled item.
         """
-        chromosome = []
+        chromosome: list[ScheduledItem] = []
         for base_gene in self.base_chromosome:
-            new_gene = base_gene.copy()  # Start with a copy of the template
+            # new_gene = base_gene.copy()
+            new_gene = base_gene.model_copy()
 
             # Heuristic for room selection: try to match room type
             suitable_rooms_for_type = [
@@ -187,9 +175,11 @@ class GeneticScheduler:
             chromosome.append(base_gene)
         return chromosome
 
-    def selection(self, population, fitness_scores):
+    def selection(
+        self, population: list[list[ScheduledItem]], fitness_scores: list[float]
+    ) -> list[list[ScheduledItem]]:
         """Tournament selection."""
-        selected_parents = []
+        selected_parents: list[list[ScheduledItem]] = []
         for _ in range(len(population)):  # Select N parents for N offspring
             tournament_indices = random.sample(
                 range(len(population)), SELECTION_TOURNAMENT_SIZE
@@ -203,7 +193,7 @@ class GeneticScheduler:
             selected_parents.append(population[winner_population_idx])
         return selected_parents
 
-    def crossover(self, parent1, parent2):
+    def crossover(self, parent1: list[ScheduledItem], parent2: list[ScheduledItem]):
         """
         Performs single-point crossover.
         Since each index in the chromosome corresponds to a specific pre-defined ScheduledItem template,
@@ -219,12 +209,14 @@ class GeneticScheduler:
         child2 = parent2[:point] + parent1[point:]
         return child1, child2
 
-    def mutate(self, chromosome):
+    def mutate(self, chromosome: list[ScheduledItem]) -> list[ScheduledItem]:
         """
         Mutates a chromosome by potentially changing the room, timeslot, or day
         for some of its ScheduledItems (genes).
         """
-        mutated_chromosome = [item.copy() for item in chromosome]  # Work on a copy
+        mutated_chromosome: list[ScheduledItem] = [
+            item.model_copy() for item in chromosome
+        ]
 
         for i in range(len(mutated_chromosome)):
             if (
@@ -240,7 +232,7 @@ class GeneticScheduler:
                     suitable_rooms_for_type = [
                         r for r in self.rooms if r.type == item_to_mutate.sessionType
                     ]
-                    new_room = None
+                    new_room: Classroom | None = None
                     if suitable_rooms_for_type:
                         new_room = random.choice(suitable_rooms_for_type)
                     elif self.rooms:  # Fallback to any room
@@ -256,8 +248,10 @@ class GeneticScheduler:
                     item_to_mutate.day = random.choice(self.days)
         return mutated_chromosome
 
-    def evolve(self, population, fitness_scores):
-        new_population = []
+    def evolve(
+        self, population: list[list[ScheduledItem]], fitness_scores: list[float]
+    ) -> list[list[ScheduledItem]]:
+        new_population: list[list[ScheduledItem]] = []
 
         # * Elitism: Carry over the best individuals
         sorted_population_indices = sorted(
@@ -341,7 +335,7 @@ class GeneticScheduler:
             )
             return float("inf")
 
-        for item_idx, scheduled_item in enumerate(chromosome):
+        for _, scheduled_item in enumerate(chromosome):
             item_penalty = 0
             # violation_reasons_for_item = [] # For detailed logging
 

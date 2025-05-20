@@ -1,10 +1,10 @@
 import {
   createParamDecorator,
-  ExecutionContext,
+  type ExecutionContext,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Request } from 'express';
-import { AuthenticatedUserPayload } from '@/common/request/express.request.d';
+import { type Request } from 'express';
+import { type AuthenticatedUserPayload } from '@/common/request/express.request.d';
 
 type UserProperty = keyof AuthenticatedUserPayload;
 

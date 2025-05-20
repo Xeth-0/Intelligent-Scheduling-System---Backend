@@ -1,41 +1,118 @@
-import { IsNotEmpty, IsString, ValidateNested } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  ValidateNested,
+  IsOptional,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
+import { DayOfWeek, SessionType } from '@prisma/client';
 
-// Interface for the teacher schedule details (classGroupId, subjectId, classroomId)
-export class TeacherScheduleDetailsDto {
+// Interface for the teacher schedule details
+export class TeacherScheduleItemDto {
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  classGroupId!: string;
+  studentGroupId!: string;
+
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  subjectId!: string;
+  courseId!: string;
+
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
   classroomId!: string;
+
+  @ApiProperty({ enum: SessionType })
+  @IsOptional()
+  sessionType?: SessionType;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  startTime!: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  endTime!: string;
+
+  @ApiProperty({ enum: DayOfWeek })
+  @IsNotEmpty()
+  day!: DayOfWeek;
 }
 
-// Interface for a single teacher's schedule (timeslot -> details)
-export interface TeacherTimeslot {
-  [timeslot: number]: TeacherScheduleDetailsDto;
-}
+// Interface for a single teacher's schedule entries
+export type TeacherTimeslots = Record<string, TeacherScheduleItemDto>;
 
 // Interface for the full teacher schedule (teacherId -> timeslot -> details)
-export interface TeacherSchedule {
-  [teacherId: string]: TeacherTimeslot;
-}
+export type TeacherSchedule = Record<string, TeacherTimeslots>;
 
 // Wrapper class for validation and serialization
 export class TeacherScheduleWrapperDto {
-  @ApiProperty()
+  @ApiProperty({
+    description: 'Schedule organized by teacher and timeslot',
+  })
   @ValidateNested({ each: true })
-  @Type(() => TeacherScheduleDetailsDto)
+  @Type(() => TeacherScheduleItemDto)
   schedule!: TeacherSchedule;
 }
 
+// Interface for a classroom schedule item
+export class ClassroomScheduleItemDto {
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  teacherId!: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  studentGroupId!: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  courseId!: string;
+
+  @ApiProperty({ enum: SessionType })
+  @IsOptional()
+  sessionType?: SessionType;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  startTime!: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  endTime!: string;
+
+  @ApiProperty({ enum: DayOfWeek })
+  @IsNotEmpty()
+  day!: DayOfWeek;
+}
+
+// Interface for a classroom's schedule entries
+export type ClassroomTimeslots = Record<string, ClassroomScheduleItemDto>;
+
+// Interface for the full classroom schedule (classroomId -> timeslot -> details)
+export type ClassroomSchedule = Record<string, ClassroomTimeslots>;
+
+// Wrapper class for validation and serialization
+export class ClassroomScheduleWrapperDto {
+  @ApiProperty({
+    description: 'Schedule organized by classroom and timeslot',
+  })
+  @ValidateNested({ each: true })
+  @Type(() => ClassroomScheduleItemDto)
+  schedule!: ClassroomSchedule;
+}
+
+// Keeping mock data for reference
 export const teacherMockSchedule = {
   schedule: {
     T001: {

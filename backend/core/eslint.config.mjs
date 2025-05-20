@@ -1,5 +1,4 @@
 // @ts-check
-import eslint from '@eslint/js';
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
 import eslintPluginJest from 'eslint-plugin-jest';
 import globals from 'globals';
@@ -13,12 +12,42 @@ export default tseslint.config(
       '**/*.test.ts',
       '**/*.spec.ts',
       '**/__tests__/**/*.ts',
+      '**/*.e2e-spec.ts',
     ],
   },
-  eslint.configs.recommended,
-  ...tseslint.configs.recommendedTypeChecked,
-  eslintPluginPrettierRecommended,
   {
+    files: ['**/*.ts'],
+    extends: [
+      ...tseslint.configs.recommended,
+      ...tseslint.configs.recommendedTypeChecked,
+      ...tseslint.configs.stylisticTypeChecked,
+      eslintPluginPrettierRecommended,
+    ],
+    rules: {
+      '@typescript-eslint/array-type': 'off',
+      '@typescript-eslint/consistent-type-definitions': 'off',
+      '@typescript-eslint/consistent-type-imports': [
+        'warn',
+        {
+          prefer: 'type-imports',
+          fixStyle: 'inline-type-imports',
+        },
+      ],
+      '@typescript-eslint/no-floating-promises': 'warn',
+      '@typescript-eslint/no-unsafe-argument': 'warn',
+      '@typescript-eslint/no-unsafe-assignment': 'warn',
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        { argsIgnorePattern: '^_' },
+      ],
+      'linebreak-style': ['error', 'unix'],
+      'eol-last': ['error', 'always'],
+    },
+  },
+  {
+    linterOptions: {
+      reportUnusedDisableDirectives: true,
+    },
     languageOptions: {
       globals: {
         ...globals.node,
@@ -30,17 +59,6 @@ export default tseslint.config(
         projectService: true,
         tsconfigRootDir: import.meta.dirname,
       },
-    },
-  },
-  {
-    rules: {
-      '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-floating-promises': 'warn',
-      '@typescript-eslint/no-unsafe-argument': 'warn',
-      '@typescript-eslint/no-unsafe-assignment': 'warn',
-      '@typescript-eslint/no-unused-vars': 'warn',
-      'linebreak-style': ['error', 'unix'],
-      'eol-last': ['error', 'always'],
     },
   },
 );

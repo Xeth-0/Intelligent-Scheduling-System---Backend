@@ -20,9 +20,9 @@ import {
 import { ApiResponse } from '../../common/response/api-response.dto';
 import { RefreshJwtAuthGuard } from '../../common/guards/refresh-jwt-auth.guard';
 import { LogoutDocs } from '../../common/decorators/swagger/auth.swagger.docs';
-import { GetUser } from '../../common/decorators/auth';
+import { GetUser, Public } from '../../common/decorators/auth';
 import { Request } from 'express';
-
+import { UserResponseDto } from '../users/dtos';
 @Controller('auth')
 @ApiTags('Authentication')
 export class AuthController {
@@ -102,5 +102,61 @@ export class AuthController {
   @Get('test_exception')
   testException() {
     throw new Error('Test exception');
+  }
+
+  // ! Debug Routes. Remove before production.
+  @Get('debug_get_all_users')
+  async debugGetAllUsers(): Promise<ApiResponse<UserResponseDto[]>> {
+    const users = await this.usersService.findAllUsers();
+    return new ApiResponse({
+      success: true,
+      data: users,
+      message: 'Users fetched successfully',
+    });
+  }
+
+  @Post('debug_admin_login')
+  @Public()
+  async getAdminToken(): Promise<ApiResponse<TokensDto>> {
+    const loginDto = {
+      email: 'admin1@email.email',
+      password: 'adminpassword1',
+    };
+    const tokens = await this.authService.login(loginDto);
+    return new ApiResponse({
+      success: true,
+      data: tokens,
+      message: 'Admin login successful',
+    });
+  }
+
+  @Post('debug_student_login')
+  @Public()
+  async getStudentToken(): Promise<ApiResponse<TokensDto>> {
+    const loginDto = {
+      email: 'student1@email.email',
+      password: 'studentpassword1',
+    };
+    const tokens = await this.authService.login(loginDto);
+    return new ApiResponse({
+      success: true,
+      data: tokens,
+      message: 'Student login successful',
+    });
+  }
+
+  @Post('debug_teacher_login')
+  @Public()
+  async getTeacherToken(): Promise<ApiResponse<TokensDto>> {
+    const loginDto = {
+      email: 'teacher1@email.email',
+      password: 'teacher1password',
+    };
+    const tokens = await this.authService.login(loginDto);
+    return new ApiResponse({
+      success: true,
+      data: tokens,
+      message: 'Teacher login successful',
+    });
   }
 }

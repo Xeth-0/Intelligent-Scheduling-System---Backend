@@ -11,4 +11,9 @@ export class HealthController {
       timestamp: new Date().toISOString(),
     };
   }
+
+  @Get('/debug-sentry')
+  debugSentry() {
+    throw new Error('This should be captured by Sentry');
+  }
 }

@@ -1,38 +1,84 @@
-import { IsNotEmpty, IsString, ValidateNested } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  ValidateNested,
+  IsOptional,
+} from 'class-validator';
 import { Type } from 'class-transformer';
+import { ApiProperty } from '@nestjs/swagger';
+import { DayOfWeek, SessionType } from '@prisma/client';
 
-// Interface for the schedule details (teacherId, subjectId, classroomId)
-export class ScheduleItem {
+// Interface for the schedule session details
+export class ScheduleItemDto {
+  @ApiProperty()
   @IsString()
   @IsNotEmpty()
   teacherId!: string;
 
+  @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  subjectId!: string;
+  courseId!: string;
 
+  @ApiProperty()
   @IsString()
   @IsNotEmpty()
   classroomId!: string;
-}
 
-// Interface for the full general schedule (classGroupId -> timeslot -> details)
-export interface Schedule {
-  [classGroupId: string]: ClassGroupSchedule;
+  @ApiProperty({ enum: SessionType })
+  @IsOptional()
+  sessionType?: SessionType;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  startTime!: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  endTime!: string;
+
+  @ApiProperty({ enum: DayOfWeek })
+  @IsNotEmpty()
+  day!: DayOfWeek;
 }
 
 // Interface for a single class group's schedule (timeslot -> details)
-export interface ClassGroupSchedule {
-  [timeslot: number]: ScheduleItem;
-}
+export type ClassGroupSchedule = Record<string, ScheduleItemDto>;
+
+// Interface for the full general schedule (classGroupId -> timeslot -> details)
+export type Schedule = Record<string, ClassGroupSchedule>;
 
 // Wrapper class for validation and serialization
 export class GeneralScheduleWrapperDto {
+  @ApiProperty({
+    description: 'Schedule organized by class group and timeslot',
+  })
   @ValidateNested({ each: true })
-  @Type(() => ScheduleItem)
+  @Type(() => ScheduleItemDto)
   schedule!: Schedule;
 }
 
+// Query parameter DTO for filtering schedules
+export class ScheduleQueryParamsDto {
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  classGroupId?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  teacherId?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  classroomId?: string;
+}
+
+// Keeping mock data for reference
 export const generalMockSchedule = {
   schedule: {
     class1: {
