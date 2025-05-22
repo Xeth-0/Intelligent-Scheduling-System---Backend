@@ -32,7 +32,7 @@ import {
 
 @Controller('scheduling')
 @ApiBearerAuth()
-@ApiTags('Users')
+@ApiTags('Scheduling')
 @UseInterceptors(ClassSerializerInterceptor)
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class SchedulingController {
