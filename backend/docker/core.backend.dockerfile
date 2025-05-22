@@ -4,14 +4,14 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Copy package files first for better caching
-COPY backend/core/package*.json ./
-COPY backend/core/prisma/schema.prisma ./prisma/
+COPY ./package*.json ./
+COPY ./prisma/schema.prisma ./prisma/
 
 # Install dependencies including dev dependencies for build
 RUN npm ci --include=dev
 
 # Copy all source files
-COPY backend/core/ .
+COPY . .
 
 # Build the application
 RUN npm run build

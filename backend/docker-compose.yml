@@ -1,18 +1,52 @@
+version: "3.8"
 services:
-  core:
-    build: ./core
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=admin
+      - RABBITMQ_DEFAULT_PASS=securepassword123
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  nestjs-app:
+    build:
+      context: ./core
+      dockerfile: ../docker/core.backend.dockerfile
+    container_name: nestjs-app
     ports:
       - "3000:3000"
-    env_file: .env
-  
-  # scheduling:
-  #   build: ./scheduling-engine
-  #   ports:
-  #     - "8000:8000"
-    
-  # postgres:
-  #   image: postgres:15
-  #   # Add other database config
+    environment:
+      - RABBITMQ_URL=amqp://admin:securepassword123@rabbitmq:5672
+      - NODE_ENV=development
+    depends_on:
+      - rabbitmq
+    networks:
+      - app-network
+    restart: unless-stopped
 
-  # redis:
-  #   image: redis:alpine
+  python-service:
+    build:
+      context: ./python-service
+      dockerfile: Dockerfile
+    container_name: python-service
+    environment:
+      - RABBITMQ_URL=amqp://admin:securepassword123@rabbitmq:5672
+    depends_on:
+      - rabbitmq
+    networks:
+      - app-network
+    restart: unless-stopped
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  rabbitmq_data:
