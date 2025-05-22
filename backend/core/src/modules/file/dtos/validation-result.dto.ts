@@ -1,4 +1,6 @@
 export class ValidationResultDto {
-  message: string;
-  data: any;
+  success: boolean;
+  errors: any[]
+  data: any[];
+  taskId: string;
 }

@@ -450,26 +450,27 @@ def publish_result(task_id, result):
 
 # Define the Celery task for CSV validation
 @app.task(name="csv_validation_request")
-def validate_csv(task_id: str, file_data: str):
+def validate_csv(task_id: str, file_data: str, category: str):
     # Decode the base64-encoded CSV file
     csv_content = base64.b64decode(file_data).decode("utf-8")
 
+    returned = validate_csv_file(csv_content, CONFIGS[category])
     # Placeholder for CSV validation logic
     validated_data = [
         {"row": 1, "data": "sample_data"},
     ]
 
-    # Create the result object
-    result = {
-        "message": "CSV validation completed successfully",
-        "data": validated_data,
-    }
+    # # Create the result object
+    # result = {
+    #     "message": "CSV validation completed successfully",
+    #     "data": validated_data,
+    # }
 
     # Publish the result to the response queue
-    publish_result(task_id, result)
+    publish_result(task_id, returned)
 
     # Return result for Celery (optional, for task tracking)
-    return result
+    return returned
 
 
 import sys

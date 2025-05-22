@@ -11,6 +11,7 @@ export class FileService {
   // Send CSV file to Python service for validation (non-blocking)
   async queueValidationTask(
     file: Express.Multer.File,
+    category: string,
   ): Promise<ValidationQueuedDto> {
     // Convert file buffer to base64 for safe transmission
     const fileData = file.buffer.toString('base64');
@@ -20,6 +21,7 @@ export class FileService {
     this.client.emit('csv_validation_request', {
       taskId: taskId,
       fileData: fileData,
+      category: category,
     });
     // Immediately return a response to the client
     return { message: 'File queued for validation', taskId: taskId };

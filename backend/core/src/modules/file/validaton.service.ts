@@ -9,9 +9,9 @@ export class ValidationService {
   // Handle validation results from the Python service
   @EventPattern('csv_validation_response')
 //   @MessageHandler()
-  handleValidationResult(data: ValidationResultDto & { taskId: string }) {
+  handleValidationResult(data: ValidationResultDto) {
     // Log the validation result (replace with database storage or other logic)
-    this.logger.log(`Received validation result for task ${data.taskId}: ${data.message}`);
+    this.logger.log(`Received validation result for task ${data.taskId}: ${data.errors.length} errors`);
     this.logger.log(`Validated data: ${JSON.stringify(data.data)}`);
     // TODO: Store result in database or notify client (e.g., via WebSocket)
   }
