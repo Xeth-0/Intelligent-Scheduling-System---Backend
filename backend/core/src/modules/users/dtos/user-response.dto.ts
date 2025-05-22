@@ -3,23 +3,23 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export class UserResponseDto {
   @ApiProperty({ description: 'System generated unique user ID' })
-  userId: string;
+  userId!: string;
 
   @ApiProperty({ example: 'John' })
-  firstName: string;
+  firstName!: string;
 
   @ApiProperty({ example: 'Doe' })
-  lastName: string;
+  lastName!: string;
 
   @ApiProperty({ example: 'john.doe@university.edu' })
-  email: string;
+  email!: string;
 
   @ApiProperty({ enum: Role })
-  role: Role;
+  role!: Role;
 
   @ApiProperty()
-  createdAt: Date;
+  createdAt!: Date;
 
   @ApiProperty()
-  updatedAt: Date;
-} 
+  updatedAt!: Date;
+}

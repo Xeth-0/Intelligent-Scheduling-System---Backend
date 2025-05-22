@@ -12,13 +12,15 @@ The System is an AI/ML-powered platform designed to optimize school timetables b
 
 * Automatically generate schedules that satisfy hard and soft constraints.   
 * Hard Constraints:   
-- Overlapping courses  
--   
+- Room Schedule Overlap (taking the room type like labs into account)  
+- Teacher Schedule Overlap  
+- Student Group overlap  
+- Timeslot Validity (no classes during lunch, or after 10:00 for eg)  
 * Soft Constraints:   
 - Time preference for teachers  
-- schedule classes in a week with the maximum possible gap in days.(?)  
-- Floor considerations based on disability.  
-- 
+- Schedule classes in a week with the maximum/minimum possible gap in days.(? Not sure which one to go for, as it depends on teacher preferences too)  
+- Scheduling the harder courses earlier in the day. (can be determined from the course ECTS)  
+- Floor considerations based on disability (should be in hard constraints, but i want to make it easier for the scheduler for now).  
 
 * Should narrow down soft and hard constraints soon as well.
 
@@ -80,71 +82,6 @@ Not sure about the reporting yet, but the schedules should be exportable for eac
 ## **4\. Options for the Scheduling Engine**
 
 These are the options for which ML/AI tools or algorithms we can use for the actual scheduling. We need to decide which one we are going to use, along with a plan for it by the time we write the SDS (i’m assuming we have to lay out a plan for it in that doc). For the SRS, it should be fine, the only thing that matters is to narrow down *what we want the scheduler to do.*
-
-### **4.1. Constraint Satisfaction Problem (CSP)**
-
-* **Description**: Solve scheduling as a constraint satisfaction problem, focusing on satisfying hard constraints first.  
-* **Pros**:  
-  * Efficient for hard constraints.  
-  * Mature tools like Google OR-Tools and Z3 Solver are available.  
-  * Easy to extend with additional constraints.  
-* **Cons**:  
-  * Struggles with soft constraints unless prioritized explicitly.  
-  * May become computationally intensive for large datasets.
-
-  ### **4.2. Integer Linear Programming (ILP)**
-
-* **Description**: Use mathematical optimization to satisfy constraints while optimizing soft objectives.  
-* **Pros**:  
-  * Guarantees optimal solutions if solvable.  
-  * Balances hard and soft constraints effectively.  
-  * Supports multi-objective optimization.  
-* **Cons**:  
-  * Computationally expensive for complex problems.  
-  * Requires precise mathematical formulation.
-
-  ### **4.3. Heuristic Algorithms**
-
-* **Description**: Use rule-based heuristics (e.g., greedy algorithms for graph coloring) for quick and approximate solutions.  
-* **Pros**:  
-  * Simple and fast, even for larger datasets.  
-  * Flexible and easy to implement.  
-* **Cons**:  
-  * No guarantee of finding an optimal solution.  
-  * Limited ability to handle complex soft constraints.
-
-  ### **4.4. Hybrid Approach**
-
-* **Description**: Combine heuristics for initial scheduling with CSP or ILP for refinement.  
-* **Pros**:  
-  * Balances speed and quality.  
-  * Handles both hard and soft constraints well.  
-* **Cons**:  
-  * More complex to implement and debug.
-
-  ### **4.5. Machine Learning** 
-
-* **Description**: Use reinforcement learning or supervised models to iteratively improve schedules.  
-* **Pros**:  
-  * Learns and adapts over time based on user feedback.  
-  * Handles complex, dynamic constraints.  
-* **Cons**:  
-  * Requires large datasets and extensive training.  
-  * Development is time-intensive.
-
-  ### **4.6.Hybrid (ML and ..)**
-
-* Start with **Constraint Programming (CP)** or **Mixed Integer Linear Programming (MILP)** to build the core scheduling system for handling hard constraints.  
-* Integrate **ML** for adaptability to soft constraints and dynamic changes, like learning user preferences or optimizing schedules over time.  
-* Ensure scalability by considering **modular design**: separate hard-constraint resolution from dynamic updates.(??)
-
-## 
-
-## 
-
-## 
-
-## 
 
 ## **Requirements**
 

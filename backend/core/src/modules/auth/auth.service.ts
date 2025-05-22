@@ -1,7 +1,6 @@
 import {
   Injectable,
   UnauthorizedException,
-  ConflictException,
   ForbiddenException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
@@ -10,6 +9,7 @@ import { TokensService } from './tokens.service';
 import { LoginDto, RegisterDto, TokensDto } from './dtos';
 import { IAuthService } from '../.interfaces/auth.service.interface';
 import { Role } from '@prisma/client';
+import { AuthenticatedUserPayload } from '@/common/request/express.request';
 
 @Injectable()
 export class AuthService implements IAuthService {
@@ -37,22 +37,18 @@ export class AuthService implements IAuthService {
       user.email,
       user.role,
     );
-    
+
     await this.tokensService.saveRefreshToken(user.userId, tokens.refreshToken);
-    
+
     return tokens;
   }
 
   async register(registerDto: RegisterDto): Promise<TokensDto> {
-    const existingUser = await this.usersService.findByEmail(registerDto.email);
-    if (existingUser) {
-      throw new ConflictException('User with this email already exists');
-    }
-
     const isFirstUser = await this.usersService.isFirstUser();
-    
     if (!isFirstUser && registerDto.role !== Role.STUDENT) {
-      throw new ForbiddenException('Only student accounts can be created publicly');
+      throw new ForbiddenException(
+        'Only student accounts can be created publicly',
+      );
     }
 
     const user = await this.usersService.createUser({
@@ -65,9 +61,9 @@ export class AuthService implements IAuthService {
       user.email,
       user.role,
     );
-    
+
     await this.tokensService.saveRefreshToken(user.userId, tokens.refreshToken);
-    
+
     return tokens;
   }
 
@@ -86,11 +82,23 @@ export class AuthService implements IAuthService {
     }
   }
 
-  async validateUser(email: string, password: string): Promise<any> {
+  async validateUser(
+    email: string,
+    password: string,
+  ): Promise<AuthenticatedUserPayload> {
     const user = await this.usersService.findByEmail(email);
-    if (!user) return null;
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
-    return isPasswordValid ? user : null;
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+    return {
+      sub: user.userId,
+      email: user.email,
+      role: user.role,
+    };
   }
 
   async logout(userId: string): Promise<void> {

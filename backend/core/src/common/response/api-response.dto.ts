@@ -1,10 +1,11 @@
-export class CustomApiResponse<T> {
-    success: boolean;
-    message?: string;
-    data: T;
-    error?: string;
-  
-    constructor(partial: Partial<CustomApiResponse<T>> & { data: T }) {
-      Object.assign(this, partial);
-    }
-  } 
+export class ApiResponse<T> {
+  success!: boolean;
+  data!: T | null;
+  message?: string;
+  error?: string;
+  meta?: unknown;
+
+  constructor(partial: Partial<ApiResponse<T>> & { data: T }) {
+    Object.assign(this, partial);
+  }
+}

@@ -1,10 +1,25 @@
-import { createParamDecorator, ExecutionContext } from "@nestjs/common";
+import {
+  createParamDecorator,
+  type ExecutionContext,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { type Request } from 'express';
+import { type AuthenticatedUserPayload } from '@/common/request/express.request.d';
 
-export const GetUser = createParamDecorator((data: unknown, ctx: ExecutionContext) => {
-    const request = ctx.switchToHttp().getRequest();
-    
-    if (data) {
-        return request.user[data as keyof typeof request.user];
+type UserProperty = keyof AuthenticatedUserPayload;
+
+export const GetUser = createParamDecorator(
+  (data: UserProperty | undefined, ctx: ExecutionContext) => {
+    const request = ctx.switchToHttp().getRequest<Request>();
+    const user = request.user;
+    if (!user) {
+      throw new UnauthorizedException('User not found');
     }
-    return request.user;
-});
+
+    if (data && data in user) {
+      return user[data] as string;
+    }
+
+    return user;
+  },
+);

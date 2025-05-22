@@ -1,11 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { UsersController } from '../users.controller';
-import { UsersService } from '../users.service';
-import { CreateUserDto, UpdateUserDto, UserResponseDto } from '../dtos';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Role } from '@prisma/client';
+import { ApiResponse } from '../../../common/response/api-response.dto';
 import { JwtAuthGuard, RolesGuard } from '../../../common/guards';
-import { CustomApiResponse } from '../../../common/response/api-response.dto';
+import { CreateUserDto, UpdateUserDto, UserResponseDto } from '../dtos';
+import { UsersController } from '../users.controller';
+import { UsersService } from '../users.service';
 
 jest.mock('../../../common/guards/jwt-auth.guard', () => ({
   JwtAuthGuard: jest.fn().mockImplementation(() => ({
@@ -65,11 +65,11 @@ describe('UsersController', () => {
         password: 'password123',
         role: Role.TEACHER,
       };
-      const mockResponse = new CustomApiResponse({
+      const mockResponse: ApiResponse<UserResponseDto> = new ApiResponse({
         success: true,
-        data: mockUser
+        data: mockUser,
       });
-      usersService.createUser.mockResolvedValue(mockResponse.data);
+      usersService.createUser.mockResolvedValue(mockResponse.data!);
 
       const result = await controller.create(createDto);
       expect(result.data).toEqual(mockUser);
@@ -113,7 +113,9 @@ describe('UsersController', () => {
     it('should throw NotFoundException for non-existent user', async () => {
       usersService.findUserById.mockRejectedValue(new NotFoundException());
 
-      await expect(controller.findOne('999')).rejects.toThrow(NotFoundException);
+      await expect(controller.findOne('999')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -123,7 +125,7 @@ describe('UsersController', () => {
       usersService.updateUser.mockResolvedValue({ ...mockUser, ...updateDto });
 
       const result = await controller.update('1', updateDto);
-      expect(result.data.firstName).toBe('Updated');
+      expect(result.data?.firstName).toBe('Updated');
       expect(usersService.updateUser).toHaveBeenCalledWith('1', updateDto);
     });
   });

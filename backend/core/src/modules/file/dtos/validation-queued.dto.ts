@@ -1,4 +1,4 @@
 export class ValidationQueuedDto {
-  message: string;
-  taskId: string;
+  message!: string;
+  taskId!: string;
 }

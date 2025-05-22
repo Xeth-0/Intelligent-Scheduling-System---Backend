@@ -1,10 +1,7 @@
 import { applyDecorators } from '@nestjs/common';
 import {
   ApiOperation,
-  ApiResponse,
-  ApiBody,
   ApiParam,
-  ApiForbiddenResponse,
   ApiCreatedResponse,
   ApiOkResponse,
 } from '@nestjs/swagger';
@@ -31,8 +28,11 @@ export const GetGeneralScheduleDocs = () => {
         },
       },
     }),
-    ApiParam({ name: 'classGroupId', description: 'class ID', required: false }),
-
+    ApiParam({
+      name: 'classGroupId',
+      description: 'class ID',
+      required: false,
+    }),
   );
 };
 
@@ -65,10 +65,8 @@ export const GetTeacherScheduleDocs = () => {
       },
     }),
     ApiParam({ name: 'teacherId', description: 'teacher ID', required: false }),
-
   );
 };
-
 // export const GetUserByIdDocs = () => {
 //   return applyDecorators(
 //     ApiOperation({ summary: 'Get user by ID' }),

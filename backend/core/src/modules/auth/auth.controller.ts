@@ -4,7 +4,7 @@ import {
   RegisterDocs,
   RefreshDocs,
 } from '../../common/decorators/swagger/auth.swagger.docs';
-import { LoginDto, RegisterDto, RefreshTokenDto, TokensDto } from './dtos';
+import { LoginDto, RegisterDto, TokensDto } from './dtos';
 import { Role, User } from '@prisma/client';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
@@ -17,12 +17,12 @@ import {
   Get,
   UnauthorizedException,
 } from '@nestjs/common';
-import { CustomApiResponse } from '../../common/response/api-response.dto';
+import { ApiResponse } from '../../common/response/api-response.dto';
 import { RefreshJwtAuthGuard } from '../../common/guards/refresh-jwt-auth.guard';
 import { LogoutDocs } from '../../common/decorators/swagger/auth.swagger.docs';
-import { GetUser } from '../../common/decorators/auth';
+import { GetUser, Public } from '../../common/decorators/auth';
 import { Request } from 'express';
-
+import { UserResponseDto } from '../users/dtos';
 @Controller('auth')
 @ApiTags('Authentication')
 export class AuthController {
@@ -33,11 +33,9 @@ export class AuthController {
 
   @Post('login')
   @LoginDocs()
-  async login(
-    @Body() loginDto: LoginDto,
-  ): Promise<CustomApiResponse<TokensDto>> {
+  async login(@Body() loginDto: LoginDto): Promise<ApiResponse<TokensDto>> {
     const tokens = await this.authService.login(loginDto);
-    return new CustomApiResponse({
+    return new ApiResponse({
       success: true,
       data: tokens,
       message: 'Login successful',
@@ -48,7 +46,7 @@ export class AuthController {
   @RegisterDocs()
   async register(
     @Body() registerDto: RegisterDto,
-  ): Promise<CustomApiResponse<TokensDto>> {
+  ): Promise<ApiResponse<TokensDto>> {
     // If the user is the first user, force role to be ADMIN
     const isFirstUser = await this.usersService.isFirstUser();
     if (isFirstUser) {
@@ -61,8 +59,7 @@ export class AuthController {
     }
 
     const tokens = await this.authService.register(registerDto);
-
-    return new CustomApiResponse({
+    return new ApiResponse({
       success: true,
       data: tokens,
       message:
@@ -75,15 +72,16 @@ export class AuthController {
   @Post('refresh')
   @RefreshDocs()
   @UseGuards(RefreshJwtAuthGuard)
-  async refresh(
-    @Req() req: Request,
-  ): Promise<CustomApiResponse<TokensDto>> {
-    const refreshToken = req.get('authorization')?.replace('Bearer ', '').trim();
+  async refresh(@Req() req: Request): Promise<ApiResponse<TokensDto>> {
+    const refreshToken = req
+      .get('authorization')
+      ?.replace('Bearer ', '')
+      .trim();
     if (!refreshToken) {
       throw new UnauthorizedException('Refresh token is required');
     }
     const tokens = await this.authService.refreshTokens(refreshToken);
-    return new CustomApiResponse({
+    return new ApiResponse({
       success: true,
       data: tokens,
       message: 'Tokens refreshed successfully',
@@ -92,9 +90,9 @@ export class AuthController {
 
   @Get('logout')
   @LogoutDocs()
-  async logout(@GetUser() user: User): Promise<CustomApiResponse<void>> {
+  async logout(@GetUser() user: User): Promise<ApiResponse<void>> {
     await this.authService.logout(user.userId);
-    return new CustomApiResponse({
+    return new ApiResponse({
       success: true,
       message: 'Logout successful',
       data: undefined,
@@ -102,7 +100,63 @@ export class AuthController {
   }
 
   @Get('test_exception')
-  async testException() {
+  testException() {
     throw new Error('Test exception');
+  }
+
+  // ! Debug Routes. Remove before production.
+  @Get('debug_get_all_users')
+  async debugGetAllUsers(): Promise<ApiResponse<UserResponseDto[]>> {
+    const users = await this.usersService.findAllUsers();
+    return new ApiResponse({
+      success: true,
+      data: users,
+      message: 'Users fetched successfully',
+    });
+  }
+
+  @Post('debug_admin_login')
+  @Public()
+  async getAdminToken(): Promise<ApiResponse<TokensDto>> {
+    const loginDto = {
+      email: 'admin1@email.email',
+      password: 'adminpassword1',
+    };
+    const tokens = await this.authService.login(loginDto);
+    return new ApiResponse({
+      success: true,
+      data: tokens,
+      message: 'Admin login successful',
+    });
+  }
+
+  @Post('debug_student_login')
+  @Public()
+  async getStudentToken(): Promise<ApiResponse<TokensDto>> {
+    const loginDto = {
+      email: 'student1@email.email',
+      password: 'studentpassword1',
+    };
+    const tokens = await this.authService.login(loginDto);
+    return new ApiResponse({
+      success: true,
+      data: tokens,
+      message: 'Student login successful',
+    });
+  }
+
+  @Post('debug_teacher_login')
+  @Public()
+  async getTeacherToken(): Promise<ApiResponse<TokensDto>> {
+    const loginDto = {
+      email: 'teacher1@email.email',
+      password: 'teacher1password',
+    };
+    const tokens = await this.authService.login(loginDto);
+    return new ApiResponse({
+      success: true,
+      data: tokens,
+      message: 'Teacher login successful',
+    });
   }
 }

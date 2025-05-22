@@ -2,11 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from '../auth.service';
 import { UsersService } from '../../users/users.service';
 import { TokensService } from '../tokens.service';
-import {
-  UnauthorizedException,
-  ConflictException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
@@ -24,9 +20,9 @@ describe('AuthService', () => {
     lastName: 'Doe',
     email: 'test@example.com',
     passwordHash: 'hashedPassword',
+    phone: '1234567890',
+    needWheelchairAccessibleRoom: false,
     role: Role.STUDENT,
-    departmentId: null,
-    classGroupId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -126,7 +122,6 @@ describe('AuthService', () => {
         lastName: 'Doe',
         role: Role.STUDENT,
       };
-      usersService.findByEmail.mockResolvedValue(null);
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashedPassword');
       usersService.createUser.mockResolvedValue(mockUser);
       tokensService.generateTokens.mockResolvedValue(mockTokens);
@@ -136,7 +131,6 @@ describe('AuthService', () => {
 
       // Assert
       expect(result).toEqual(mockTokens);
-      expect(usersService.findByEmail).toHaveBeenCalledWith(registerDto.email);
       expect(usersService.createUser).toHaveBeenCalled();
     });
 
@@ -155,30 +149,17 @@ describe('AuthService', () => {
         ForbiddenException,
       );
     });
-
-    it('should throw ConflictException when email already exists', async () => {
-      // Arrange
-      const registerDto = {
-        email: 'existing@example.com',
-        password: 'password123',
-        firstName: 'John',
-        lastName: 'Doe',
-        role: Role.STUDENT,
-      };
-      usersService.findByEmail.mockResolvedValue(mockUser);
-
-      // Act & Assert
-      await expect(service.register(registerDto)).rejects.toThrow(
-        ConflictException,
-      );
-    });
   });
 
   describe('refreshTokens', () => {
     it('should successfully refresh tokens with valid refresh token', async () => {
       // Arrange
       const refreshToken = 'validRefreshToken';
-      const payload = { sub: '1', email: 'test@example.com' };
+      const payload = {
+        sub: '1',
+        email: 'test@example.com',
+        role: Role.STUDENT,
+      };
       tokensService.verifyRefreshToken.mockResolvedValue(payload);
       usersService.findUserById.mockResolvedValue(mockUser);
       tokensService.generateTokens.mockResolvedValue(mockTokens);

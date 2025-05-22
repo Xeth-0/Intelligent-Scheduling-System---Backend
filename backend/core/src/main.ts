@@ -1,8 +1,10 @@
-import './common/sentry/instrument';
+import '@/common/sentry/instrument';
 
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { ValidationPipe } from '@nestjs/common';
+import { AllExceptionsFilter } from '@/common/filters/all-exceptions.filter';
 import { ConfigService } from '@nestjs/config';
 import { Transport, MicroserviceOptions } from '@nestjs/microservices';
 async function bootstrap() {
@@ -22,10 +24,10 @@ async function bootstrap() {
   //   },
   // });
 
-    app.connectMicroservice<MicroserviceOptions>({
+  app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.RMQ,
     options: {
-      urls:[process.env.RABBITMQ_URL ?? ''],
+      urls: [process.env.RABBITMQ_URL ?? ''],
       queue: 'csv_validation_response', // Queue for validation results
       queueOptions: {
         durable: true,
@@ -37,6 +39,19 @@ async function bootstrap() {
   app.enableCors({
     origin: true,
   });
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
+    }),
+  );
+
+  app.useGlobalFilters(new AllExceptionsFilter(app.getHttpAdapter()));
 
   // Swagger Config
   const config = new DocumentBuilder()
@@ -50,6 +65,12 @@ async function bootstrap() {
   SwaggerModule.setup('api', app, document);
   // Start all microservices
   await app.startAllMicroservices();
-  await app.listen(process.env.PORT ?? 3000);
+  const PORT = process.env.PORT ?? 3000;
+
+  await app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+  
 }
-bootstrap();
+
+void bootstrap();

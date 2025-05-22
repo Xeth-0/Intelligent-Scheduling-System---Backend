@@ -10,7 +10,7 @@ import { FileService } from './file.service';
 import { ValidationQueuedDto } from './dtos/validation-queued.dto';
 import { ApiTags } from '@nestjs/swagger';
 import { UploadFieDocs } from 'src/common/decorators/swagger/file.swagger.docs';
-import { UploadFileDto } from './dtos/upload-file.dto';
+import { UploadFileDto } from './dtos/upload.dto';
 @Controller('file')
 @ApiTags('file')
 export class FileController {

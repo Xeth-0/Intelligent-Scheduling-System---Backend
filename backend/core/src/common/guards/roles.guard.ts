@@ -1,6 +1,7 @@
 import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Role } from '@prisma/client';
+import { Request } from 'express';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -11,24 +12,24 @@ export class RolesGuard implements CanActivate {
       context.getHandler(),
       context.getClass(),
     ]);
-    console.log('Required roles:', requiredRoles);
+    console.debug('Required roles:', requiredRoles);
+    const request = context.switchToHttp().getRequest<Request>();
+    console.debug('User in request:', request.user);
 
-    const request = context.switchToHttp().getRequest();
-    console.log('User in request:', request.user);
+    const user = request.user;
 
     if (!requiredRoles) {
-      console.log('No roles required, allowing access');
+      console.debug('No roles required, allowing access');
       return true;
     }
-
-    if (!request.user) {
-      console.log('No user found in request');
+    if (!user) {
+      console.debug('No user found in request');
       return false;
     }
 
-    console.log('User role:', request.user.role);
-    const hasRole = requiredRoles.includes(request.user.role);
-    console.log('Has required role:', hasRole);
+    console.debug('User role:', user.role);
+    const hasRole = requiredRoles.some((role) => role === user.role);
+    console.debug('Has required role:', hasRole);
     return hasRole;
   }
-} 
+}

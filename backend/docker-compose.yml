@@ -1,4 +1,4 @@
-version: "3.8"
+
 services:
   rabbitmq:
     image: rabbitmq:3-management
@@ -18,7 +18,7 @@ services:
   nestjs-app:
     build:
       context: ./core
-      dockerfile: ../docker/core.backend.dockerfile
+      dockerfile: ../.docker/core.backend.dockerfile
     container_name: nestjs-app
     ports:
       - "3000:3000"
@@ -31,18 +31,18 @@ services:
       - app-network
     restart: unless-stopped
 
-  python-service:
-    build:
-      context: ./python-service
-      dockerfile: Dockerfile
-    container_name: python-service
-    environment:
-      - RABBITMQ_URL=amqp://admin:securepassword123@rabbitmq:5672
-    depends_on:
-      - rabbitmq
-    networks:
-      - app-network
-    restart: unless-stopped
+  # python-service:
+  #   build:
+  #     context: ./python-service
+  #     dockerfile: Dockerfile
+  #   container_name: python-service
+  #   environment:
+  #     - RABBITMQ_URL=amqp://admin:securepassword123@rabbitmq:5672
+  #   depends_on:
+  #     - rabbitmq
+  #   # networks:
+  #   #   - app-network
+  #   restart: unless-stopped
 
 networks:
   app-network:

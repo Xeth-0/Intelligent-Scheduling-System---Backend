@@ -1,14 +1,17 @@
 import { applyDecorators } from '@nestjs/common';
 import {
   ApiOperation,
-  ApiResponse,
   ApiBody,
   ApiParam,
   ApiForbiddenResponse,
   ApiCreatedResponse,
   ApiOkResponse,
 } from '@nestjs/swagger';
-import { UserResponseDto, CreateUserDto, UpdateUserDto } from '../../../modules/users/dtos';
+import {
+  UserResponseDto,
+  CreateUserDto,
+  UpdateUserDto,
+} from '../../../modules/users/dtos';
 
 export const GetProfileDocs = () => {
   return applyDecorators(
@@ -16,7 +19,7 @@ export const GetProfileDocs = () => {
     ApiOkResponse({
       description: 'Current user details',
       type: UserResponseDto,
-    })
+    }),
   );
 };
 
@@ -28,7 +31,7 @@ export const CreateUserDocs = () => {
       type: UserResponseDto,
     }),
     ApiForbiddenResponse({ description: 'Insufficient permissions' }),
-    ApiBody({ type: CreateUserDto })
+    ApiBody({ type: CreateUserDto }),
   );
 };
 
@@ -38,7 +41,7 @@ export const GetAllUsersDocs = () => {
     ApiOkResponse({
       description: 'Successfully retrieved users list',
       type: [UserResponseDto],
-    })
+    }),
   );
 };
 
@@ -49,7 +52,7 @@ export const GetUserByIdDocs = () => {
       description: 'User details',
       type: UserResponseDto,
     }),
-    ApiParam({ name: 'id', description: 'User ID' })
+    ApiParam({ name: 'id', description: 'User ID' }),
   );
 };
 
@@ -61,7 +64,7 @@ export const UpdateUserDocs = () => {
       type: UserResponseDto,
     }),
     ApiParam({ name: 'id', description: 'User ID' }),
-    ApiBody({ type: UpdateUserDto })
+    ApiBody({ type: UpdateUserDto }),
   );
 };
 
@@ -69,6 +72,6 @@ export const DeleteUserDocs = () => {
   return applyDecorators(
     ApiOperation({ summary: 'Delete user (admin only)' }),
     ApiOkResponse({ description: 'User deleted successfully' }),
-    ApiParam({ name: 'id', description: 'User ID' })
+    ApiParam({ name: 'id', description: 'User ID' }),
   );
 };

@@ -1,36 +1,30 @@
 import {
   Controller,
-  Get,
-  Post,
-  Body,
-  Query,
-  Param,
-  Put,
-  Delete,
-  HttpCode,
-  HttpStatus,
   UseInterceptors,
   ClassSerializerInterceptor,
   UseGuards,
-  ForbiddenException,
-  Request as Req,
+  Post,
+  Param,
+  Get,
+  Query,
+  Body,
 } from '@nestjs/common';
-import { SchedulingService } from './scheduling.service';
-import { Role } from '@prisma/client';
-import { Roles } from '../../common/decorators/auth/roles.decorator';
-import { JwtAuthGuard, RolesGuard } from '../../common/guards';
+import { Role, User } from '@prisma/client';
 import {
-  ClassGroupSchedule,
-  GeneralScheduleWrapperDto,
-} from './dtos/generalSchedule.dto';
-import { TeacherScheduleWrapperDto } from './dtos/teacherSchedule.dto';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
-import {
-  GetGeneralScheduleDocs,
-  GetTeacherScheduleDocs,
-} from 'src/common/decorators/swagger/scheduling.swagger.docs';
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+} from '@nestjs/swagger';
 
-@Controller('scheduling')
+import { Roles } from '@/common/decorators/auth/roles.decorator';
+import { JwtAuthGuard, RolesGuard } from '@/common/guards';
+import { SchedulingService } from './scheduling.service';
+import { GetUser } from '@/common/decorators/auth/get-user.decorator';
+import { SearchSessionsBody } from './dtos/scheduleSearch.dto';
+
+@Controller('schedules')
 @ApiBearerAuth()
 @ApiTags('Scheduling')
 @UseInterceptors(ClassSerializerInterceptor)
@@ -38,21 +32,59 @@ import {
 export class SchedulingController {
   constructor(private readonly schedulingService: SchedulingService) {}
 
-  @Get('general')
-  @GetGeneralScheduleDocs()
-  @Roles(Role.ADMIN, Role.TEACHER, Role.STUDENT)
-  async getGeneralSchedule(
-    @Query('classGroupId') classGroupId?: string,
-  ): Promise<GeneralScheduleWrapperDto> {
-    return await this.schedulingService.getGeneralSchedule(classGroupId);
+  @Post('/generate')
+  @Roles(Role.ADMIN)
+  @ApiOperation({ summary: 'Generate a new schedule' })
+  @ApiResponse({ status: 201, description: 'Schedule generated successfully' })
+  async generateSchedule(@GetUser() admin: User) {
+    return await this.schedulingService.generateSchedule(admin.userId);
   }
 
-  @Get('teacher')
-  @GetTeacherScheduleDocs()
+  @Get('/id/:scheduleId')
   @Roles(Role.ADMIN, Role.TEACHER, Role.STUDENT)
-  async getTeacherSchedule(
-    @Query('teacherId') teacherId?: string,
-  ): Promise<TeacherScheduleWrapperDto> {
-    return await this.schedulingService.getTeacherSchedule(teacherId);
+  @ApiOperation({ summary: 'Get a schedule by ID' })
+  @ApiParam({ name: 'scheduleId', required: true, description: 'Schedule ID' })
+  @ApiResponse({ status: 200, description: 'Schedule retrieved successfully' })
+  async getScheduleById(
+    @GetUser() user: User,
+    @Query('scheduleId') scheduleId: string,
+  ) {
+    return await this.schedulingService.getScheduleById(
+      user.userId,
+      scheduleId,
+    );
+  }
+
+  @Get()
+  @Roles(Role.ADMIN)
+  @ApiOperation({ summary: 'Get all schedules for a campus' })
+  @ApiResponse({ status: 200, description: 'Schedules retrieved successfully' })
+  async getAllSchedules(@GetUser() admin: User) {
+    return await this.schedulingService.getAllSchedules(admin.userId);
+  }
+
+  @Post('/activate/id/:scheduleId')
+  @Roles(Role.ADMIN)
+  @ApiOperation({ summary: 'Activate a schedule' })
+  @ApiParam({ name: 'scheduleId', required: true, description: 'Schedule ID' })
+  @ApiResponse({ status: 200, description: 'Schedule activated successfully' })
+  async activateSchedule(
+    @GetUser() admin: User,
+    @Param('scheduleId') scheduleId: string,
+  ) {
+    return await this.schedulingService.activateSchedule(
+      admin.userId,
+      scheduleId,
+    );
+  }
+
+  @Post('/sessions/id/search')
+  @ApiOperation({ summary: 'Search for sessions by ID' })
+  @ApiResponse({ status: 200, description: 'Sessions retrieved successfully' })
+  async searchSessions(
+    @GetUser() user: User,
+    @Body() body: SearchSessionsBody,
+  ) {
+    return await this.schedulingService.searchSessions(user.userId, body);
   }
 }

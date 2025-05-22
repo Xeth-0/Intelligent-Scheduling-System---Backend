@@ -1,5 +1,9 @@
-import { CreateUserDto, UpdateUserDto, UserResponseDto } from '../users/dtos';
-import { User } from '@prisma/client';
+import {
+  type CreateUserDto,
+  type UpdateUserDto,
+  type UserResponseDto,
+} from '../users/dtos';
+import { type User } from '@prisma/client';
 
 export interface IUsersService {
   deleteUser(id: string): Promise<void>;
