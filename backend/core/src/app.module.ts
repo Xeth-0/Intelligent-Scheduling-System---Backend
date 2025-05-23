@@ -13,6 +13,8 @@ import { UsersModule } from './modules/users/users.module';
 import { HealthModule } from './modules/health/health.module';
 import { SchedulingModule } from './modules/scheduling/scheduling.module';
 import { dbConfig, jwtConfig, validateEnv, servicesConfig } from './config';
+import { FileModule } from './modules/file/file.module';
+import { ValidationService } from './modules/file/validaton.service';
 
 @Module({
   imports: [
@@ -26,7 +28,7 @@ import { dbConfig, jwtConfig, validateEnv, servicesConfig } from './config';
     PrismaModule, // Injectable anywhere for orm queries
     AuthModule,
     SchedulingModule,
-
+    FileModule,
     UsersModule,
     HealthModule,
   ],

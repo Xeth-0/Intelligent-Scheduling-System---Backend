@@ -1,13 +1,17 @@
 import base64
-from celery_config import app
 import pandas as pd
 import re
 
+import os
+import pika
+import json
+from io import StringIO
+
 
 # 2: Function to read CSV file
-def read_csv(file_path, delimiter=",", encoding="utf-8"):
+def read_csv(file, delimiter=",", encoding="utf-8"):
     try:
-        df = pd.read_csv(file_path, delimiter=delimiter, encoding=encoding)
+        df = pd.read_csv(file, delimiter=delimiter, encoding=encoding)
         return df, []
     except Exception as e:
         return None, [f"Failed to read CSV: {str(e)}"]
@@ -193,8 +197,9 @@ def parse(df) -> list[dict]:
 
 # 12: Pipeline function to validate CSV
 def validate_csv_file(file_path, config):
+    file = StringIO(file_path)
     df, read_errors = read_csv(
-        file_path,
+        file,
         delimiter=config.get("delimiter", ","),
         encoding=config.get("encoding", "utf-8"),
     )
@@ -393,108 +398,102 @@ CONFIGS = {
     "SGCOURSE": SGCOURSE_CONFIG,
 }
 
-# import base64
-# from celery_config import app
-
-# # Define a Celery task to validate CSV files
-# @app.task(name='validate_csv')
-# def validate_csv(file_data: str):
-#     # Decode the base64-encoded CSV file
-#     csv_content = base64.b64decode(file_data).decode('utf-8')
-
-#     # Placeholder for CSV validation logic
-#     # In a real implementation, parse csv_content and validate
-#     validated_data = [
-#         {"row": 1, "data": "sample_data"},  # Example JSON output
-#     ]
-
-#     # returned_data = validate_csv_file(csv_content, CONFIGS[])
-
-#     # Return validation result
-#     return {
-#         'message': 'CSV validation completed successfully',
-#         'data': validated_data
-#     }
-
-# import sys
-
-import base64
+# consumer.py
 import os
-from celery_config import app
-import pika
 import json
+import base64
+import pika
+
+import dotenv
+
+# dotenv.load_dotenv()
 
 
-# Define a function to publish results to the response queue
 def publish_result(task_id, result):
-    # Get RabbitMQ connection parameters from environment
-    rabbitmq_url = os.getenv("RABBITMQ_URL")
-    # Establish connection to RabbitMQ
-    connection = pika.BlockingConnection(pika.URLParameters(rabbitmq_url))
+    connection = pika.BlockingConnection(pika.URLParameters(os.getenv("RABBITMQ_URL")))
     channel = connection.channel()
+    routing_key = "csv_validation_response"
 
-    # Declare the response queue
-    channel.queue_declare(queue="csv_validation_response", durable=True)
+    # Declare exchange and queue
+    channel.queue_declare(queue='csv_validation_response', durable=True)
 
-    # Publish the result to the response queue
-    channel.basic_publish(
-        exchange="",
-        routing_key="csv_validation_response",
-        body=json.dumps({**result, "taskId": task_id}),
-        properties=pika.BasicProperties(delivery_mode=2),  # Persistent message
-    )
+    # Wrapped payload
+    message = {
+        "pattern": "csv_validation_response",
+        "data": {
+            "taskId": task_id,
+            "result": result
+        }
+    }
 
-    # Close the connection
-    connection.close()
+    try:
+        channel.basic_publish(
+            exchange='',
+            routing_key=routing_key,
+            body=json.dumps(message),
+            properties=pika.BasicProperties(delivery_mode=2)
+        )
+        print(f"Published event '{routing_key}' to exchange  with payload: {message}")
+    except Exception as e:
+        print(f"Error publishing event: {e}")
+    finally:
+        connection.close()
+
+def on_message(ch, method, properties, body):
+    print("[x] Received message")
+    try:
+        payload = json.loads(body)
+        print("payload: ", payload)
+        data = payload.get("data")
+        task_id = data.get("taskId")
+        file_data_encoded = data.get("fileData")
+        category = data.get("category")
+
+        if not task_id or not file_data_encoded or not category:
+            raise ValueError("Invalid message format")
+        file_data = base64.b64decode(file_data_encoded).decode("utf-8")
+        result = validate_csv_file(file_data, CONFIGS[category])
+
+        publish_result(task_id, result)
+
+    except Exception as e:
+
+        print(f"[!] Error processing message: {e}")
+
+    ch.basic_ack(delivery_tag=method.delivery_tag)
+
+import time
 
 
-# Define the Celery task for CSV validation
-@app.task(name="csv_validation_request")
-def validate_csv(task_id: str, file_data: str, category: str):
-    # Decode the base64-encoded CSV file
-    csv_content = base64.b64decode(file_data).decode("utf-8")
+def start_consumer():
+    print("[*] Starting consumer service...")
+    for i in range(10):  # retry up to 10 times
+        try:
+            print(f"Attempt {i + 1}: Connecting to RabbitMQ...")
+            connection = pika.BlockingConnection(
+                pika.URLParameters(os.getenv("RABBITMQ_URL"))
+            )
+            channel = connection.channel()
+            channel.queue_declare(queue="csv_validation_request", durable=True)
+            print("connection successful", connection.is_open)
+            channel.basic_consume(
+                queue="csv_validation_request", on_message_callback=on_message
+            )
+            print("queue and channel: ", channel.is_open)
+            print("to consume...")
+            channel.start_consuming()
+            print("consuming.....")
+            # setup queues, consume, etc.
+            break
+        except pika.exceptions.AMQPConnectionError as e:
 
-    returned = validate_csv_file(csv_content, CONFIGS[category])
-    # Placeholder for CSV validation logic
-    validated_data = [
-        {"row": 1, "data": "sample_data"},
-    ]
-
-    # # Create the result object
-    # result = {
-    #     "message": "CSV validation completed successfully",
-    #     "data": validated_data,
-    # }
-
-    # Publish the result to the response queue
-    publish_result(task_id, returned)
-
-    # Return result for Celery (optional, for task tracking)
-    return returned
-
-
-import sys
-
-
-def main():
-    if len(sys.argv) != 3:
-        print("Usage: python script.py <file_path> <config_name>")
-        return
-    file_path = sys.argv[1]
-    config_name = sys.argv[2].upper()
-    config = CONFIGS.get(config_name)
-    if not config:
-        print(f"Invalid config: {config_name}")
-        return
-    result = validate_csv_file(file_path, config)
-    if result["success"]:
-        print("Validation successful")
-        print(result["data"])
+            print(f"Connection failed: {e}, retrying in 5s...")
+            time.sleep(5)
     else:
-        print("Validation errors:")
-        for error in result["errors"]:
-            print(error)
+        print("Failed to connect to RabbitMQ after multiple attempts.")
 
 
 if __name__ == "__main__":
-    main()
+    print("we here!!!")
+    start_consumer()
+

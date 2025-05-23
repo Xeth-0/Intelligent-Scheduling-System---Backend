@@ -11,7 +11,8 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the application code
-COPY app/ ./app/
+COPY . .
 
 # Command to start the Celery worker
-CMD ["celery", "-A", "app.main", "worker", "--loglevel=info"]
+# CMD ["celery", "-A", "app.celery_config", "worker", "--loglevel=info", "-Q", "csv_validation_request"]
+CMD ["python", "main.py"]

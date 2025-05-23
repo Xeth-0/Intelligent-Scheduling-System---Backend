@@ -417,3 +417,60 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+'''
+
+# Define a function to publish results to the response queue
+def publish_result(task_id, result):
+    # Get RabbitMQ connection parameters from environment
+    rabbitmq_url = os.getenv("RABBITMQ_URL")
+    print("#################### publishe on : ", rabbitmq_url)
+
+    # Establish connection to RabbitMQ
+    connection = pika.BlockingConnection(pika.URLParameters(rabbitmq_url))
+    channel = connection.channel()
+
+    # Declare the response queue
+    channel.queue_declare(queue="csv_validation_response", durable=True)
+
+    # Publish the result to the response queue
+    channel.basic_publish(
+        exchange="",
+        routing_key="csv_validation_response",
+        body=json.dumps({**result, "taskId": task_id}),
+        properties=pika.BasicProperties(delivery_mode=2),  # Persistent message
+    )
+    print("#################### published: ", channel)
+
+    # Close the connection
+    connection.close()
+
+
+# Define the Celery task for CSV validation
+@app.task(name="csv_validation_request", queue="csv_validation_request")
+def validate_csv(task_id: str, file_data: str, category: str):
+    # Decode the base64-encoded CSV file
+
+    csv_content = base64.b64decode(file_data).decode("utf-8")
+
+    returned = validate_csv_file(csv_content, CONFIGS[category])
+    print("/////////// success /////////////:\n", returned["success"])
+    # Placeholder for CSV validation logic
+    validated_data = [
+        {"row": 1, "data": "sample_data"},
+    ]
+
+    # # Create the result object
+    # result = {
+    #     "message": "CSV validation completed successfully",
+    #     "data": validated_data,
+    # }
+
+    # Publish the result to the response queue
+    publish_result(task_id, returned)
+
+    # Return result for Celery (optional, for task tracking)
+    return returned
+
+
+'''

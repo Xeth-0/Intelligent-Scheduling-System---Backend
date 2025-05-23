@@ -1,6 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
+import amqp from 'amqp-connection-manager';
 import { ValidationQueuedDto } from './dtos/validation-queued.dto';
 import { randomUUID, UUID } from 'crypto';
 @Injectable()
@@ -10,7 +11,7 @@ export class FileService {
 
   // Send CSV file to Python service for validation (non-blocking)
   async queueValidationTask(
-    file: Express.Multer.File,
+    file: any,
     category: string,
   ): Promise<ValidationQueuedDto> {
     // Convert file buffer to base64 for safe transmission
@@ -18,12 +19,24 @@ export class FileService {
     // Generate a unique task ID (for tracking purposes)
     const taskId = randomUUID();
     // Emit the CSV file to the RabbitMQ queue without waiting for a response
+      const message = {
+      task: 'csv_validation_request', // Matches the @app.task name
+      args: [taskId, fileData, category], // Arguments for validate_csv
+      kwargs: {},
+      id: taskId, // Task ID for tracking
+      content_type: 'application/json',
+      content_encoding: 'utf-8',
+    };
+
+    console.log('to queue');
     this.client.emit('csv_validation_request', {
       taskId: taskId,
       fileData: fileData,
       category: category,
     });
+    console.log('queued');
     // Immediately return a response to the client
     return { message: 'File queued for validation', taskId: taskId };
+
   }
 }

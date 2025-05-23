@@ -1,22 +1,20 @@
-from celery import Celery
-from dotenv import load_dotenv
-import os
+# from celery import Celery
+# import os
 
-# Load environment variables from .env file
-load_dotenv()
 
-# Initialize Celery with RabbitMQ as the broker
-app = Celery(
-    'csv_validator',
-    broker=os.getenv('RABBITMQ_URL'),
-    backend='rpc://',  # Use RPC for result retrieval
-)
 
-# Configure Celery settings
-app.conf.update(
-    task_serializer='json',  # Serialize tasks as JSON
-    accept_content=['json'],  # Accept JSON content
-    result_serializer='json',  # Serialize results as JSON
-    task_acks_late=True,  # Acknowledge tasks after completion
-    worker_prefetch_multiplier=1,  # Process one task at a time
-)
+# # Initialize Celery with RabbitMQ as the broker
+# app = Celery(
+#     'csv_validator',
+#     broker=os.getenv('RABBITMQ_URL'),
+#     backend='rpc://',  # Use RPC for result retrieval
+# )
+
+# # Configure Celery settings
+# app.conf.update(
+#     task_serializer='json',  # Serialize tasks as JSON
+#     accept_content=['json'],  # Accept JSON content
+#     result_serializer='json',  # Serialize results as JSON
+#     task_acks_late=True,  # Acknowledge tasks after completion
+#     worker_prefetch_multiplier=1,  # Process one task at a time
+# )

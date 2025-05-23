@@ -1,4 +1,4 @@
-import '@/common/sentry/instrument';
+// import '@/common/sentry/instrument';
 
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
@@ -24,18 +24,32 @@ async function bootstrap() {
   //   },
   // });
 
+  // app.connectMicroservice<MicroserviceOptions>({
+  //   transport: Transport.RMQ,
+  //   options: {
+  //     urls: [process.env.RABBITMQ_URL ?? ''],
+  //     queue: 'csv_validation_response', // Queue for validation results
+  //     queueOptions: {
+  //       durable: true,
+  //     },
+  //     noAck: false,
+  //     prefetchCount: 1,
+  //   },
+  // });
+
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.RMQ,
     options: {
-      urls: [process.env.RABBITMQ_URL ?? ''],
-      queue: 'csv_validation_response', // Queue for validation results
+      urls: [process.env.RABBITMQ_URL ?? 'amqp://guest:guest@localhost:5672'],
+      queue: 'csv_validation_response',
       queueOptions: {
         durable: true,
       },
       noAck: false,
       prefetchCount: 1,
-    },
-  });
+      // Explicitly bind to the exchange
+      
+    }});
   app.enableCors({
     origin: true,
   });
@@ -70,7 +84,6 @@ async function bootstrap() {
   await app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
-  
 }
 
 void bootstrap();

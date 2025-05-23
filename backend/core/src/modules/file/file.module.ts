@@ -2,10 +2,12 @@ import { Module } from '@nestjs/common';
 import { FileController } from './file.controller';
 import { FileService } from './file.service';
 import { ClientsModule, Transport } from '@nestjs/microservices';
+import { ValidationService } from './validaton.service';
+import { ValidationController } from './validation.controller';
 
 @Module({
-  controllers: [FileController],
-  providers: [FileService],
+  controllers: [FileController, ValidationController],
+  providers: [FileService, ValidationService],
   imports: [
     ClientsModule.register([
       {
@@ -21,5 +23,6 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
       },
     ]),
   ],
+  exports: [ValidationService],
 })
 export class FileModule {}

@@ -24,8 +24,8 @@ export class FileController {
     @UploadedFile() file: Express.Multer.File,
     @Body() body: UploadFileDto,
   ): Promise<ValidationQueuedDto> {
-    const {category } = body;
+    const { category } = body;
     // Call the service to validate the CSV file
-    return this.appService.queueValidationTask(file, category);
+    return await this.appService.queueValidationTask(file, category);
   }
 }
