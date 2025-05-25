@@ -26,31 +26,15 @@ export class AllExceptionsFilter extends BaseExceptionFilter {
 
     console.error('Determined status:', status);
 
-    let message: string;
-    if (exception instanceof HttpException) {
-      console.error('Processing HttpException');
-      const responsePayload = exception.getResponse();
-      console.error('HttpException response payload:', responsePayload);
+    const message =
+      typeof exception === 'string'
+        ? exception
+        : ((exception as { message: string }).message ??
+          'Internal Server Error. Unknown error occurred');
 
-      if (typeof responsePayload === 'string') {
-        message = responsePayload;
-        console.error('Message from string payload:', message);
-      } else if (
-        typeof responsePayload === 'object' &&
-        responsePayload !== null
-      ) {
-        const errorResponse = responsePayload as { message: string };
-        message = errorResponse.message || 'An error occurred';
-        console.error('Message from object payload:', message);
-      } else {
-        message = 'An error occurred';
-        console.error('Default message for unknown payload type');
-      }
-    } else {
-      message = 'Internal server error';
-      console.error('Non-HttpException, using default message:', message);
-    }
+    const apiResponse = ApiResponse.error(status, message);
 
+    // Debugging logs
     console.error(`[${request.method}] ${request.url} ${status} `, message);
     console.error(
       'Request details - Method:',
@@ -62,8 +46,6 @@ export class AllExceptionsFilter extends BaseExceptionFilter {
       'Stack trace:',
       exception instanceof Error ? exception.stack : 'No stack trace available',
     );
-
-    const apiResponse = ApiResponse.error(status, message);
     console.error('API response being sent:', apiResponse);
 
     response.status(status).json({
@@ -71,7 +53,6 @@ export class AllExceptionsFilter extends BaseExceptionFilter {
       path: request.url,
       timestamp: new Date().toISOString(),
     });
-
-    console.error('Response sent successfully');
+    console.error('Error response sent successfully');
   }
 }

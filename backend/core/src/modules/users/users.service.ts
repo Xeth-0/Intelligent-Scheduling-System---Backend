@@ -1,3 +1,4 @@
+import * as bcrypt from 'bcrypt';
 import {
   BadRequestException,
   ConflictException,
@@ -6,11 +7,10 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { IUsersService } from '../.interfaces/user.service.interface';
 import { Prisma, Role, User } from '@prisma/client';
+import { PrismaService } from '@/prisma/prisma.service';
+import { IUsersService } from '@/modules/interfaces/user.service.interface';
 import { CreateUserDto, UpdateUserDto, UserResponseDto } from './dtos';
-import * as bcrypt from 'bcrypt';
-import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
 export class UsersService implements IUsersService {
@@ -74,25 +74,6 @@ export class UsersService implements IUsersService {
     const count = await this.prismaService.user.count();
     return count === 0;
   }
-
-  // private handlePrismaError(
-  //   error: Prisma.PrismaClientKnownRequestError,
-  //   entity: string,
-  // ): never {
-  //   // Rethrow HttpExceptions (like BadRequest/Forbidden)
-  //   if (error instanceof HttpException) {
-  //     throw error;
-  //   }
-
-  //   if (error.code === 'P2002') {
-  //     throw new ConflictException(`${entity} with this email already exists`);
-  //   }
-  //   if (error.code === 'P2025') {
-  //     throw new NotFoundException(error.meta?.cause || `${entity} not found`);
-  //   }
-
-  //   throw new InternalServerErrorException('An unexpected error occurred');
-  // }
 
   async findAllUsers(): Promise<UserResponseDto[]> {
     const users = await this.prismaService.user.findMany();

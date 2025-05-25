@@ -7,7 +7,7 @@ import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
 import { TokensService } from './tokens.service';
 import { LoginDto, RegisterDto, TokensDto } from './dtos';
-import { IAuthService } from '../.interfaces/auth.service.interface';
+import { IAuthService } from '../interfaces/auth.service.interface';
 import { Role } from '@prisma/client';
 import { AuthenticatedUserPayload } from '@/common/request/express.request';
 

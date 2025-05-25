@@ -35,11 +35,7 @@ export class AuthController {
   @LoginDocs()
   async login(@Body() loginDto: LoginDto): Promise<ApiResponse<TokensDto>> {
     const tokens = await this.authService.login(loginDto);
-    return new ApiResponse({
-      success: true,
-      data: tokens,
-      message: 'Login successful',
-    });
+    return ApiResponse.success(200, tokens, 'Login successful');
   }
 
   @Post('register')
@@ -59,14 +55,13 @@ export class AuthController {
     }
 
     const tokens = await this.authService.register(registerDto);
-    return new ApiResponse({
-      success: true,
-      data: tokens,
-      message:
-        'Registration successful' +
+    return ApiResponse.success(
+      201,
+      tokens,
+      'Registration successful' +
         (isFirstUser ? ' (First user)' : '') +
         (registerDto.role === Role.STUDENT ? ' (Student)' : ' (Admin)'),
-    });
+    );
   }
 
   @Post('refresh')
@@ -81,38 +76,21 @@ export class AuthController {
       throw new UnauthorizedException('Refresh token is required');
     }
     const tokens = await this.authService.refreshTokens(refreshToken);
-    return new ApiResponse({
-      success: true,
-      data: tokens,
-      message: 'Tokens refreshed successfully',
-    });
+    return ApiResponse.success(200, tokens, 'Tokens refreshed successfully');
   }
 
   @Get('logout')
   @LogoutDocs()
   async logout(@GetUser() user: User): Promise<ApiResponse<void>> {
     await this.authService.logout(user.userId);
-    return new ApiResponse({
-      success: true,
-      message: 'Logout successful',
-      data: undefined,
-    });
-  }
-
-  @Get('test_exception')
-  testException() {
-    throw new Error('Test exception');
+    return ApiResponse.success(200, undefined, 'Logout successful');
   }
 
   // ! Debug Routes. Remove before production.
   @Get('debug_get_all_users')
   async debugGetAllUsers(): Promise<ApiResponse<UserResponseDto[]>> {
     const users = await this.usersService.findAllUsers();
-    return new ApiResponse({
-      success: true,
-      data: users,
-      message: 'Users fetched successfully',
-    });
+    return ApiResponse.success(200, users, 'Users fetched successfully');
   }
 
   @Post('debug_admin_login')
@@ -123,11 +101,7 @@ export class AuthController {
       password: 'adminpassword1',
     };
     const tokens = await this.authService.login(loginDto);
-    return new ApiResponse({
-      success: true,
-      data: tokens,
-      message: 'Admin login successful',
-    });
+    return ApiResponse.success(200, tokens, 'Admin login successful');
   }
 
   @Post('debug_student_login')
@@ -138,11 +112,7 @@ export class AuthController {
       password: 'studentpassword1',
     };
     const tokens = await this.authService.login(loginDto);
-    return new ApiResponse({
-      success: true,
-      data: tokens,
-      message: 'Student login successful',
-    });
+    return ApiResponse.success(200, tokens, 'Student login successful');
   }
 
   @Post('debug_teacher_login')
@@ -153,10 +123,6 @@ export class AuthController {
       password: 'teacher1password',
     };
     const tokens = await this.authService.login(loginDto);
-    return new ApiResponse({
-      success: true,
-      data: tokens,
-      message: 'Teacher login successful',
-    });
+    return ApiResponse.success(200, tokens, 'Teacher login successful');
   }
 }

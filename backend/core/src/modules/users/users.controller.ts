@@ -49,7 +49,7 @@ export class UsersController {
     @GetUser('sub') userId: string,
   ): Promise<ApiResponse<UserResponseDto>> {
     const user = await this.usersService.findUserById(userId);
-    return new ApiResponse({ success: true, data: user });
+    return ApiResponse.success(200, user, 'Profile fetched successfully');
   }
 
   @Post()
@@ -65,7 +65,7 @@ export class UsersController {
       );
     }
     const user = await this.usersService.createUser(createUserDto);
-    return new ApiResponse({ success: true, data: user });
+    return ApiResponse.success(201, user, 'User created successfully');
   }
 
   @Get()
@@ -73,7 +73,7 @@ export class UsersController {
   @GetAllUsersDocs()
   async findAll(): Promise<ApiResponse<UserResponseDto[]>> {
     const users = await this.usersService.findAllUsers();
-    return new ApiResponse({ success: true, data: users });
+    return ApiResponse.success(200, users, 'Users fetched successfully');
   }
 
   @Get(':id')
@@ -83,7 +83,7 @@ export class UsersController {
     @Param('id') id: string,
   ): Promise<ApiResponse<UserResponseDto>> {
     const user = await this.usersService.findUserById(id);
-    return new ApiResponse({ success: true, data: user });
+    return ApiResponse.success(200, user, 'User fetched successfully');
   }
 
   @Put(':id')
@@ -94,7 +94,7 @@ export class UsersController {
     @Body() updateUserDto: UpdateUserDto,
   ): Promise<ApiResponse<UserResponseDto>> {
     const user = await this.usersService.updateUser(id, updateUserDto);
-    return new ApiResponse({ success: true, data: user });
+    return ApiResponse.success(200, user, 'User updated successfully');
   }
 
   @Delete(':id')
@@ -102,10 +102,6 @@ export class UsersController {
   @DeleteUserDocs()
   async remove(@Param('id') id: string): Promise<ApiResponse<void>> {
     await this.usersService.deleteUser(id);
-    return new ApiResponse({
-      success: true,
-      data: undefined,
-      message: 'User deleted successfully',
-    });
+    return ApiResponse.success(200, undefined, 'User deleted successfully');
   }
 }

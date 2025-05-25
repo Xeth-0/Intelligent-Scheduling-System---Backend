@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { TokensDto } from './dtos/tokens.dto';
-import { ITokensService } from '../.interfaces/token.service.interface';
+import { ITokensService } from '../interfaces/token.service.interface';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuthenticatedUserPayload } from '@/common/request/express.request.d';
 

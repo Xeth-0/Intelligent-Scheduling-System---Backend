@@ -21,9 +21,10 @@ import { plainToInstance } from 'class-transformer';
 import { SchedulingApiResponseDto } from './dtos/schedule.microservice.dto';
 import { GeneralScheduleResponse } from './dtos/schedule.dto';
 import { SearchSessionsBody } from './dtos/scheduleSearch.dto';
+import { ISchedulingService } from '../interfaces/scheduling.service.interface';
 
 @Injectable()
-export class SchedulingService {
+export class SchedulingService implements ISchedulingService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly configService: ConfigService,
@@ -70,12 +71,13 @@ export class SchedulingService {
       throw new UnauthorizedException('Admin not found');
     }
 
-    const schedule = await this.prismaService.schedule.findUnique({
+    const schedule = await this.prismaService.schedule.findFirst({
       where: {
         scheduleId: scheduleId,
       },
     });
     if (!schedule) {
+      console.error('Schedule not found');
       throw new NotFoundException('Schedule not found');
     }
     if (schedule.campusId !== admin.campusId) {
@@ -137,13 +139,19 @@ export class SchedulingService {
    * @returns Promise with the schedule details
    */
   async getScheduleById(userId: string, scheduleId: string) {
-    const { schedule } = await this._findSchedule(scheduleId, userId);
-    const sessions = await this._fetchSessions(scheduleId);
+    try {
+      const { schedule } = await this._findSchedule(scheduleId, userId);
+      const sessions = await this._fetchSessions(scheduleId);
 
-    return plainToInstance(GeneralScheduleResponse, {
-      scheduleId: schedule.scheduleId,
-      sessions: sessions.map((session) => this._mapSessionToResponse(session)),
-    });
+      return plainToInstance(GeneralScheduleResponse, {
+        scheduleId: schedule.scheduleId,
+        sessions: sessions.map((session) =>
+          this._mapSessionToResponse(session),
+        ),
+      });
+    } catch (e) {
+      throw e;
+    }
   }
 
   /**
@@ -301,16 +309,12 @@ export class SchedulingService {
         },
       });
 
-      return {
-        success: true,
-        data: plainToInstance(GeneralScheduleResponse, {
-          scheduleId: schedule.scheduleId,
-          sessions: sessions.map((session) =>
-            this._mapSessionToResponse(session),
-          ),
-        }),
-        message: 'Sessions retrieved successfully',
-      };
+      return plainToInstance(GeneralScheduleResponse, {
+        scheduleId: schedule.scheduleId,
+        sessions: sessions.map((session) =>
+          this._mapSessionToResponse(session),
+        ),
+      });
     } catch (error) {
       throw error;
     }
