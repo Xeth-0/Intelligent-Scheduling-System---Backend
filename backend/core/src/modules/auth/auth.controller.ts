@@ -3,6 +3,10 @@ import {
   LoginDocs,
   RegisterDocs,
   RefreshDocs,
+  DebugGetAllUsersDocs,
+  DebugAdminLoginDocs,
+  DebugStudentLoginDocs,
+  DebugTeacherLoginDocs,
 } from '../../common/decorators/swagger/auth.swagger.docs';
 import { LoginDto, RegisterDto, TokensDto } from './dtos';
 import { Role, User } from '@prisma/client';
@@ -88,6 +92,7 @@ export class AuthController {
 
   // ! Debug Routes. Remove before production.
   @Get('debug_get_all_users')
+  @DebugGetAllUsersDocs()
   async debugGetAllUsers(): Promise<ApiResponse<UserResponseDto[]>> {
     const users = await this.usersService.findAllUsers();
     return ApiResponse.success(200, users, 'Users fetched successfully');
@@ -95,6 +100,7 @@ export class AuthController {
 
   @Post('debug_admin_login')
   @Public()
+  @DebugAdminLoginDocs()
   async getAdminToken(): Promise<ApiResponse<TokensDto>> {
     const loginDto = {
       email: 'admin1@email.email',
@@ -106,6 +112,7 @@ export class AuthController {
 
   @Post('debug_student_login')
   @Public()
+  @DebugStudentLoginDocs()
   async getStudentToken(): Promise<ApiResponse<TokensDto>> {
     const loginDto = {
       email: 'student1@email.email',
@@ -117,6 +124,7 @@ export class AuthController {
 
   @Post('debug_teacher_login')
   @Public()
+  @DebugTeacherLoginDocs()
   async getTeacherToken(): Promise<ApiResponse<TokensDto>> {
     const loginDto = {
       email: 'teacher1@email.email',
