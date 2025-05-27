@@ -8,6 +8,7 @@ import {
   Get,
   Query,
   Body,
+  BadRequestException,
 } from '@nestjs/common';
 import { Role, User } from '@prisma/client';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
@@ -47,8 +48,12 @@ export class SchedulingController {
   @GetScheduleByIdDocs()
   async getScheduleById(
     @GetUser() user: User,
-    @Query('scheduleId') scheduleId: string,
+    @Query('scheduleId') scheduleId: string | undefined,
   ) {
+    console.log(`getting schedule by id. User: ${user.userId}`);
+    if (!scheduleId) {
+      throw new BadRequestException('Schedule ID is required');
+    }
     const resp = await this.schedulingService.getScheduleById(
       user.userId,
       scheduleId,

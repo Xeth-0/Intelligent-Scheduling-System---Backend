@@ -11,6 +11,7 @@ type UserProperty = keyof AuthenticatedUserPayload;
 export const GetUser = createParamDecorator(
   (data: UserProperty | undefined, ctx: ExecutionContext) => {
     const request = ctx.switchToHttp().getRequest<Request>();
+    console.log(`request:`, request);
     const user = request.user;
     if (!user) {
       throw new UnauthorizedException('User not found');

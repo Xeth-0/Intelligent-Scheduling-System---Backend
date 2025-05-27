@@ -61,14 +61,72 @@ export class SchedulingService implements ISchedulingService {
     };
   }
 
-  private async _findSchedule(scheduleId: string, adminId: string) {
+  /**
+   * Finds a schedule by its ID and checks if the user has permission to access it
+   * @param scheduleId - ID of the schedule to find
+   * @param userId - ID of the user finding the schedule
+   * @returns Promise with the schedule and admin details and the admin if the user is an admin
+   */
+  private async _findSchedule(scheduleId: string, userId: string) {
     const admin = await this.prismaService.admin.findFirst({
       where: {
-        userId: adminId,
+        userId: userId,
       },
     });
     if (!admin) {
-      throw new UnauthorizedException('Admin not found');
+      console.log(`user is not an admin. User: ${userId}`);
+      console.log('looking for the user in the database');
+      const user = await this.prismaService.user.findFirst({
+        where: {
+          userId: userId,
+        },
+        include: {
+          student: {
+            include: {
+              studentGroup: {
+                include: {
+                  department: true,
+                },
+              },
+            },
+          },
+          teacher: {
+            include: {
+              department: true,
+            },
+          },
+        },
+      });
+
+      let campusId: string | undefined = undefined;
+      if (!user) {
+        throw new UnauthorizedException('User not found');
+      } else if (user.student) {
+        console.log('user is a student');
+        campusId = user.student.studentGroup?.department.campusId;
+      } else if (user.teacher) {
+        console.log('user is a teacher');
+        campusId = user.teacher.department.campusId;
+      } else {
+        throw new UnauthorizedException('User not found');
+      }
+
+      if (!campusId) {
+        throw new UnauthorizedException('User not found');
+      }
+
+      console.log(`fetching active schedule for campus: ${campusId}`);
+      const schedule = await this.prismaService.schedule.findFirst({
+        where: {
+          campusId: campusId,
+          active: true,
+        },
+      });
+      console.log(`schedule: `, schedule);
+      if (!schedule) {
+        throw new NotFoundException('No active schedule found');
+      }
+      return { admin: null, schedule };
     }
 
     const schedule = await this.prismaService.schedule.findFirst({
@@ -98,6 +156,8 @@ export class SchedulingService implements ISchedulingService {
     const { admin, schedule } = await this._findSchedule(scheduleId, userId);
     if (schedule.active) {
       throw new BadRequestException('Schedule is already active');
+    } else if (!admin) {
+      throw new ForbiddenException('User is not an admin');
     }
 
     try {
@@ -140,6 +200,7 @@ export class SchedulingService implements ISchedulingService {
    */
   async getScheduleById(userId: string, scheduleId: string) {
     try {
+      console.log(`fetching the schedule by the given Id. User: ${userId}`);
       const { schedule } = await this._findSchedule(scheduleId, userId);
       const sessions = await this._fetchSessions(scheduleId);
 
@@ -236,12 +297,15 @@ export class SchedulingService implements ISchedulingService {
       },
     });
     if (!admin) {
-      throw new UnauthorizedException('Admin not found');
+      throw new ForbiddenException('User is not an admin');
     }
 
     const schedules = await this.prismaService.schedule.findMany({
       where: {
         campusId: admin.campusId,
+      },
+      orderBy: {
+        createdAt: 'desc',
       },
     });
 
@@ -333,7 +397,7 @@ export class SchedulingService implements ISchedulingService {
       },
     });
     if (!admin) {
-      throw new UnauthorizedException('Admin not found');
+      throw new ForbiddenException('User is not an admin');
     }
 
     // Prepare the data for the generate schedule endpoint
