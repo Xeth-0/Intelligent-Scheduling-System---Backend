@@ -50,7 +50,6 @@ export class SchedulingController {
     @GetUser() user: User,
     @Query('scheduleId') scheduleId: string | undefined,
   ) {
-    console.log(`getting schedule by id. User: ${user.userId}`);
     if (!scheduleId) {
       throw new BadRequestException('Schedule ID is required');
     }
