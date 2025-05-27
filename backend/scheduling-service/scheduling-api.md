@@ -9,8 +9,8 @@
   - [x] Implement the mutation
   - [x] Implement the GA algorithm
 - [x] Fix the fitness function(keeps flagging valid schedules invalid)
+- [x] Implement the API
 - [ ] Room accessibility handling
-- [ ] Implement the API
 - [ ] Test the API
 - [ ] Add soft constraints
 - [ ] Optimize the fitness function

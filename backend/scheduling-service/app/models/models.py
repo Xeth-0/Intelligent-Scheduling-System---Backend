@@ -23,18 +23,13 @@ class Course(BaseModel):
     description: str
     ectsCredits: int
     department: str
-    teacherId: str  # Teacher is assigned, we're trying to schedule the course
+    teacherId: str  # Teacher is already assigned, we're trying to schedule the course
     sessionType: str
     sessionsPerWeek: int
     studentGroupIds: list[str]
 
     # More than one student group can be assigned to the course.
-    # The list is a list of student groups for each session type. Each list item in the list is a list of student group ids that take the course together
-    # (at the same time and place).
-    # This is to account for the fact that some courses are taken by multiple student groups at the same time.
-    # For example, a course that is taught to year 1 and year 2 students, and year 3 students but at a different time will have:
-    #   studentGroupIds = [[SG_Y1, SG_Y2], [SG_Y3]]
-
+    # The list is a list of student groups for each session type. The student groups in that list take that course together.
 
 class Teacher(BaseModel):
     teacherId: str

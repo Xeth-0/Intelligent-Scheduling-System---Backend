@@ -1,8 +1,7 @@
+import time
 from fastapi import APIRouter
 from app.services.GeneticScheduler import GeneticScheduler
-from app.models.models import (
-    ScheduleApiRequest,
-)
+from app.models.models import ScheduleApiRequest
 
 router = APIRouter(prefix="/scheduler")
 
@@ -32,7 +31,13 @@ async def generate_schedule(request: ScheduleApiRequest):
     )
 
     print("Running scheduler...")
-    best_schedule, best_fitness = scheduler.run()
+    start_time = time.time()
+    best_schedule, best_fitness, report = scheduler.run()
+    end_time = time.time()
+    print(f"Scheduler finished running in {end_time - start_time} seconds")
+    if report:
+        report.print_detailed_report()
+
     print("Scheduler finished running.")
     return {
         "status": "success",
@@ -40,5 +45,7 @@ async def generate_schedule(request: ScheduleApiRequest):
         "data": {
             "best_schedule": best_schedule,
             "best_fitness": best_fitness,
+            "report": report,
+            "time_taken": end_time - start_time,
         },
     }
