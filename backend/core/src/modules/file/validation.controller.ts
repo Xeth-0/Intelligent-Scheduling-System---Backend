@@ -1,6 +1,6 @@
 import { Controller } from '@nestjs/common';
 import { Ctx, EventPattern, Payload, RmqContext } from '@nestjs/microservices';
-import { ValidationService } from './validaton.service';
+import { ValidationService } from './validation.service';
 
 @Controller('validation')
 export class ValidationController {

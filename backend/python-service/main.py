@@ -192,11 +192,14 @@ def check_duplicate_rows(df):
 
 
 def parse(df) -> list[dict]:
-    return df.to_dict(orient="records")
+    # return df.to_dict(orient="records")
+    # return df.fillna(value=None).to_dict(orient="records")
+    return df.where(pd.notnull(df), None).to_dict(orient="records")
 
 
 # 12: Pipeline function to validate CSV
-def validate_csv_file(file_path, config):
+def validate_csv_file(file_path, category):
+    config = CONFIGS[category]
     file = StringIO(file_path)
     df, read_errors = read_csv(
         file,
@@ -204,7 +207,7 @@ def validate_csv_file(file_path, config):
         encoding=config.get("encoding", "utf-8"),
     )
     if df is None:
-        return {"success": False, "errors": read_errors}
+        return {"success": False, "errors": read_errors, data: [], "type": category}
 
     errors = read_errors
 
@@ -229,7 +232,7 @@ def validate_csv_file(file_path, config):
     data = []
     if success:
         data = parse(df)
-    return {"success": success, "errors": errors, "data": data}
+    return {"success": success, "errors": errors, "data": data, "type": category}
 
 
 DEPARTMENT_CONFIG = {
@@ -404,7 +407,7 @@ import json
 import base64
 import pika
 
-import dotenv
+# import dotenv
 
 # dotenv.load_dotenv()
 
@@ -415,29 +418,27 @@ def publish_result(task_id, result):
     routing_key = "csv_validation_response"
 
     # Declare exchange and queue
-    channel.queue_declare(queue='csv_validation_response', durable=True)
+    channel.queue_declare(queue="csv_validation_response", durable=True)
 
     # Wrapped payload
     message = {
         "pattern": "csv_validation_response",
-        "data": {
-            "taskId": task_id,
-            "result": result
-        }
+        "data": {"taskId": task_id, "result": result},
     }
 
     try:
         channel.basic_publish(
-            exchange='',
+            exchange="",
             routing_key=routing_key,
             body=json.dumps(message),
-            properties=pika.BasicProperties(delivery_mode=2)
+            properties=pika.BasicProperties(delivery_mode=2),
         )
         print(f"Published event '{routing_key}' to exchange  with payload: {message}")
     except Exception as e:
         print(f"Error publishing event: {e}")
     finally:
         connection.close()
+
 
 def on_message(ch, method, properties, body):
     print("[x] Received message")
@@ -452,7 +453,7 @@ def on_message(ch, method, properties, body):
         if not task_id or not file_data_encoded or not category:
             raise ValueError("Invalid message format")
         file_data = base64.b64decode(file_data_encoded).decode("utf-8")
-        result = validate_csv_file(file_data, CONFIGS[category])
+        result = validate_csv_file(file_data, category)
 
         publish_result(task_id, result)
 
@@ -461,6 +462,7 @@ def on_message(ch, method, properties, body):
         print(f"[!] Error processing message: {e}")
 
     ch.basic_ack(delivery_tag=method.delivery_tag)
+
 
 import time
 
@@ -496,4 +498,3 @@ def start_consumer():
 if __name__ == "__main__":
     print("we here!!!")
     start_consumer()
-

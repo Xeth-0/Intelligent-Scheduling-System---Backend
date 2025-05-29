@@ -14,7 +14,7 @@ import { HealthModule } from './modules/health/health.module';
 import { SchedulingModule } from './modules/scheduling/scheduling.module';
 import { dbConfig, jwtConfig, validateEnv, servicesConfig } from './config';
 import { FileModule } from './modules/file/file.module';
-import { ValidationService } from './modules/file/validaton.service';
+import { ValidationService } from './modules/file/validation.service';
 
 @Module({
   imports: [

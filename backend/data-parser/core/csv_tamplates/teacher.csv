@@ -1,3 +1,3 @@
 teacherId,firstName,lastName,email,password,phone,role,departmentId,needWheelchairAccessibleRoom
 tch-xyz789,Alice,Smith,alice.smith@example.com,securePass123,555-0100,TEACHER,dpt-1a2b3c,false
-tch-opq456,Bob,Jones,bob.jones@example.com,kar,555-0200,TEACHER,dpt-4d5e6f,true
+tch-opq456,Bob,Jones,bob.jones@example.com,gjhjg,555-0200,TEACHER,dpt-4d5e6f,true
