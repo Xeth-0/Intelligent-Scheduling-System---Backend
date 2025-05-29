@@ -19,6 +19,8 @@ import { dbConfig, jwtConfig, validateEnv, servicesConfig } from './config';
 import { BuildingsModule } from './modules/buildings/buildings.module';
 import { StudentGroupsModule } from './modules/student-groups/student-groups.module';
 import { DepartmentsModule } from './modules/departments/departments.module';
+import { FileModule } from './modules/file/file.module';
+import { ValidationService } from './modules/file/validation.service';
 
 @Module({
   imports: [
@@ -32,6 +34,7 @@ import { DepartmentsModule } from './modules/departments/departments.module';
     PrismaModule, // Injectable anywhere for orm queries
     AuthModule,
     SchedulingModule,
+    FileModule,
     UsersModule,
     HealthModule,
     TeachersModule,
