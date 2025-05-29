@@ -1,13 +1,9 @@
-import {
-  Injectable,
-  UnauthorizedException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
 import { TokensService } from './tokens.service';
 import { LoginDto, RegisterDto, TokensDto } from './dtos';
-import { IAuthService } from '../interfaces/auth.service.interface';
+import { IAuthService } from '../__interfaces__/auth.service.interface';
 import { Role } from '@prisma/client';
 import { AuthenticatedUserPayload } from '@/common/request/express.request';
 
@@ -39,16 +35,19 @@ export class AuthService implements IAuthService {
     );
 
     await this.tokensService.saveRefreshToken(user.userId, tokens.refreshToken);
-
     return tokens;
   }
 
   async register(registerDto: RegisterDto): Promise<TokensDto> {
     const isFirstUser = await this.usersService.isFirstUser();
-    if (!isFirstUser && registerDto.role !== Role.STUDENT) {
-      throw new ForbiddenException(
-        'Only student accounts can be created publicly',
-      );
+    if (isFirstUser) {
+      // Force Role to be ADMIN for the first user.
+      console.log('First user, forcing role to ADMIN');
+      registerDto.role = Role.ADMIN;
+    } else {
+      // Force role to be STUDENT for public registration
+      console.log('Creating student account');
+      registerDto.role = Role.STUDENT;
     }
 
     const user = await this.usersService.createUser({
@@ -63,7 +62,6 @@ export class AuthService implements IAuthService {
     );
 
     await this.tokensService.saveRefreshToken(user.userId, tokens.refreshToken);
-
     return tokens;
   }
 

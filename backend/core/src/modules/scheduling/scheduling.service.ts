@@ -21,7 +21,7 @@ import { plainToInstance } from 'class-transformer';
 import { SchedulingApiResponseDto } from './dtos/schedule.microservice.dto';
 import { GeneralScheduleResponse } from './dtos/schedule.dto';
 import { SearchSessionsBody } from './dtos/scheduleSearch.dto';
-import { ISchedulingService } from '../interfaces/scheduling.service.interface';
+import { ISchedulingService } from '../__interfaces__/scheduling.service.interface';
 
 @Injectable()
 export class SchedulingService implements ISchedulingService {

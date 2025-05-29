@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { Prisma, Role, User } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
-import { IUsersService } from '@/modules/interfaces/user.service.interface';
+import { IUsersService } from '@/modules/__interfaces__/user.service.interface';
 import { CreateUserDto, UpdateUserDto, UserResponseDto } from './dtos';
 
 @Injectable()

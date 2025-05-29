@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   PrismaClient,
   ClassroomType,
@@ -128,8 +126,8 @@ async function main() {
   };
 
   // Create teachers with clear first and last names
-  const teachers = [
-    await createTeacher(
+  const teachers = await Promise.all([
+    createTeacher(
       '1',
       'Abrham',
       'Gebremedhin',
@@ -137,7 +135,7 @@ async function main() {
       '01234567890',
       true,
     ),
-    await createTeacher(
+    createTeacher(
       '002',
       'Natinael',
       'Wondimu',
@@ -145,7 +143,7 @@ async function main() {
       '1234567890',
       true,
     ),
-    await createTeacher(
+    createTeacher(
       '003',
       'Nebiat',
       'Tekle',
@@ -153,7 +151,7 @@ async function main() {
       '1234567890',
       false,
     ),
-    await createTeacher(
+    createTeacher(
       '004',
       'Amanuel',
       'Tadesse',
@@ -161,7 +159,7 @@ async function main() {
       '1234567890',
       false,
     ),
-    await createTeacher(
+    createTeacher(
       '005',
       'Bereket',
       'Haile',
@@ -169,7 +167,7 @@ async function main() {
       '1234567890',
       false,
     ),
-    await createTeacher(
+    createTeacher(
       '006',
       'Dawit',
       'Solomon',
@@ -177,7 +175,7 @@ async function main() {
       '1234567890',
       false,
     ),
-    await createTeacher(
+    createTeacher(
       '007',
       'Eyob',
       'Kifle',
@@ -185,7 +183,7 @@ async function main() {
       '1234567890',
       false,
     ),
-    await createTeacher(
+    createTeacher(
       '008',
       'Fitsum',
       'Tesfaye',
@@ -193,7 +191,7 @@ async function main() {
       '1234567890',
       false,
     ),
-    await createTeacher(
+    createTeacher(
       '009',
       'Goitom',
       'Tsegay',
@@ -201,8 +199,7 @@ async function main() {
       '1234567890',
       false,
     ),
-  ];
-
+  ]);
   console.log('Created teachers:', teachers.length);
 
   // Create student groups with custom IDs

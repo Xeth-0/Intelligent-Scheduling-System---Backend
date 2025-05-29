@@ -47,25 +47,8 @@ export class AuthController {
   async register(
     @Body() registerDto: RegisterDto,
   ): Promise<ApiResponse<TokensDto>> {
-    // If the user is the first user, force role to be ADMIN
-    const isFirstUser = await this.usersService.isFirstUser();
-    if (isFirstUser) {
-      console.log('First user, forcing role to ADMIN');
-      registerDto.role = Role.ADMIN;
-    } else {
-      // Force role to be STUDENT for public registration
-      console.log('Creating student account');
-      registerDto.role = Role.STUDENT;
-    }
-
     const tokens = await this.authService.register(registerDto);
-    return ApiResponse.success(
-      201,
-      tokens,
-      'Registration successful' +
-        (isFirstUser ? ' (First user)' : '') +
-        (registerDto.role === Role.STUDENT ? ' (Student)' : ' (Admin)'),
-    );
+    return ApiResponse.success(201, tokens, 'Registration successful');
   }
 
   @Post('refresh')

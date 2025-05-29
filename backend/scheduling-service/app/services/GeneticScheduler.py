@@ -1,11 +1,11 @@
 from app.models.models import Classroom, Course, ScheduledItem, StudentGroup, Teacher
-from app.services.fitness import ScheduleFitnessEvaluator, FitnessReport
+from app.services.Fitness import ScheduleFitnessEvaluator, FitnessReport
 from typing import List, Tuple, Optional
 import random
 import time
 
 # --- GA Parameters ---
-MAX_GENERATIONS = 10000 
+MAX_GENERATIONS = 10000
 GENE_MUTATION_RATE = (
     0.1  # Probability of mutating a single gene (ScheduledItem's assignment)
 )
