@@ -407,9 +407,9 @@ import json
 import base64
 import pika
 
-# import dotenv
+import dotenv
 
-# dotenv.load_dotenv()
+dotenv.load_dotenv()
 
 
 def publish_result(task_id, result):
