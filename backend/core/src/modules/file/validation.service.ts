@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { EventPattern, Payload, Ctx, RmqContext } from '@nestjs/microservices';
-import { RabbitDto } from './dtos/validation-result.dto';
+import { RabbitDto, ValidatedDataType } from './dtos/validation-result.dto';
 import { SeedDatabase } from './seedDatabase.service';
 
 @Injectable()
@@ -11,28 +11,26 @@ export class ValidationService {
 
   @EventPattern('validation_result')
   async handleValidationResult(
-    @Payload() data: RabbitDto,
+    @Payload() data: RabbitDto<ValidatedDataType[]>,
     @Ctx() context: RmqContext,
   ): Promise<void> {
     try {
       this.logger.log(`Processing validation result for ${data.result.type}`);
 
-      const { errors, erroneousItems } = await this.seedDatabase.seed(
-        data.result.data,
-        data.result.type,
-      );
+      const { errors, erroneousItems, successfulRecords } =
+        await this.seedDatabase.seed(data.result.data, data.result.type);
 
       if (errors.length > 0) {
         this.logger.warn(
           `Encountered ${errors.length} errors during seeding`,
-          errors,
+          ...errors,
         );
         // Optionally: Send errors to a dead-letter queue or monitoring system
       }
-
-      const channel = context.getChannelRef();
-      const originalMsg = context.getMessage();
-      await channel.ack(originalMsg);
+      // return [error, erroneousItems]
+      // const channel = context.getChannelRef();
+      // const originalMsg = context.getMessage();
+      // await channel.ack(originalMsg);
     } catch (error) {
       this.logger.error('Failed to process validation result', error);
       throw error; // Or handle based on your error strategy

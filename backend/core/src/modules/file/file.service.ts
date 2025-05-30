@@ -10,16 +10,16 @@ export class FileService {
   constructor(@Inject('CSV_SERVICE') private readonly client: ClientProxy) {}
 
   // Send CSV file to Python service for validation (non-blocking)
-  async queueValidationTask(
-    file: any,
+  queueValidationTask(
+    file: Express.Multer.File,
     category: string,
-  ): Promise<ValidationQueuedDto> {
+  ): ValidationQueuedDto {
     // Convert file buffer to base64 for safe transmission
     const fileData = file.buffer.toString('base64');
     // Generate a unique task ID (for tracking purposes)
     const taskId = randomUUID();
     // Emit the CSV file to the RabbitMQ queue without waiting for a response
-      const message = {
+    const message = {
       task: 'csv_validation_request', // Matches the @app.task name
       args: [taskId, fileData, category], // Arguments for validate_csv
       kwargs: {},
@@ -37,6 +37,5 @@ export class FileService {
     console.log('queued');
     // Immediately return a response to the client
     return { message: 'File queued for validation', taskId: taskId };
-
   }
 }

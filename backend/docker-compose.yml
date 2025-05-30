@@ -11,7 +11,7 @@ services:
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     networks:
-      - app-network
+       - app-network
     restart: unless-stopped
   postgres:
     image: postgres:15-alpine
@@ -26,7 +26,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - app-network
+       - app-network
 
   nestjs-app:
     build:
@@ -43,7 +43,7 @@ services:
       - rabbitmq
       - postgres
     networks:
-      - app-network
+       - app-network
     restart: unless-stopped
 
   python-service:
@@ -58,7 +58,7 @@ services:
     depends_on:
       - rabbitmq
     networks:
-      - app-network
+       - app-network
     restart: unless-stopped
 
 networks:
