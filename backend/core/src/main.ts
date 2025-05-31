@@ -5,8 +5,7 @@ import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import { AllExceptionsFilter } from '@/common/filters/all-exceptions.filter';
-import { ConfigService } from '@nestjs/config';
-import { Transport, MicroserviceOptions } from '@nestjs/microservices';
+import { Transport, type MicroserviceOptions } from '@nestjs/microservices';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],

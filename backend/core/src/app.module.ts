@@ -21,7 +21,7 @@ import { StudentGroupsModule } from './modules/student-groups/student-groups.mod
 import { DepartmentsModule } from './modules/departments/departments.module';
 import { FileModule } from './modules/file/file.module';
 import { ConstraintsModule } from './modules/constraints/constraints.module';
-import { ValidationService } from './modules/file/validation.service';
+import { TimeslotModule } from './modules/timeslots/timeslots.module';
 
 @Module({
   imports: [
@@ -33,6 +33,7 @@ import { ValidationService } from './modules/file/validation.service';
       validate: validateEnv,
     }),
     PrismaModule, // Injectable anywhere for orm queries
+    TimeslotModule, // Must be imported before ConstraintsModule
     AuthModule,
     SchedulingModule,
     FileModule,

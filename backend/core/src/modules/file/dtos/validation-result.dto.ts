@@ -1,4 +1,4 @@
-import { ClassroomType, SessionType } from '@prisma/client';
+import { type ClassroomType, type SessionType } from '@prisma/client';
 
 export class ValidationResultDto<T> {
   success!: boolean;

@@ -7,15 +7,19 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import {
+  VALID_TIMESLOT_CODES,
   CONSTRAINT_DEFINITIONS,
   ConstraintDefinitionKey,
 } from './dtos/constraints.types';
-import { Role, ConstraintType, Constraint, Prisma } from '@prisma/client';
+import {
+  Role,
+  ConstraintType,
+  Constraint,
+  Prisma,
+  ConstraintValueType,
+  ConstraintScope,
+} from '@prisma/client';
 import { CreateConstraintDto, UpdateConstraintDto } from './dtos';
-
-// type InferConstraintValue<K extends ConstraintDefinitionKey> = z.infer<
-//   (typeof CONSTRAINT_DEFINITIONS)[K]['jsonSchema']
-// >;
 
 @Injectable()
 export class ConstraintService implements OnModuleInit {
@@ -57,6 +61,96 @@ export class ConstraintService implements OnModuleInit {
         constraintType.id,
       );
     }
+  }
+
+  /**
+   * Validates if timeslot codes are valid
+   */
+  private validateTimeslotCodes(timeslotCodes: string[]): boolean {
+    return timeslotCodes.every((code) =>
+      (VALID_TIMESLOT_CODES as readonly string[]).includes(code),
+    );
+  }
+
+  /**
+   * Validate if a time preference conflicts with existing constraints
+   */
+  private async validateTeacherTimePreference(
+    teacherId: string,
+    timeslotCodes: string[],
+    preference: 'PREFER' | 'AVOID' | 'NEUTRAL',
+  ): Promise<{
+    hasConflict: boolean;
+    conflicts: Array<{
+      conflictingConstraintId: string;
+      timeslotCode: string;
+      existingPreference: string;
+      newPreference: string;
+    }>;
+  }> {
+    // Skip conflict checking for NEUTRAL preferences
+    if (preference === 'NEUTRAL') {
+      return {
+        hasConflict: false,
+        conflicts: [],
+      };
+    }
+
+    // Validate timeslot codes first
+    if (!this.validateTimeslotCodes(timeslotCodes)) {
+      throw new BadRequestException('Invalid timeslot codes provided');
+    }
+
+    // Get existing time preferences for this teacher
+    const existingConstraints = await this.prisma.constraint.findMany({
+      where: {
+        teacherId,
+        isActive: true,
+        constraintType: {
+          // name: 'Teacher Time Preference',
+          valueType: ConstraintValueType.TIME_SLOT,
+          category: ConstraintScope.TEACHER_PREFERENCE,
+        },
+      },
+      include: {
+        constraintType: true,
+      },
+    });
+
+    const conflicts: Array<{
+      conflictingConstraintId: string;
+      timeslotCode: string;
+      existingPreference: string;
+      newPreference: string;
+    }> = [];
+
+    // Check each timeslot for conflicts
+    for (const code of timeslotCodes) {
+      for (const constraint of existingConstraints) {
+        const constraintValue = constraint.value as {
+          timeslotCodes?: string[];
+          preference?: string;
+        };
+
+        if (
+          constraintValue.timeslotCodes?.includes(code) &&
+          constraintValue.preference !== preference &&
+          constraintValue.preference !== 'NEUTRAL' // Don't conflict with NEUTRAL
+        ) {
+          conflicts.push({
+            conflictingConstraintId: constraint.id,
+            timeslotCode: code,
+            existingPreference: constraintValue.preference ?? 'UNKNOWN',
+            newPreference: preference,
+          });
+        }
+      }
+    }
+
+    return {
+      hasConflict: conflicts.length > 0,
+      conflicts,
+    };
   }
 
   /**
@@ -104,6 +198,33 @@ export class ConstraintService implements OnModuleInit {
 
     if (user.role === Role.STUDENT) {
       throw new BadRequestException('Students cannot create constraints');
+    }
+
+    // Check for time preference conflicts if this is a time preference constraint
+    if (
+      createDto.constraintTypeKey === 'TEACHER_TIME_PREFERENCE' &&
+      user.teacher
+    ) {
+      const timeValue = validatedValue as {
+        timeslotCodes: string[];
+        preference: 'PREFER' | 'AVOID' | 'NEUTRAL';
+      };
+
+      const conflictCheck = await this.validateTeacherTimePreference(
+        user.teacher.teacherId,
+        timeValue.timeslotCodes,
+        timeValue.preference,
+      );
+
+      if (conflictCheck.hasConflict) {
+        const conflictMessages = conflictCheck.conflicts.map(
+          (conflict) =>
+            `Timeslot ${conflict.timeslotCode}: existing preference is ${conflict.existingPreference}, new preference is ${conflict.newPreference}`,
+        );
+        throw new BadRequestException(
+          `Time preference conflicts detected: ${conflictMessages.join('; ')}`,
+        );
+      }
     }
 
     // TODO: Implement constraint limits (max 10 constraints per teacher)
@@ -264,9 +385,50 @@ export class ConstraintService implements OnModuleInit {
 
       if (constraintDef) {
         validatedValue = constraintDef.jsonSchema.parse(updateDto.value);
+
+        // Check for conflicts if updating time preferences
+        if (
+          constraint.constraintType.name === 'Teacher Time Preference' &&
+          user.teacher
+        ) {
+          const timeValue = validatedValue as {
+            timeslotCodes: string[];
+            preference: 'PREFER' | 'AVOID' | 'NEUTRAL';
+          };
+
+          const conflictCheck = await this.validateTeacherTimePreference(
+            user.teacher.teacherId,
+            timeValue.timeslotCodes,
+            timeValue.preference,
+          );
+
+          // Filter out conflicts with the current constraint
+          const relevantConflicts = conflictCheck.conflicts.filter(
+            (conflict) => {
+              if (conflict.conflictingConstraintId === constraintId) {
+                // This is the constraint being updated.
+                return false;
+              }
+              // This would need more sophisticated logic to check if the conflict
+              // is with a different constraint instance
+              return true;
+            },
+          );
+
+          if (relevantConflicts.length > 0) {
+            const conflictMessages = relevantConflicts.map(
+              (conflict) =>
+                `Timeslot ${conflict.timeslotCode}: existing preference is ${conflict.existingPreference}, new preference is ${conflict.newPreference}`,
+            );
+            throw new BadRequestException(
+              `Time preference conflicts detected: ${conflictMessages.join('; ')}`,
+            );
+          }
+        }
       }
     }
 
+    // Finally, update the constraint now that everything is validated.
     return this.prisma.constraint.update({
       where: { id: constraintId },
       data: {
@@ -355,5 +517,44 @@ export class ConstraintService implements OnModuleInit {
       data: { isActive: !constraint.isActive },
       include: { constraintType: true },
     });
+  }
+
+  /**
+   * Get all constraints for scheduling service serialization
+   */
+  async getConstraintsForScheduling(campusId: string): Promise<
+    Array<{
+      id: string;
+      type: string;
+      teacherId: string | null;
+      value: Prisma.JsonValue;
+      weight: number;
+      category: string;
+    }>
+  > {
+    const constraints = await this.prisma.constraint.findMany({
+      where: {
+        isActive: true,
+        OR: [{ campusId }, { teacher: { department: { campusId } } }],
+      },
+      include: {
+        constraintType: true,
+        teacher: {
+          include: {
+            user: true,
+          },
+        },
+      },
+    });
+
+    // Transform constraints for scheduling service
+    return constraints.map((constraint) => ({
+      id: constraint.id,
+      type: constraint.constraintType.name,
+      teacherId: constraint.teacherId,
+      value: constraint.value,
+      weight: constraint.weight,
+      category: constraint.constraintType.category,
+    }));
   }
 }

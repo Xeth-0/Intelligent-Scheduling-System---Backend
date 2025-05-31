@@ -22,8 +22,7 @@ export interface RoomConstraintValue {
 
 export interface TimeslotConstraintValue {
   days: DayOfWeek[];
-  startTime: string;
-  endTime: string;
+  timeslotCodes: string[]; // e.g., ["0900_1000", "1000_1100"]
   preference: 'PREFER' | 'AVOID' | 'NEUTRAL';
 }
 
@@ -31,12 +30,26 @@ export interface BooleanConstraintValue {
   enabled: boolean;
 }
 
+// Valid timeslot codes for validation. This is temporary, more granular timeslot choices will be added later.
+export const VALID_TIMESLOT_CODES = [
+  '0800_0900',
+  '0900_1000',
+  '1000_1100',
+  '1100_1200',
+  '1200_1300',
+  '1300_1400',
+  '1400_1500',
+  '1500_1600',
+  '1600_1700',
+  '1700_1800',
+] as const;
+
 export const CONSTRAINT_DEFINITIONS = {
   // Teacher preferences
   TEACHER_TIME_PREFERENCE: {
     id: 'TEACHER_TIME_PREFERENCE',
     name: 'Teacher Time Preference',
-    description: 'A preference for a teacher to teach at a specific time',
+    description: 'A preference for a teacher to teach at specific timeslots',
     category: ConstraintScope.TEACHER_PREFERENCE,
     valueType: ConstraintValueType.TIME_SLOT,
     jsonSchema: z.object({
@@ -49,8 +62,9 @@ export const CONSTRAINT_DEFINITIONS = {
           DayOfWeek.FRIDAY,
         ]),
       ),
-      startTime: z.string().regex(/^\d{2}:\d{2}$/),
-      endTime: z.string().regex(/^\d{2}:\d{2}$/),
+      timeslotCodes: z
+        .array(z.enum(VALID_TIMESLOT_CODES))
+        .min(1, 'At least one timeslot must be selected'),
       preference: z.enum(['PREFER', 'AVOID', 'NEUTRAL']),
     }),
   } satisfies ConstraintTypeDefinition<TimeslotConstraintValue>,

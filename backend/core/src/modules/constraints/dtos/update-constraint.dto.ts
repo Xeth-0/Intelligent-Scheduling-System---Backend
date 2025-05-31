@@ -6,8 +6,7 @@ export class UpdateConstraintDto {
     description: 'The constraint value (varies by constraint type)',
     example: {
       days: ['MONDAY', 'TUESDAY'],
-      startTime: '09:00',
-      endTime: '17:00',
+      timeslotCodes: ['0900_1000', '1000_1100'],
       preference: 'PREFER',
     },
     required: false,

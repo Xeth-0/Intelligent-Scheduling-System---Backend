@@ -15,6 +15,7 @@ import {
   Teacher,
   StudentGroup,
   ScheduledSession,
+  Timeslot,
 } from '@prisma/client';
 import axios from 'axios';
 import { plainToInstance } from 'class-transformer';
@@ -22,12 +23,16 @@ import { SchedulingApiResponseDto } from './dtos/schedule.microservice.dto';
 import { GeneralScheduleResponse } from './dtos/schedule.dto';
 import { SearchSessionsBody } from './dtos/scheduleSearch.dto';
 import { ISchedulingService } from '../__interfaces__/scheduling.service.interface';
+import { ConstraintService } from '../constraints/constraints.service';
+import { TimeslotService } from '../timeslots/timeslots.service';
 
 @Injectable()
 export class SchedulingService implements ISchedulingService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly configService: ConfigService,
+    private readonly timeslotService: TimeslotService,
+    private readonly constraintService: ConstraintService,
   ) {}
 
   /**
@@ -232,32 +237,21 @@ export class SchedulingService implements ISchedulingService {
     const defaultIncludes: Prisma.ScheduledSessionInclude = {
       course: true,
       teacher: {
-        select: {
-          teacherId: true,
-          user: {
-            select: {
-              firstName: true,
-              lastName: true,
-            },
-          },
+        include: {
+          user: true,
         },
       },
       classroom: {
-        select: {
-          classroomId: true,
-          name: true,
-          isWheelchairAccessible: true,
-          building: {
-            select: {
-              name: true,
-            },
-          },
-          campus: {
-            select: {
-              name: true,
-              campusId: true,
-            },
-          },
+        // select: {
+        //   classroomId: true,
+        //   name: true,
+        //   isWheelchairAccessible: true,
+        //   building: true,
+        //   campus: true,
+        // },
+        include: {
+          campus: true,
+          building: true,
         },
       },
       studentGroup: true,
@@ -428,6 +422,11 @@ export class SchedulingService implements ISchedulingService {
       },
     });
 
+    // Get constraints and timeslots for the campus
+    const constraints =
+      await this.constraintService.getConstraintsForScheduling(admin.campusId);
+    const timeslots = await this.timeslotService.getAllTimeslots();
+
     const payload = {
       courses: courses.map((course) => ({
         courseId: course.courseId,
@@ -470,6 +469,19 @@ export class SchedulingService implements ISchedulingService {
         floor: room.building?.floor ?? 0,
         isWheelchairAccessible: room.isWheelchairAccessible,
       })),
+
+      // Include constraints for the genetic algorithm
+      constraints: constraints,
+
+      // Include standardized timeslots
+      timeslots: timeslots.map((slot: Timeslot) => ({
+        timeslotId: slot.timeslotId,
+        code: slot.code,
+        label: slot.label,
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+        order: slot.order,
+      })),
     };
 
     // Call the generate schedule endpoint
@@ -497,22 +509,40 @@ export class SchedulingService implements ISchedulingService {
       );
 
       const schedule = mappedSchedulingData.data.best_schedule;
+
+      // Process schedule items and map timeslot codes to timeslot IDs
+      const scheduleItemsData = await Promise.all(
+        schedule.map(async (scheduledSession) => {
+          const timeslotCode = scheduledSession.timeslot; // TODO: Needs a better way to handle this.
+          const timeslot =
+            await this.timeslotService.getTimeslotByCode(timeslotCode);
+          if (!timeslot) {
+            throw new InternalServerErrorException(
+              `Error generating schedule: Timeslot not found for code: ${timeslotCode}`,
+            );
+          }
+
+          return {
+            courseId: scheduledSession.courseId,
+            teacherId: scheduledSession.teacherId,
+            studentGroupId: scheduledSession.studentGroupIds[0],
+            sessionType: scheduledSession.sessionType,
+            classroomId: scheduledSession.classroomId,
+            timeslotId: timeslot.timeslotId,
+            startTime: timeslot.startTime,
+            endTime: timeslot.endTime,
+            day: scheduledSession.day,
+          };
+        }),
+      );
+
       const newSchedule = await this.prismaService.schedule.create({
         data: {
           generatedByAdminId: admin.adminId,
           campusId: admin.campusId,
           scheduleItems: {
             createMany: {
-              data: schedule.map((scheduledSession) => ({
-                courseId: scheduledSession.courseId,
-                teacherId: scheduledSession.teacherId,
-                studentGroupId: scheduledSession.studentGroupIds[0],
-                sessionType: scheduledSession.sessionType,
-                classroomId: scheduledSession.classroomId,
-                startTime: scheduledSession.timeslot.split('-')[0],
-                endTime: scheduledSession.timeslot.split('-')[1],
-                day: scheduledSession.day,
-              })),
+              data: scheduleItemsData,
             },
           },
         },
