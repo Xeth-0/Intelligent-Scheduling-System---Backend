@@ -20,6 +20,7 @@ import { BuildingsModule } from './modules/buildings/buildings.module';
 import { StudentGroupsModule } from './modules/student-groups/student-groups.module';
 import { DepartmentsModule } from './modules/departments/departments.module';
 import { FileModule } from './modules/file/file.module';
+import { ConstraintsModule } from './modules/constraints/constraints.module';
 import { ValidationService } from './modules/file/validation.service';
 
 @Module({
@@ -43,6 +44,7 @@ import { ValidationService } from './modules/file/validation.service';
     BuildingsModule,
     DepartmentsModule,
     StudentGroupsModule,
+    ConstraintsModule,
   ],
   controllers: [AppController],
   providers: [

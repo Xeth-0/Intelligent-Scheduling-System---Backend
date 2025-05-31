@@ -69,6 +69,7 @@ export class SeedDatabase {
     }
   }
   private async createUser(item: Teacher | Student, tableName: fileTypes) {
+    // eslint-disable-next-line @typescript-eslint/dot-notation
     const userId = (item['teacherId'] ?? item['studentId']) as string;
 
     const userData = {

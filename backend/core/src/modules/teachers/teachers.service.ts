@@ -4,7 +4,7 @@ import {
   ConflictException,
   InternalServerErrorException,
 } from '@nestjs/common';
-import { Prisma, Teacher } from '@prisma/client';
+import { Prisma, Role, Teacher } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
 import { CampusValidationService } from '@/common/services/campus-validation.service';
 import { CreateTeacherDto, UpdateTeacherDto, TeacherResponseDto } from './dtos';
@@ -49,50 +49,30 @@ export class TeachersService {
     createTeacherDto: CreateTeacherDto,
   ): Promise<TeacherResponseDto> {
     try {
-      // Validate department exists and get its campus
       const department = await this.prismaService.department.findUnique({
         where: { deptId: createTeacherDto.departmentId },
       });
-
       if (!department) {
         throw new NotFoundException('Department not found');
       }
-
-      // Validate campus access
       await this.campusValidationService.validateCampusAccess(
         userId,
         department.campusId,
       );
 
-      // Validate user exists and is a teacher
       const user = await this.prismaService.user.findUnique({
         where: { userId: createTeacherDto.userId },
       });
-
       if (!user) {
         throw new NotFoundException('User not found');
-      }
-
-      if (user.role !== 'TEACHER') {
+      } else if (user.role !== Role.TEACHER) {
         throw new ConflictException('User must have TEACHER role');
       }
-
       const teacher = await this.prismaService.teacher.create({
         data: createTeacherDto,
         include: {
-          user: {
-            select: {
-              firstName: true,
-              lastName: true,
-              email: true,
-            },
-          },
-          department: {
-            select: {
-              name: true,
-              campusId: true,
-            },
-          },
+          user: true,
+          department: true,
         },
       });
 
@@ -131,19 +111,8 @@ export class TeachersService {
         },
       },
       include: {
-        user: {
-          select: {
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-        department: {
-          select: {
-            name: true,
-            campusId: true,
-          },
-        },
+        user: true,
+        department: true,
       },
     });
 
@@ -160,19 +129,8 @@ export class TeachersService {
     const teacher = await this.prismaService.teacher.findUnique({
       where: { teacherId },
       include: {
-        user: {
-          select: {
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-        department: {
-          select: {
-            name: true,
-            campusId: true,
-          },
-        },
+        user: true,
+        department: true,
       },
     });
 
@@ -198,7 +156,6 @@ export class TeachersService {
     updateTeacherDto: UpdateTeacherDto,
   ): Promise<TeacherResponseDto> {
     try {
-      // First validate the teacher exists and campus access
       await this.findTeacherById(userId, teacherId);
 
       // If updating department, validate new department
@@ -222,19 +179,8 @@ export class TeachersService {
         where: { teacherId },
         data: updateTeacherDto,
         include: {
-          user: {
-            select: {
-              firstName: true,
-              lastName: true,
-              email: true,
-            },
-          },
-          department: {
-            select: {
-              name: true,
-              campusId: true,
-            },
-          },
+          user: true,
+          department: true,
         },
       });
 

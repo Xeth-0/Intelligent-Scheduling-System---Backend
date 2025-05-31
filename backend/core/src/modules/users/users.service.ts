@@ -58,7 +58,7 @@ export class UsersService implements IUsersService {
         if (error.code === 'P2002') {
           throw new ConflictException(`User with this email already exists`);
         } else if (error.code === 'P2025') {
-          throw new NotFoundException(error.meta?.cause || 'User not found');
+          throw new NotFoundException(error.meta?.cause ?? 'User not found');
         } else {
           throw new InternalServerErrorException(
             'An unexpected error occurred',
@@ -110,7 +110,7 @@ export class UsersService implements IUsersService {
         if (error.code === 'P2002') {
           throw new ConflictException(`User with this email already exists`);
         } else if (error.code === 'P2025') {
-          throw new NotFoundException(error.meta?.cause || 'User not found');
+          throw new NotFoundException(error.meta?.cause ?? 'User not found');
         } else {
           throw new InternalServerErrorException(
             'An unexpected error occurred',
@@ -140,7 +140,7 @@ export class UsersService implements IUsersService {
         if (error.code === 'P2002') {
           throw new ConflictException(`User with this email already exists`);
         } else if (error.code === 'P2025') {
-          throw new NotFoundException(error.meta?.cause || 'User not found');
+          throw new NotFoundException(error.meta?.cause ?? 'User not found');
         } else {
           throw new InternalServerErrorException(
             'An unexpected error occurred',
