@@ -12,32 +12,51 @@ import {
 } from './dtos/validation-result.dto';
 import { PrismaService } from '@/prisma/prisma.service';
 import { Role } from '@prisma/client';
+
+import { Prisma } from '@prisma/client';
+
+function formatPrismaError(error: unknown, rowNumber: number): string {
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    switch (error.code) {
+      case 'P2002':
+        return `Row ${rowNumber}: Duplicate entry for unique field`;
+      case 'P2003':
+        return `Row ${rowNumber}: Foreign key constraint failed - referenced item not found`;
+      case 'P2000':
+        return `Row ${rowNumber}: Field value too long`;
+      case 'P2025':
+        return `Row ${rowNumber}: Entity not found`;
+      default:
+        return `Row ${rowNumber}: Database error - ${error.message}`;
+    }
+  }
+  return `Row ${rowNumber}: Unexpected error - ${(error as Error).message}`;
+}
+
 @Injectable()
 export class SeedDatabase {
   constructor(private readonly prismaService: PrismaService) {}
   private logger = new Logger(SeedDatabase.name);
   async seed(data: ValidatedDataType[], tableName: fileTypes) {
     const results = {
-      errors: [] as Error[],
+      errors: [] as string[],
       erroneousItems: [] as ValidatedDataType[],
       successfulRecords: 0,
     };
 
-    const operations = data.map(async (item) => {
+    const operations = data.map(async (item, idx) => {
       try {
         await this.processItem(item, tableName);
         results.successfulRecords++;
       } catch (error) {
-        results.errors.push(
-          error instanceof Error ? error : new Error(error as string),
-        );
+        results.errors.push(formatPrismaError(error, idx + 1));
+
         results.erroneousItems.push(item);
         this.logger.error('Error processing item', item, error);
       }
     });
 
     await Promise.all(operations);
-    this.logger.debug(results.errors);
     return results;
   }
 
@@ -69,6 +88,7 @@ export class SeedDatabase {
     }
   }
   private async createUser(item: Teacher | Student, tableName: fileTypes) {
+    // eslint-disable-next-line @typescript-eslint/dot-notation
     const userId = (item['teacherId'] ?? item['studentId']) as string;
 
     const userData = {

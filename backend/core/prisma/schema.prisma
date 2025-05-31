@@ -35,6 +35,12 @@ enum DayOfWeek {
   SUNDAY
 }
 
+enum TaskStatus {
+  COMPLETED
+  QUEUED
+  FAILED
+}
+
 // ========== Building ==========
 model Building {
   buildingId String      @id @default(uuid())
@@ -56,6 +62,7 @@ model Campus {
   schedules        Schedule[]
   admins           Admin[]
   // buildings        Building[]
+  Task             Task[]
 }
 
 // ========== User ==========
@@ -104,6 +111,7 @@ model Admin {
   schedules Schedule[] // Schedules that this admin has created
   campus    Campus     @relation(fields: [campusId], references: [campusId], onDelete: Cascade)
   campusId  String
+  Task      Task[]
 }
 
 // ========== Department ==========
@@ -241,4 +249,26 @@ model RefreshToken {
   token          String
   expiresAt      DateTime
   createdAt      DateTime @default(now())
+}
+
+model Task {
+  taskId     String     @id @default(uuid())
+  admin      Admin      @relation(fields: [adminId], references: [adminId], onDelete: Cascade)
+  adminId    String
+  campus     Campus?    @relation(fields: [campusId], references: [campusId], onDelete: SetNull)
+  campusId   String?
+  status     TaskStatus
+  errorCount Int        @default(0)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  errors TaskError[]
+}
+
+model TaskError {
+  id        String   @id @default(uuid())
+  task      Task     @relation(fields: [taskId], references: [taskId], onDelete: Cascade)
+  taskId    String
+  message   String
+  createdAt DateTime @default(now())
 }

@@ -84,6 +84,10 @@ def validate_email(email):
 import uuid
 
 
+def valid_string(value):
+    return isinstance(value, str)
+
+
 def check_formats(df, format_checks):
     errors = []
     for col, format_type in format_checks.items():
@@ -113,6 +117,13 @@ def check_formats(df, format_checks):
             for idx, row in invalid.iterrows():
                 errors.append(
                     f"Invalid boolean in row {idx+1}, column '{col}': '{row[col]}'"
+                )
+        elif str(format_type).lower() == "string":
+
+            invalid = df[~df[col].apply(valid_string)]
+            for idx, row in invalid.iterrows():
+                errors.append(
+                    f"Invalid string in row {idx+1}, column '{col}': '{row[col]}'"
                 )
     return errors
 
@@ -191,6 +202,16 @@ def check_duplicate_rows(df):
     return []
 
 
+def edit_ids(df: pd.DataFrame, editable_comlumns, prefix=""):
+    errors = []
+
+    for column in editable_comlumns:
+        if column not in df.columns:
+            continue
+        df[column] = prefix + df[column].astype(str)
+    return errors
+
+
 def parse(df) -> list[dict]:
     # return df.to_dict(orient="records")
     # return df.fillna(value=None).to_dict(orient="records")
@@ -198,7 +219,7 @@ def parse(df) -> list[dict]:
 
 
 # 12: Pipeline function to validate CSV
-def validate_csv_file(file_path, category):
+def validate_csv_file(file_path, category, campus_id):
     config = CONFIGS[category]
     file = StringIO(file_path)
     df, read_errors = read_csv(
@@ -227,7 +248,7 @@ def validate_csv_file(file_path, category):
             check_numerical_constraints(df, config.get("numerical_checks", {}))
         )
         errors.extend(check_duplicate_rows(df))
-
+        errors.extend(edit_ids(df, ID_COLUMNS, campus_id))
     success = len(errors) == 0
     data = []
     if success:
@@ -235,14 +256,28 @@ def validate_csv_file(file_path, category):
     return {"success": success, "errors": errors, "data": data, "type": category}
 
 
+# edit required fields (id fields, foreign or otherwise, need to be edited by adding campusId to make them unique.)
+
+ID_COLUMNS = [
+    "deptId",
+    "departmentId",
+    # "campusId",
+    "courseId",
+    "teacherId",
+    "studentGroupId",
+    "classroomId",
+    "buildingId",
+    "studentId",
+]
+
 DEPARTMENT_CONFIG = {
     "expected_columns": [
-        "departmentId",  # Will be converted to UUID later if needed
+        "deptId",  # Will be converted to UUID later if needed
         "name",
         "campusId",
     ],
-    "required_columns": ["departmentId", "name", "campusId"],
-    "unique_columns": ["departmentId", "name"],
+    "required_columns": ["deptId", "name", "campusId"],
+    "unique_columns": ["deptId", "name"],
     "length_checks": {
         "name": 100  # Adjust max length based on your schema constraints
     },
@@ -412,7 +447,7 @@ import dotenv
 dotenv.load_dotenv()
 
 
-def publish_result(task_id, result):
+def publish_result(task_id, result, admin_id, campus_id):
     connection = pika.BlockingConnection(pika.URLParameters(os.getenv("RABBITMQ_URL")))
     channel = connection.channel()
     routing_key = "csv_validation_response"
@@ -423,7 +458,12 @@ def publish_result(task_id, result):
     # Wrapped payload
     message = {
         "pattern": "csv_validation_response",
-        "data": {"taskId": task_id, "result": result},
+        "data": {
+            "taskId": task_id,
+            "result": result,
+            "adminId": admin_id,
+            "campusId": campus_id,
+        },
     }
 
     try:
@@ -449,13 +489,15 @@ def on_message(ch, method, properties, body):
         task_id = data.get("taskId")
         file_data_encoded = data.get("fileData")
         category = data.get("category")
+        admin_id = data.get("adminId")
+        campus_id = data.get("campusId")
 
         if not task_id or not file_data_encoded or not category:
             raise ValueError("Invalid message format")
         file_data = base64.b64decode(file_data_encoded).decode("utf-8")
-        result = validate_csv_file(file_data, category)
+        result = validate_csv_file(file_data, category, campus_id)
 
-        publish_result(task_id, result)
+        publish_result(task_id, result, admin_id, campus_id)
 
     except Exception as e:
 
@@ -498,3 +540,13 @@ def start_consumer():
 if __name__ == "__main__":
     print("we here!!!")
     start_consumer()
+"""
+decisions:
+    * reject the entire file if there are errors
+    * prefix all id columns with a prifix (campus_id) to insure intercampus uniqueness
+    * send campus_id to queue both in request and response
+    * keep track of tasks for each campus and admin using taskId?
+concerns:
+    * save admin_id - campus_id - task_id in db
+    * save task_id - response in db
+"""
