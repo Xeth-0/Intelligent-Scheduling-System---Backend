@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import {
-  ConstraintScope,
+  ConstraintCategory,
   ConstraintValueType,
   DayOfWeek,
 } from '@prisma/client';
@@ -9,7 +9,7 @@ export interface ConstraintTypeDefinition<T> {
   id: string;
   name: string;
   description: string;
-  category: ConstraintScope;
+  category: ConstraintCategory;
   valueType: ConstraintValueType;
   jsonSchema: z.ZodSchema<T>;
 }
@@ -50,7 +50,7 @@ export const CONSTRAINT_DEFINITIONS = {
     id: 'TEACHER_TIME_PREFERENCE',
     name: 'Teacher Time Preference',
     description: 'A preference for a teacher to teach at specific timeslots',
-    category: ConstraintScope.TEACHER_PREFERENCE,
+    category: ConstraintCategory.TEACHER_PREFERENCE,
     valueType: ConstraintValueType.TIME_SLOT,
     jsonSchema: z.object({
       days: z.array(
@@ -73,7 +73,7 @@ export const CONSTRAINT_DEFINITIONS = {
     id: 'TEACHER_SCHEDULE_COMPACTNESS',
     name: 'Teacher Schedule Compactness',
     description: 'A preference for a teacher to have a compact schedule',
-    category: ConstraintScope.TEACHER_PREFERENCE,
+    category: ConstraintCategory.TEACHER_PREFERENCE,
     valueType: ConstraintValueType.BOOLEAN,
     jsonSchema: z.object({
       enabled: z.boolean(),
@@ -84,7 +84,7 @@ export const CONSTRAINT_DEFINITIONS = {
     id: 'TEACHER_ROOM_PREFERENCE',
     name: 'Teacher Room Preference',
     description: 'A preference for a teacher to teach in a specific room',
-    category: ConstraintScope.TEACHER_PREFERENCE,
+    category: ConstraintCategory.TEACHER_PREFERENCE,
     valueType: ConstraintValueType.ROOM,
     jsonSchema: z.object({
       roomIds: z.array(z.string()).optional(),

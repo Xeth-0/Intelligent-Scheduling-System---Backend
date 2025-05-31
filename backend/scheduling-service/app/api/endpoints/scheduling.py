@@ -10,14 +10,11 @@ router = APIRouter(prefix="/scheduler")
 async def generate_schedule(request: ScheduleApiRequest):
     print("Received request: ", request)
 
-    timeslots = [
-        "08:00-09:30",
-        "09:40-11:10",
-        "11:20-12:50",
-        "13:30-15:00",
-        "15:10-16:40",
-    ]
+    timeslots = [timeslot.code for timeslot in request.timeslots]
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+
+    constraints = request.constraints
+    # print("Constraints: ", constraints)
 
     print("Initializing scheduler...")
     scheduler = GeneticScheduler(

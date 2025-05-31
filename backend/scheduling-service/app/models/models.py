@@ -1,10 +1,13 @@
 from pydantic import BaseModel
 
 
-# class Campus(BaseModel):  # useless for now
-#     campusId: str
-#     name: str
-#     location: str
+class Timeslot(BaseModel):
+    timeslotId: str
+    code: str
+    label: str
+    startTime: str
+    endTime: str
+    order: int
 
 
 class Classroom(BaseModel):
@@ -30,6 +33,7 @@ class Course(BaseModel):
 
     # More than one student group can be assigned to the course.
     # The list is a list of student groups for each session type. The student groups in that list take that course together.
+
 
 class Teacher(BaseModel):
     teacherId: str
@@ -72,11 +76,19 @@ class StudentGroup(BaseModel):
     accessibilityRequirement: bool  # blanket requirement for all reqs # ! for now
 
 
+class Constraint(BaseModel):
+    constraintId: str
+    constraintType: str
+    teacherId: str
+    value: dict
+    weight: int
+    category: str
+
+
 class ScheduleApiRequest(BaseModel):
     courses: list[Course]
     teachers: list[Teacher]
     studentGroups: list[StudentGroup]
     rooms: list[Classroom]
-
-class ExamplePayload(BaseModel):
-    something: list[int]
+    timeslots: list[Timeslot]
+    constraints: list[Constraint]

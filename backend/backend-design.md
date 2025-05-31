@@ -1,308 +1,369 @@
-# Backend Structure
-## System Structure
-Our backend follows a monorepo structure with clear service boundaries, designed for scalability and maintainability. The architecture separates core application logic from specialized scheduling operations while promoting code reuse through shared resources.
+# Intelligent Scheduling System (ISS) - Backend Design2
 
-Separating the core logic into a nestjs api, and delegating the actual scheduling to a python based framework like FASTAPI/Django.
+## Overview
 
-***diagram made with mermaid.js. extension to view it in vscode: https://marketplace.cursorapi.com/items?itemName=bierner.markdown-mermaid***
+The Intelligent Scheduling System (ISS) is an AI-powered platform designed to optimize university timetables using advanced genetic algorithms. The system automatically generates schedules that satisfy hard constraints (room conflicts, teacher availability) and soft constraints (preferences, accessibility) while providing a modern web interface for administrators, teachers, and students.
+
+The backend follows a microservices architecture with three main services:
+
+- **Core Service (NestJS)**: Main API gateway handling authentication, data management, and business logic
+- **Scheduling Service (FastAPI)**: Genetic algorithm engine for timetable optimization  
+- **Data Processing Service (Python)**: CSV file processing and validation via message queues
+
+## System Architecture
+
 ```mermaid
-graph TD
-    subgraph Backend Monorepo
-        subgraph Core_Service[NestJS Core Service]
-            AG[CORE API - Nestjs]
-            subgraph Modules
-                A[Auth Module]
-                U[Users Module]
-                S[Scheduling Module]
-            end
-            DB[PostgreSQL\nvia Prisma]
-        end
-
-        subgraph Scheduling_Engine[FastAPI/Django Engine]
-            SE_API[Scheduling API]
-            SE_Core[Scheduling Algorithm]
-            SE_DB[(Cache DB)]
-        end
-
-        
+graph TB
+    subgraph "Client Layer"
+        WEB[Web Frontend]
+        API_CLIENTS[API Clients]
     end
 
-    AG -->|HTTP Requests| Modules
-    S -->|REST API Calls| SE_API
-    SE_API -->|Algorithm Config| SE_Core
-    SE_Core -->|Temporary Data| SE_DB
-    
-    Modules --> DB
+    subgraph "Backend Services"
+        subgraph "Core Service (NestJS)"
+            CORE_API[Core API Server]
+            AUTH[Authentication Module]
+            USERS[Users Module] 
+            TEACHERS[Teachers Module]
+            COURSES[Courses Module]
+            ROOMS[Classrooms Module]
+            BUILDINGS[Buildings Module]
+            DEPARTMENTS[Departments Module]
+            GROUPS[Student Groups Module]
+            SCHEDULING[Scheduling Module]
+            FILES[File Processing Module]
+            HEALTH[Health Module]
+        end
 
-    classDef service fill:#e1f5fe,stroke:#039be5;
-    classDef engine fill:#f0f4c3,stroke:#827717;
-    
-    class Core_Service,Modules service
-    class Scheduling_Engine engine
-    class Shared shared
-    class DB,SE_DB db
+        subgraph "Scheduling Engine (FastAPI)"
+            SCHED_API[Scheduling API]
+            GA_ENGINE[Genetic Algorithm Engine]
+            FITNESS[Fitness Evaluator]
+        end
+
+        subgraph "Data Processing (Python)"
+            PYTHON_SERVICE[Python Service]
+            CSV_PARSER[CSV Processing Engine]
+            VALIDATION[Data Validation]
+        end
+
+        subgraph "Infrastructure"
+            RABBITMQ[Message Queue - RabbitMQ]
+            POSTGRES[(PostgreSQL Database)]
+            PRISMA[Prisma ORM]
+        end
+    end
+
+    subgraph "External Services"
+        SENTRY[Sentry - Error Tracking]
+    end
+
+    WEB --> CORE_API
+    API_CLIENTS --> CORE_API
+
+    CORE_API --> AUTH
+    CORE_API --> USERS
+    CORE_API --> TEACHERS
+    CORE_API --> COURSES
+    CORE_API --> ROOMS
+    CORE_API --> BUILDINGS
+    CORE_API --> DEPARTMENTS
+    CORE_API --> GROUPS
+    CORE_API --> SCHEDULING
+    CORE_API --> FILES
+    CORE_API --> HEALTH
+
+    SCHEDULING --> RABBITMQ
+    RABBITMQ --> SCHED_API
+    SCHED_API --> GA_ENGINE
+    GA_ENGINE --> FITNESS
+
+    FILES --> RABBITMQ
+    RABBITMQ --> PYTHON_SERVICE
+    PYTHON_SERVICE --> CSV_PARSER
+    CSV_PARSER --> VALIDATION
+
+    CORE_API --> PRISMA
+    PRISMA --> POSTGRES
+
+    CORE_API --> SENTRY
+    SCHED_API --> SENTRY
+
+    classDef coreService fill:#e1f5fe,stroke:#039be5,stroke-width:2px
+    classDef schedService fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef dataService fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
+    classDef infrastructure fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef external fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+
+    class CORE_API,AUTH,USERS,TEACHERS,COURSES,ROOMS,BUILDINGS,DEPARTMENTS,GROUPS,SCHEDULING,FILES,HEALTH coreService
+    class SCHED_API,GA_ENGINE,FITNESS schedService  
+    class PYTHON_SERVICE,CSV_PARSER,VALIDATION dataService
+    class RABBITMQ,POSTGRES,PRISMA infrastructure
+    class SENTRY external
 ```
-## Core(Nestjs) Structure
-### Overview
-The Core API serves as the backbone of the backend application, built using NestJS. It is responsible for handling all web operations and business logic related to user management, authentication, and scheduling functionalities. The API is structured into distinct modules, each focusing on a specific domain, which is ig the way nest is usually structured. Here's some example modules:
 
-1. **Auth Module**: Manages user authentication processes, including registration and login, while implementing role-based access control (RBAC) for secure access to resources.
+## Core Service (NestJS)
 
-2. **Users Module**: Handles user data management, allowing for the retrieval, updating, and deletion of user profiles.
+The core service serves as the main API gateway, handling authentication, data management, and orchestrating communication with other microservices.
 
-3. **Scheduling Module**: Integrates with the scheduling engine, facilitating communication and data exchange for generating and managing schedules.
+### Key Features
 
-Each module will contain it's own dtos and unit tests for teh controller and the services.
+- **JWT-based Authentication** with role-based access control (Admin, Teacher, Student)
+- **Prisma ORM** for type-safe PostgreSQL operations
+- **Modular Architecture** with dedicated modules for each domain
+- **RESTful API** with Swagger/OpenAPI documentation
+- **Input Validation** using class-validator and DTOs
+- **Error Tracking** via Sentry integration
 
-### Directory Structure Breakdown
+### Module Structure
 
-## Directory Structure
-        backend/
-        ├── core/                   # Main NestJS Application 
-        │   ├── src/
-        │   │   ├── modules/        # Split by domain features
-        │   │   │   ├── auth/       # Authentication module
-        │   │   │   ├── scheduling/ # Scheduling integration module
-        │   │   │   ├── users/      # User management module
-        │   │   │   └── ...         # Other modules
-        │   │   ├── shared/         # Reusable components
-        │   │   │   ├── decorators/ # Custom decorators
-        │   │   │   ├── filters/    # Exception filters
-        │   │   │   ├── interceptors/ # Request interceptors
-        │   │   │   └── ...         # Other shared utilities
-        │   │   ├── main.ts         # Existing entry file
-        |   |   └── ...
-        ├── scheduling-engine/      # Second API Application (FastAPI/Django)
-        │   ├── app/
-        │   │   ├── core/           # Scheduling algorithm implementation
-        │   │   ├── routers/        # API endpoints
-        │   │   └── ...             # Service-specific structure
-        ├── docker/                 # Docker configurations
-        │   ├── core.Dockerfile
-        │   ├── scheduling.Dockerfile
-        │   └── ...
-        ├── scripts/                # Deployment/maintenance scripts
-        ├── docs/                   # Technical documentation
-        ├── docker-compose.yml      # Local development setup
-        ├── package.json            # Workspace config (if using npm workspaces)
-        └── .env.example            # Environment template
+The core service contains the following modules:
 
-#### Core Service (`core/`)
-The primary NestJS application handling web operations and business logic
+- **Auth Module**: JWT authentication and role-based access control
+- **Users Module**: User profile management and CRUD operations
+- **Teachers Module**: Teacher-specific data and preferences
+- **Student Groups Module**: Management of student cohorts and groups
+- **Courses Module**: Course definitions and academic content
+- **Departments Module**: Academic department organization
+- **Classrooms Module**: Room management and facility data
+- **Buildings Module**: Building and location information
+- **Scheduling Module**: Orchestrates scheduling requests and results
+- **File Module**: Handles CSV uploads and data import coordination
+- **Health Module**: Service monitoring and health checks
 
+## Scheduling Service (FastAPI)
 
-#### Scheduling Engine (`scheduling-api/`)
-Independent service for timetable generation (FastAPI/Django):
+The scheduling service implements a sophisticated genetic algorithm for timetable optimization, operating as an independent microservice communicating via RabbitMQ.
 
-#### Shared Directory Structure
-The `shared/` directory contains reusable components that cut across multiple modules:
+### Algorithm Parameters
 
-1. **Decorators** (e.g., `@Public()` to bypass authentication)
-2. **Filters** (Global exception handlers)
-3. **Interceptors** (Request/response transformers, sentry/posthog interceptor for logging)
-4. **Pipes** (Validation and data transformation)
-5. **Guards** (Extended authentication checks)
-6. **Utilities** (Common helpers like date formatting or sth)
+- **Population Size**: 50 chromosomes
+- **Max Generations**: 10,000
+- **Gene Mutation Rate**: 10%
+- **Chromosome Mutation Rate**: 20%
+- **Tournament Selection Size**: 3
+- **Elitism Count**: 2 (best individuals preserved)
+- **Time Limit**: 20 seconds
 
+### Genetic Algorithm Flow
 
-# **Final Project Design Doc \- Backend**
+```mermaid
+flowchart TD
+    START([Algorithm Start]) --> INIT[Initialize Population<br/>50 chromosomes]
+    
+    INIT --> POP_EVAL[Evaluate Population]
+    POP_EVAL --> FITNESS[Calculate Fitness Scores]
+    FITNESS --> REPORT[Generate Fitness Reports]
+    
+    REPORT --> CHECK_TERMINATION{Check Termination}
+    
+    CHECK_TERMINATION -->|Perfect Solution| PERFECT[Return Optimal Solution]
+    CHECK_TERMINATION -->|Time Limit: 20s| TIMEOUT[Return Best Solution]
+    CHECK_TERMINATION -->|Max Generations: 10k| MAX_GEN[Return Best Solution]
+    CHECK_TERMINATION -->|Continue| EVOLUTION[Evolution Process]
+    
+    EVOLUTION --> SELECTION[Tournament Selection<br/>Size: 3]
+    SELECTION --> CROSSOVER[Single-Point Crossover]
+    CROSSOVER --> MUTATION[Gene Mutation<br/>Rate: 10%]
+    MUTATION --> ELITISM[Preserve Elite<br/>Count: 2]
+    ELITISM --> NEW_POP[Create New Population]
+    
+    NEW_POP --> POP_EVAL
+    
+    PERFECT --> END([Algorithm End])
+    TIMEOUT --> END
+    MAX_GEN --> END
 
-## **Overview \- High Level Description of the project**
+    classDef startEnd fill:#e8f5e8,stroke:#4caf50,stroke-width:2px
+    classDef process fill:#e1f5fe,stroke:#039be5,stroke-width:2px
+    classDef decision fill:#fff3e0,stroke:#ff9800,stroke-width:2px
+    classDef evolution fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
 
-The System is an AI/ML-powered platform designed to optimize school timetables by balancing hard constraints (e.g., no course conflicts, room capacities) with soft constraints (e.g., teacher preferences, accessibility). The system is intended for educational institutions, universities for the moment, to modernize their scheduling processes. Unlike traditional rule-based systems, this system leverages advanced optimization techniques to provide scalable, flexible, and user-friendly solutions for educational institutions. Its primary goal is to minimize manual intervention, improve satisfaction among stakeholders, and enable efficient resource utilization.
+    class START,END startEnd
+    class INIT,FITNESS,REPORT,PERFECT,TIMEOUT,MAX_GEN process
+    class POP_EVAL,CHECK_TERMINATION decision
+    class EVOLUTION,SELECTION,CROSSOVER,MUTATION,ELITISM,NEW_POP evolution
+```
 
-## **Requirements**
+### Constraint System
 
-## Core Functionalities
+**Hard Constraints (Must be satisfied):**
 
-### 1. **Schedule Generation**
+- **Resource Conflicts**: No double-booking of rooms, teachers, or student groups
+- **Room Type Matching**: Sessions assigned to appropriate room types (lecture, lab, seminar)
+- **Wheelchair Accessibility**: Accessible rooms for teachers/students requiring them
+- **Data Integrity**: All referenced entities must exist
+- **Timeslot Validity**: Valid day and time assignments
 
-* Automatically generate schedules that satisfy hard and soft constraints.   
-* Hard Constraints:
+**Soft Constraints (Preferences to optimize):**
 
-  * Room Schedule Overlap (taking the room type like labs into account)  
-  * Teacher Schedule Overlap  
-  * Student Group overlap  
-  * Timeslot Validity (no classes during lunch, or after 10:00 for eg)  
+- **Teacher Preferences**: Preferred working hours and room assignments
+- **Schedule Distribution**: Optimal spacing of sessions throughout the week
+- **Course Priority**: Earlier scheduling for high-ECTS/difficulty courses
+- **Room Utilization**: Efficient use of available classroom space
 
-* Soft Constraints:
-  * Time preference for teachers  
-  * Schedule classes in a week with the maximum/minimum possible gap in days.(? Not sure which one to go for, as it depends on teacher preferences too)  
-  * Scheduling the harder courses earlier in the day. (can be determined from the course ECTS)
-  * Floor considerations based on disability (should be in hard constraints, but i want to make it easier for the scheduler for now).  
-  * (any others?)
+## Data Processing Service (Python)
 
-### 2. **Conflict Detection and Resolution**
+Handles CSV file uploads and validation via RabbitMQ message queues, built using Python with pandas for data manipulation.
 
-* Detecting scheduling conflicts? If we add manual overrides for admins, maybe showing when there are conflicts would be a good idea.
+### Key Capabilities
 
-### 3. **Teacher Input for preferences**
+- **CSV Processing**: Teachers, courses, rooms, departments, student groups
+- **Data Validation**: Type checking, format validation, constraint checking
+- **Error Reporting**: Detailed feedback on validation failures
+- **Message Queue Integration**: Async processing via RabbitMQ
 
-* Have teachers specify working hours, room or location preferences, etc…  
-* Generate user-friendly views of the schedule (e.g., grid or calendar format).  
-* Allow filtering by teacher, room, or class.
+## Database Schema
 
-### 4. **Schedule Visualization**
+```mermaid
+erDiagram
+    User ||--o| Teacher : "is"
+    User ||--o| Student : "is"
+    User ||--o| Admin : "is"
+    
+    Teacher ||--o{ Course : "teaches"
+    Teacher }o--|| Department : "belongs_to"
+    Teacher ||--o{ ScheduledSession : "assigned_to"
+    
+    Student }o--o| StudentGroup : "member_of"
+    StudentGroup }o--|| Department : "belongs_to"
+    StudentGroup ||--o{ ScheduledSession : "attends"
+    StudentGroup }o--o{ Course : "enrolled_in"
+    
+    Course ||--o{ ScheduledSession : "has_sessions"
+    Course }o--o| Department : "offered_by"
+    
+    Classroom ||--o{ ScheduledSession : "hosts"
+    Classroom }o--|| Campus : "located_in"
+    Classroom }o--o| Building : "part_of"
+    
+    ScheduledSession }o--|| Schedule : "part_of"
+    
+    Department }o--|| Campus : "part_of"
+    Schedule }o--|| Campus : "created_for"
+    Admin }o--|| Campus : "manages"
+```
 
-  Visualise the schedules for the users. Teachers should be able to view their own personal schedules, and students the schedules for their class groups. This should be the default screen for signed in users as well. We should also provide the schedules for the entire school, showing which rooms are being occupied by which class across the entire university. (and allow for filtering on top of it, but that can come later).  
+## Inter-Service Communication
 
-### 5. **Data Input**
+```mermaid
+sequenceDiagram
+    participant Admin as Administrator
+    participant Core as Core API
+    participant Queue as RabbitMQ
+    participant Scheduler as Scheduling Service
+    participant DataProcessor as Data Processing Service
+    participant DB as PostgreSQL
 
-* The way the school admins input the data into the system is important. Information such as courses and rooms don’t change year to year, so we should avoid making them type out all the fields for all the courses/rooms and use a structured input format like a csv file and parse the required information from it. I’m not too sure how to handle that yet though.  
-* For other constraints such as teacher preferences, we could have the teacher input it themselves directly on their page. Again, not too sure of this. Need to explore other options and the pros and cons of them before deciding.
+    Admin->>Core: Upload CSV Data
+    Core->>Queue: Publish CSV Processing Request
+    Queue->>DataProcessor: Deliver Message
+    DataProcessor->>DataProcessor: Validate & Process CSV
+    DataProcessor->>Queue: Publish Results
+    Queue->>Core: Deliver Validation Results
+    Core->>DB: Store Validated Data
+    Core-->>Admin: Upload Complete
 
-### 6. **Export and Reporting**
+    Admin->>Core: Generate Schedule
+    Core->>DB: Fetch Course/Teacher/Room Data
+    Core->>Queue: Publish Schedule Request
+    Queue->>Scheduler: Deliver Message
+    Scheduler->>Scheduler: Run Genetic Algorithm
+    Scheduler->>Queue: Publish Results
+    Queue->>Core: Deliver Results
+    Core->>DB: Store Generated Schedule
+    Core-->>Admin: Schedule Generation Complete
 
-Not sure about the reporting yet, but the schedules should be exportable for each section.
+    Note over Core, Scheduler: Async communication for long-running tasks
+    Note over Core, DataProcessor: Async communication via message queues
+```
 
-* Export schedules in formats like PDF or Excel for sharing.Format needs to be well defined and viewable within the web ui. It should also be downloadable, so we might need a way to do that too.  
-* Provide analytics? Not sure about this one.What sort of analytics could be required. Posthog is an option, but what could we show? Need to explore this as well.
+## Technology Stack
 
-## **User Descriptions and Use cases**
+- Core Service (NestJS)
 
-### **School Administrators**
+- **Runtime**: Node.js with TypeScript
+- **Framework**: NestJS with Express
+- **ORM**: Prisma
+- **Authentication**: JWT with Passport.js
+- **Validation**: class-validator, class-transformer
+- **Documentation**: Swagger/OpenAPI
+- **Testing**: Jest
 
-* **Role**: Oversee scheduling, input data, resolve conflicts, and manage the system.  
-* **Use Cases**:  
-  1. Log in securely to the admin dashboard.  
-  2. Input data:  
-     * Add teachers, rooms, and classes.  
-     * Define hard constraints (e.g., courses, departments, sections, teacher availability for courses, room capacities).  
-  3. Run the scheduling engine to generate a draft timetable.  
-  4. Review the generated schedule:  
-     * See conflicts flagged by the system (whatever the system generates should be good. Manual adjustments might cause conflicts though).  
-     * Use system-suggested fixes(maybe have it regenerate the entire thing?) or manually adjust schedules.  
-  5. Finalize and export the schedule.  
-  6. View metrics if we do analytics.
+- Scheduling Service (FastAPI)
 
-  ### **3.2. Teachers**
+- **Runtime**: Python 3.9+
+- **Framework**: FastAPI
+- **Algorithm**: Custom Genetic Algorithm
+- **Data Models**: Pydantic
+- **Performance**: NumPy for computations
 
-* **Role**: Provide input on preferences and view their schedules.  
-* **Use Cases**:  
-  1. Log in securely to the teacher portal.  
-  2. Specify preferences:  
-     * Working hours/days, or other teacher specific (soft) constraints.  
-     * Room preferences or special accommodations.  
-  3. View personalized schedules.  
-  4. Submit feedback? or flag conflicts for administrator review. (Not sure about this)
+- Data Processing Service (Python)
 
-  ### **3.3. Students**
+- **Runtime**: Python 3.9+
+- **Data Processing**: pandas, NumPy
+- **Message Queue**: pika (RabbitMQ client)
+- **File Handling**: CSV processing utilities
 
-* **Role**: View finalized schedules.  
-* **Use Cases**:  
-  1. Log in (if permitted).  
-  2. Access class schedules filtered by class group or subject.  
-  3. Provide optional feedback on accessibility or conflicts.
+### Infrastructure
 
-## **Requirements**
+- **Database**: PostgreSQL 15
+- **Message Queue**: RabbitMQ
+- **Containerization**: Docker & Docker Compose
+- **Error Tracking**: Sentry
+- **Load Balancing**: Nginx (production)
 
-– what i could come up with so far using the above description. Just a rough outline to get it started.
+## Development Workflow
 
-### **5.1. Functional Requirements**
+### Local Development Setup
 
-1. **Data Input and Management**:  
-   * Allow administrators to input teacher, room, and class data.  
-   * Validate inputs to prevent missing or conflicting data.  
-2. **Schedule Generation**:  
-   * Generate schedules that meet all hard constraints.  
-   * Optimize schedules for soft constraints.  
-3. **Conflict Detection and Resolution**:  
-   * Automatically identify scheduling conflicts.  
-   * Provide actionable suggestions for resolution.  
-4. **User Input and Preferences**:  
-   * Allow teachers to specify working hours and preferences.  
-   * Provide interfaces for feedback and manual adjustments.  
-5. **Schedule Visualization**:  
-   * Display schedules in grid or calendar formats.  
-   * Enable filtering by teacher, room, or class.  
-6. **Export**:  
-   * Support exporting schedules in PDF and Excel formats.
+```bash
+# Start infrastructure services
+docker-compose up postgres rabbitmq
 
-   ### **5.2. Non-Functional Requirements**
+# Core service
+cd core
+npm install
+npm run prisma:generate
+npm run prisma:migrate:dev
+npm run start:dev
 
-1. **Performance**:  
-   * Generate schedules for small-to-medium institutions within 2 minutes.  
-2. **Scalability**:  
-   * Handle increasing constraints and datasets efficiently.  
-3. **Usability**:  
-   * Ensure interfaces are intuitive and accessible for non-technical users.  
-4. **Reliability**:  
-   * Ensure data integrity and robust conflict detection.  
-5. **Security**:  
-   * Use role-based access control to secure sensitive data.
+# Scheduling service  
+cd ../scheduling-service
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python -m uvicorn app.main:app --reload --port 8001
 
-# Implementation Design
+# Data processing service
+cd ../python-service
+pip install -r requirements.txt
+python main.py
+```
 
-This section details the data formats, data models, and the core algorithmic approach for the scheduling system.
+## Security & Performance
 
-#### **1\. Data Input Strategy**
+### Security Features
 
-The system will use a hybrid approach for data input to balance ease of setup for static institutional data and flexibility for dynamic, semester-specific information:
+- **JWT Authentication** with role-based access control
+- **Input Validation** at all API boundaries
+- **SQL Injection Prevention** via Prisma ORM
+- **Environment-based Configuration** for sensitive data
+- **Audit Logging** for administrative actions
 
-* **Static Institutional Data (via CSV Upload by Admin):** Data that changes infrequently (e.g., annually or less) will be imported via predefined CSV templates. This minimizes repetitive manual entry and ensures a consistent baseline. The Data IO/Parsing FastAPI service will handle parsing and validation of these CSVs.Since there are different kinds of institutional data we need to import, separating them out to their own spreadsheets is probably the better choice here.  
-  * **CSV Files:**  
-    * `rooms.csv`  
-    * `teachers.csv` (core information, detailed fields below)  
-    * `courses.csv` (core course definitions)  
-    * `course_sessions_structure.csv` (defines lecture/lab/tutorial structure per course)  
-    * `departments.csv`  
-    * `timeslots.csv` (defines all possible valid teaching slots)  
-  * **Validation:** This part is important. Robust validation will be implemented for each CSV upload, checking for correct columns, data types, and required fields. Clear error feedback will be provided to the admin for corrections. If there is a mistake in some row, or the format of the entire csv, we need to properly convey this to the user (the school admin) so they can correct the mistake in the csv.  
-* **Dynamic & Operational Data (via UI by Admins/Teachers):** Data that changes per semester or involves user preferences will be managed through the system's web interface.  
-  * **Admin UI for Semester Setup:**  
-    * Defining `StudentGroups` for the semester (Department, Year, Section, ExpectedEnrollment). I’m unsure about this one so far. Using a UI interface to determine the number of sections for all departments is overkill. Maybe we can also do this using CSV, where the admins will input student data for all learning streams or sth.  
-    * Assigning `Teachers` and `StudentGroups` to specific `CourseSessionStructure` entries to create "schedulable course sessions" for the semester.  
-  * **Teacher UI for Preferences:**  
-    * Inputting preferred/unpreferred timeslots.  
-    * Specifying hard unavailability slots.  
-    * Indicating other preferences (e.g., specific room features if applicable).
+### Performance Optimizations
 
-  #### **2\. Detailed Data Formats (CSV Structures)** ( Draft for now, will be reviewed )
+- **Database Indexing** on foreign keys and query columns
+- **Connection Pooling** for concurrent requests
+- **Algorithm Optimization** with early termination and constraint caching
+- **Message Queue** for asynchronous processing
+- **Horizontal Scaling** support for core and scheduling services
 
-The following defines the column structure for each CSV file. Unique IDs are crucial and should be consistently used.
+### Monitoring & Observability
 
-* **`rooms.csv`**  
-  * `room_id` (Text, Unique PK, e.g., "R101")  
-  * `room_name` (Text, e.g., "Engineering Block Room 101")  
-  * `building` (Text, e.g., "Engineering Block")  
-  * `floor` (Text/Integer, e.g., "1")  
-  * `numeric_capacity` (Integer, e.g., 30\)  
-  * `capacity_category` (Text: Small, Medium, Large, Auditorium \- for display/filtering)  
-  * `room_type` (Text Enum: LECTURE, LAB\_CS, LAB\_PHYSICS, SEMINAR, WORKSHOP, etc.)  
-  * `is_wheelchair_accessible` (Boolean: TRUE/FALSE)  
-  * `notes` (Text, optional)
+- **Sentry Integration** for real-time error tracking
+- **Health Check Endpoints** for service monitoring
+- **Performance Profiling** for algorithm optimization
+- **Resource Utilization** monitoring
 
-* **`teachers.csv`**  
-  * `teacher_id` (Text, Unique PK, e.g., "T001")  
-  * `first_name` (Text)  
-  * `last_name` (Text)  
-  * `email` (Text, Unique, for login)  
-  * `department_id` (Text, FK to `departments.csv`)  
-  * `requires_accessible_room` (Boolean: TRUE/FALSE)
-
-* **`courses.csv`**  
-  * `course_id` (Text, Unique PK, e.g., "CS101")  
-  * `course_name` (Text, e.g., "Introduction to Programming")  
-  * `department_id` (Text, FK to `departments.csv`)  
-  * `ects_credits` (Integer) (to determine the difficulty/importance of the course. Can give it priority as a soft constraint and schedule it earlier in the day)
-
-* **`course_sessions_structure.csv`**  
-  * `course_session_structure_id` (Text, Unique PK)  
-  * `course_id` (Text, FK to `courses.csv`)  
-  * `session_type_name` (Text Enum: LECTURE, LAB, TUTORIAL)  
-  * `count_per_week` (Integer)  
-  * `duration_minutes` (Integer)  
-  * `required_room_type` (Text Enum \- specifies room type for *this specific session type*)
-
-* **`departments.csv`**  
-  * `department_id` (Text, Unique PK, e.g., "DEPT\_CS")  
-  * `department_name` (Text, e.g., "Computer Science")  
-  * `faculty_id` (Text, Optional FK to a potential `faculties.csv`)
-
-* **`timeslots.csv`**  
-  * `timeslot_id` (Text, Unique PK, e.g., "MON\_0900\_0950")  
-  * `day_of_week` (Text Enum: MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY)  
-  * `start_time` (Time: HH:MM)  
-  * `end_time` (Time: HH:MM)  
-  * `is_lunch_break` (Boolean: TRUE/FALSE \- Marks slots unusable for classes)  
-  * `is_generally_preferred` (Boolean: TRUE/FALSE \- minor soft preference, optional)
+This architecture provides a robust, scalable foundation for the Intelligent Scheduling System, enabling efficient timetable generation while maintaining high availability and performance standards.

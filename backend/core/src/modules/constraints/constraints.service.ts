@@ -7,18 +7,18 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import {
-  VALID_TIMESLOT_CODES,
-  CONSTRAINT_DEFINITIONS,
-  ConstraintDefinitionKey,
-} from './dtos/constraints.types';
-import {
   Role,
   ConstraintType,
   Constraint,
   Prisma,
   ConstraintValueType,
-  ConstraintScope,
+  ConstraintCategory,
 } from '@prisma/client';
+import {
+  VALID_TIMESLOT_CODES,
+  CONSTRAINT_DEFINITIONS,
+  ConstraintDefinitionKey,
+} from './dtos/constraints.types';
 import { CreateConstraintDto, UpdateConstraintDto } from './dtos';
 
 @Injectable()
@@ -109,7 +109,7 @@ export class ConstraintService implements OnModuleInit {
         constraintType: {
           // name: 'Teacher Time Preference',
           valueType: ConstraintValueType.TIME_SLOT,
-          category: ConstraintScope.TEACHER_PREFERENCE,
+          category: ConstraintCategory.TEACHER_PREFERENCE,
         },
       },
       include: {
@@ -524,8 +524,8 @@ export class ConstraintService implements OnModuleInit {
    */
   async getConstraintsForScheduling(campusId: string): Promise<
     Array<{
-      id: string;
-      type: string;
+      constraintId: string;
+      constraintType: string;
       teacherId: string | null;
       value: Prisma.JsonValue;
       weight: number;
@@ -535,7 +535,10 @@ export class ConstraintService implements OnModuleInit {
     const constraints = await this.prisma.constraint.findMany({
       where: {
         isActive: true,
-        OR: [{ campusId }, { teacher: { department: { campusId } } }],
+        OR: [
+          { campusId: campusId },
+          { teacher: { department: { campusId: campusId } } },
+        ],
       },
       include: {
         constraintType: true,
@@ -549,8 +552,8 @@ export class ConstraintService implements OnModuleInit {
 
     // Transform constraints for scheduling service
     return constraints.map((constraint) => ({
-      id: constraint.id,
-      type: constraint.constraintType.name,
+      constraintId: constraint.id,
+      constraintType: constraint.constraintType.name,
       teacherId: constraint.teacherId,
       value: constraint.value,
       weight: constraint.weight,

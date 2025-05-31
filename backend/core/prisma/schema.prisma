@@ -210,9 +210,9 @@ model ScheduledSession {
   studentGroup StudentGroup? @relation(fields: [studentGroupId], references: [studentGroupId], onDelete: SetNull)
   timeSlot     Timeslot      @relation(fields: [timeslotId, startTime, endTime], references: [timeslotId, startTime, endTime])
 
-  @@unique([timeslotId, startTime, endTime, day, classroomId])
-  @@unique([timeslotId, startTime, endTime, day, teacherId])
-  @@unique([timeslotId, startTime, endTime, day, studentGroupId])
+  @@unique([scheduleId, timeslotId, startTime, endTime, day, classroomId])
+  @@unique([scheduleId, timeslotId, startTime, endTime, day, teacherId])
+  @@unique([scheduleId, timeslotId, startTime, endTime, day, studentGroupId])
   @@map("ScheduleItem")
 }
 
@@ -243,11 +243,13 @@ model RefreshToken {
 }
 
 // ============ Preferenes ==============
-enum ConstraintScope {
+enum ConstraintCategory {
   TEACHER_PREFERENCE
   CAMPUS
   DEPARTMENT
   COURSE
+
+  @@map("ConstraintScope")
 }
 
 enum ConstraintValueType {
@@ -263,7 +265,7 @@ model ConstraintType {
   id          String              @id @default(uuid())
   name        String
   description String?
-  category    ConstraintScope
+  category    ConstraintCategory
   valueType   ConstraintValueType
   jsonSchema  Json // json schema for the constraint validation
   isActive    Boolean             @default(true)
