@@ -110,19 +110,6 @@ class ScheduleFitnessEvaluator:
         if not (course and room and teacher):
             return violations
 
-        # Check for invalid scheduling (hard constraint)
-        if not scheduled_item.timeslot or not scheduled_item.day:
-            violations.append(
-                ConstraintViolation(
-                    ConstraintCategory.INVALID_SCHEDULING,
-                    ConstraintType.HARD,
-                    1.0,
-                    scheduled_item,
-                    "Missing timeslot or day assignment",
-                )
-            )
-            return violations
-
         # Calculate total student count
         total_student_count = 0
         for sg_id in scheduled_item.studentGroupIds:
@@ -140,7 +127,72 @@ class ScheduleFitnessEvaluator:
                     )
                 )
 
+        # === SOFT CONSTRAINTS ===
+        # Soft Constraint: Room capacity (treating this as soft for now)
+        if room.capacity < total_student_count:
+            overflow = total_student_count - room.capacity
+            # Penalty proportional to overflow
+            penalty = overflow * 10.0  # 10 points per extra student
+            violations.append(
+                ConstraintViolation(
+                    ConstraintCategory.ROOM_CAPACITY_OVERFLOW,
+                    ConstraintType.SOFT,
+                    penalty,
+                    scheduled_item,
+                    f"Room capacity: {room.capacity} - exceeded by {overflow} students (total students: {total_student_count})",
+                )
+            )
+
+        # TODO: Add more soft constraints here
+        # - Teacher time preferences
+        # - Room preferences
+        # - Scheduling efficiency metrics
+        # - Course clustering preferences
+
+        return violations
+
+    def _evaluate_hard_constraints(
+        self,
+        scheduled_item: ScheduledItem,
+        room_tracker: Dict[Tuple[str, str, str], ScheduledItem],
+        teacher_tracker: Dict[Tuple[str, str, str], ScheduledItem],
+        student_group_tracker: Dict[Tuple[str, str, str], ScheduledItem],
+    ) -> List[ConstraintViolation]:
+        violations: List[ConstraintViolation] = []
+
+        course = self.course_map.get(scheduled_item.courseId)
+        room = self.room_map.get(scheduled_item.classroomId)
+        teacher = self.teacher_map.get(scheduled_item.teacherId)
+
+        if not course or not teacher:
+            # Critical information. we are not going to decide the course or teacher, these need to be there.
+            return violations
+
+        if not room:  # Unscheduled. Large penalty and early return
+            violations.append(
+                ConstraintViolation(
+                    ConstraintCategory.UNASSIGNED_ROOM,
+                    ConstraintType.HARD,
+                    1000.0,
+                    scheduled_item,
+                    "Unscheduled item",
+                )
+            )
+            return violations
+
         # === HARD CONSTRAINTS ===
+        # Check for invalid scheduling (hard constraint)
+        if not scheduled_item.timeslot or not scheduled_item.day:
+            violations.append(
+                ConstraintViolation(
+                    ConstraintCategory.INVALID_SCHEDULING,
+                    ConstraintType.HARD,
+                    1.0,
+                    scheduled_item,
+                    "Missing timeslot or day assignment",
+                )
+            )
+            return violations
 
         # Hard Constraint: Teacher wheelchair accessibility
         if teacher.needsWheelchairAccessibleRoom and not room.isWheelchairAccessible:
@@ -252,28 +304,12 @@ class ScheduleFitnessEvaluator:
             else:
                 student_group_tracker[time_key_student_group] = scheduled_item
 
-        # === SOFT CONSTRAINTS ===
+        return violations
 
-        # Soft Constraint: Room capacity (treating this as soft for now)
-        if room.capacity < total_student_count:
-            overflow = total_student_count - room.capacity
-            # Penalty proportional to overflow
-            penalty = overflow * 10.0  # 10 points per extra student
-            violations.append(
-                ConstraintViolation(
-                    ConstraintCategory.ROOM_CAPACITY_OVERFLOW,
-                    ConstraintType.SOFT,
-                    penalty,
-                    scheduled_item,
-                    f"Room capacity: {room.capacity} - exceeded by {overflow} students (total students: {total_student_count})",
-                )
-            )
-
-        # TODO: Add more soft constraints here
-        # - Teacher time preferences
-        # - Room preferences
-        # - Scheduling efficiency metrics
-        # - Course clustering preferences
+    def _evaluate_soft_constraints(
+        self, scheduled_item: ScheduledItem
+    ) -> List[ConstraintViolation]:
+        violations: List[ConstraintViolation] = []
 
         return violations
 

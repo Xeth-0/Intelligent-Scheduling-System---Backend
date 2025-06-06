@@ -11,8 +11,15 @@ services:
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     networks:
-       - app-network
+      - app-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+      start_period: 60s
+
   postgres:
     image: postgres:15-alpine
     container_name: postgres
@@ -26,24 +33,46 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-       - app-network
+      - app-network
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "myuser", "-d", "mydatabase"]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+      start_period: 60s
 
   nestjs-app:
     build:
       context: ./core
-      dockerfile: ../.docker/core.backend.dockerfile
+      dockerfile: dockerfile
+      args:
+        - DATABASE_URL=postgresql://myuser:mypassword@postgres:5432/mydatabase
+        - SENTRY_AUTH_TOKEN=${SENTRY_AUTH_TOKEN}
+        - SENTRY_DSN=${SENTRY_DSN}
     container_name: nestjs-app
     ports:
-      - "3000:3000"
+      - "3001:3001"
+    env_file:
+      - path: ./core/.env
+        required: true
     environment:
-      - RABBITMQ_URL=amqp://admin:securepassword123@rabbitmq:5672
       - NODE_ENV=development
-      - .env
+
+      # Override the DATABASE_URL from the .env file
+      - DATABASE_URL=postgresql://myuser:mypassword@postgres:5432/mydatabase
+
+      # Runtime environment variables for the running container
+      - RABBITMQ_URL=amqp://admin:securepassword123@rabbitmq:5672
+      - PYTHONUNBUFFERED=1
+      - SCHEDULING_SERVICE_URL=http://localhost:8000
     depends_on:
-      - rabbitmq
-      - postgres
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
     networks:
-       - app-network
+      - app-network
     restart: unless-stopped
 
   python-service:
@@ -54,11 +83,29 @@ services:
     environment:
       - RABBITMQ_URL=amqp://admin:securepassword123@rabbitmq:5672
       - PYTHONUNBUFFERED=1
-      - .env
+    env_file:
+      - ./python-service/.env
     depends_on:
-      - rabbitmq
+      rabbitmq:
+        condition: service_healthy
     networks:
-       - app-network
+      - app-network
+    restart: unless-stopped
+
+  scheduling-service:
+    build:
+      context: ./scheduling-service
+      dockerfile: Dockerfile
+    container_name: scheduling-service
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./scheduling-service/.env
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - app-network
     restart: unless-stopped
 
 networks:

@@ -10,6 +10,12 @@ import { hash } from 'bcrypt';
 const prisma = new PrismaClient();
 
 async function main() {
+  // Only seed if campus table is empty (avoid duplicate seeding)
+  const campusCount = await prisma.campus.count();
+  if (campusCount > 0) {
+    console.log('Database already seeded. Skipping seeding.');
+    return;
+  }
   console.log('Seeding database...');
 
   // Create Campus (not in sample data - creating default)
@@ -806,8 +812,7 @@ async function main() {
 
 main()
   .catch((e) => {
-    console.error(e);
-    process.exit(1);
+    console.error('Error during seeding:', e);
   })
   .finally(() => {
     void prisma.$disconnect();
