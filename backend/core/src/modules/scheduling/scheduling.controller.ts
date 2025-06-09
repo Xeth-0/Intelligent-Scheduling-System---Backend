@@ -43,6 +43,17 @@ export class SchedulingController {
     return ApiResponse.success(201, resp, 'Schedule generated successfully');
   }
 
+  @Get('/active')
+  @Roles(Role.ADMIN, Role.TEACHER, Role.STUDENT)
+  async getActiveSchedule(@GetUser() user: User) {
+    const resp = await this.schedulingService.getActiveSchedule(user.userId);
+    return ApiResponse.success(
+      200,
+      resp,
+      'Active schedule retrieved successfully',
+    );
+  }
+
   @Get('/id/:scheduleId')
   @Roles(Role.ADMIN, Role.TEACHER, Role.STUDENT)
   @GetScheduleByIdDocs()

@@ -16,6 +16,7 @@ import {
   StudentGroup,
   ScheduledSession,
   Timeslot,
+  Role,
 } from '@prisma/client';
 import axios from 'axios';
 import { plainToInstance } from 'class-transformer';
@@ -25,7 +26,6 @@ import { SearchSessionsBody } from './dtos/scheduleSearch.dto';
 import { ISchedulingService } from '../__interfaces__/scheduling.service.interface';
 import { ConstraintService } from '../constraints/constraints.service';
 import { TimeslotService } from '../timeslots/timeslots.service';
-
 @Injectable()
 export class SchedulingService implements ISchedulingService {
   constructor(
@@ -150,6 +150,58 @@ export class SchedulingService implements ISchedulingService {
       );
     }
     return { admin, schedule };
+  }
+
+  async getActiveSchedule(userId: string) {
+    const user = await this.prismaService.user.findFirst({
+      where: {
+        userId: userId,
+      },
+      include: {
+        admin: true,
+        teacher: {
+          include: {
+            department: true,
+          },
+        },
+        student: {
+          include: {
+            studentGroup: {
+              include: {
+                department: true,
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+    let campusId: string | undefined = undefined;
+
+    if (user.role === Role.STUDENT) {
+      campusId = user.student?.studentGroup?.department.campusId;
+    } else if (user.role === Role.TEACHER) {
+      campusId = user.teacher?.department.campusId;
+    } else if (user.role === Role.ADMIN) {
+      campusId = user.admin?.campusId;
+    }
+    if (!campusId) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const schedule = await this.prismaService.schedule.findFirst({
+      where: {
+        campusId: campusId,
+        active: true,
+      },
+    });
+    if (!schedule) {
+      throw new NotFoundException('No active schedule found');
+    }
+
+    return await this.getScheduleById(userId, schedule.scheduleId);
   }
 
   /**
@@ -543,6 +595,7 @@ export class SchedulingService implements ISchedulingService {
         },
       });
 
+      await this.activateSchedule(userId, newSchedule.scheduleId);
       return this.getScheduleById(userId, newSchedule.scheduleId);
     } catch (e: unknown) {
       if (e instanceof Prisma.PrismaClientKnownRequestError) {
