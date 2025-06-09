@@ -42,6 +42,7 @@ export class SchedulingService implements ISchedulingService {
     session: ScheduledSession & {
       course: Course;
       teacher: Teacher;
+      timeslot: Timeslot;
       classroom: Classroom | null;
       studentGroup: StudentGroup | null;
     },
@@ -61,7 +62,7 @@ export class SchedulingService implements ISchedulingService {
       classroomName: session.classroom?.name ?? 'None',
       classGroupIds: session.studentGroupId,
       sessionType: session.sessionType,
-      timeslot: session.startTime + '-' + session.endTime,
+      timeslot: session.timeslot.startTime + '-' + session.timeslot.endTime,
       day: session.day,
     };
   }
@@ -242,19 +243,13 @@ export class SchedulingService implements ISchedulingService {
         },
       },
       classroom: {
-        // select: {
-        //   classroomId: true,
-        //   name: true,
-        //   isWheelchairAccessible: true,
-        //   building: true,
-        //   campus: true,
-        // },
         include: {
           campus: true,
           building: true,
         },
       },
       studentGroup: true,
+      timeslot: true,
     };
 
     const schedule = await this.prismaService.schedule.findUnique({
@@ -425,14 +420,16 @@ export class SchedulingService implements ISchedulingService {
     // Get constraints and timeslots for the campus
     const constraints =
       await this.constraintService.getConstraintsForScheduling(admin.campusId);
+
+    console.log('constraints', constraints);
     const timeslots = await this.timeslotService.getAllTimeslots();
 
     const payload = {
       courses: courses.map((course) => ({
         courseId: course.courseId,
         name: course.name,
-        description: course.description ?? 'some fucking description',
-        ectsCredits: 0,
+        description: course.description ?? 'No description available',
+        ectsCredits: course.ectsCredits,
         department: course.departmentId,
         teacherId: course.teachers[0].teacherId,
         studentGroupIds: course.studentGroups.map(
@@ -510,12 +507,12 @@ export class SchedulingService implements ISchedulingService {
 
       const schedule = mappedSchedulingData.data.best_schedule;
 
-      // Process schedule items and map timeslot codes to timeslot IDs
+      const timeslotMap = new Map(timeslots.map((slot) => [slot.code, slot]));
+
       const scheduleItemsData = await Promise.all(
-        schedule.map(async (scheduledSession) => {
-          const timeslotCode = scheduledSession.timeslot; // TODO: Needs a better way to handle this.
-          const timeslot =
-            await this.timeslotService.getTimeslotByCode(timeslotCode);
+        schedule.map((scheduledSession) => {
+          const timeslotCode = scheduledSession.timeslot;
+          const timeslot = timeslotMap.get(timeslotCode);
           if (!timeslot) {
             throw new InternalServerErrorException(
               `Error generating schedule: Timeslot not found for code: ${timeslotCode}`,
@@ -529,8 +526,6 @@ export class SchedulingService implements ISchedulingService {
             sessionType: scheduledSession.sessionType,
             classroomId: scheduledSession.classroomId,
             timeslotId: timeslot.timeslotId,
-            startTime: timeslot.startTime,
-            endTime: timeslot.endTime,
             day: scheduledSession.day,
           };
         }),

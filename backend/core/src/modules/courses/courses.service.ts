@@ -33,6 +33,7 @@ export class CoursesService {
       code: course.code,
       description: course.description,
       departmentId: course.departmentId,
+      ectsCredits: course.ectsCredits,
       sessionType: course.sessionType,
       sessionsPerWeek: course.sessionsPerWeek,
       department: course.department,
@@ -83,7 +84,7 @@ export class CoursesService {
           throw new ConflictException('Course code already exists');
         } else if (error.code === 'P2025') {
           throw new NotFoundException(
-            error.meta?.cause || 'Related entity not found',
+            error.meta?.cause ?? 'Related entity not found',
           );
         }
       }

@@ -49,7 +49,16 @@ export class ConstraintService implements OnModuleInit {
             description: definition.description,
             category: definition.category,
             valueType: definition.valueType,
-            jsonSchema: {} as Prisma.JsonObject,
+            jsonSchema: {
+              type: 'object',
+              properties: {
+                timeslotCodes: { type: 'array', items: { type: 'string' } },
+                preference: {
+                  type: 'string',
+                  enum: ['PREFER', 'AVOID', 'NEUTRAL'],
+                },
+              },
+            } as Prisma.JsonObject,
           },
         });
       } else {
@@ -245,7 +254,7 @@ export class ConstraintService implements OnModuleInit {
         campusId: user.admin ? user.admin.campusId : null,
         teacherId: user.teacher ? user.teacher.teacherId : null,
         value: validatedValue as Prisma.JsonObject,
-        weight: createDto.weight ?? 5,
+        priority: createDto.priority ?? 5.0,
       },
       include: {
         constraintType: true,
@@ -309,7 +318,7 @@ export class ConstraintService implements OnModuleInit {
     return this.prisma.constraintType.findMany({
       where: {
         isActive: true,
-        category: 'CAMPUS', // Only campus-level constraint types
+        category: ConstraintCategory.CAMPUS_PREFERENCE, // Only campus-level constraint types
       },
       orderBy: {
         name: 'asc',
@@ -363,9 +372,11 @@ export class ConstraintService implements OnModuleInit {
     }
 
     // Check ownership permissions
-    const isOwner =
-      (user.teacher && constraint.teacherId === user.teacher.teacherId) ??
-      (user.admin && constraint.campusId === user.admin.campusId);
+    const isOwner = user.teacher
+      ? constraint.teacherId === user.teacher.teacherId
+      : user.admin
+        ? constraint.campusId === user.admin.campusId
+        : false;
 
     if (!isOwner) {
       throw new ForbiddenException('You can only update your own constraints');
@@ -433,7 +444,7 @@ export class ConstraintService implements OnModuleInit {
       where: { id: constraintId },
       data: {
         value: validatedValue as Prisma.JsonObject,
-        weight: updateDto.weight,
+        priority: updateDto.priority,
         isActive: updateDto.isActive,
       },
       include: {
@@ -528,7 +539,7 @@ export class ConstraintService implements OnModuleInit {
       constraintType: string;
       teacherId: string | null;
       value: Prisma.JsonValue;
-      weight: number;
+      priority: number;
       category: string;
     }>
   > {
@@ -556,7 +567,7 @@ export class ConstraintService implements OnModuleInit {
       constraintType: constraint.constraintType.name,
       teacherId: constraint.teacherId,
       value: constraint.value,
-      weight: constraint.weight,
+      priority: constraint.priority,
       category: constraint.constraintType.category,
     }));
   }

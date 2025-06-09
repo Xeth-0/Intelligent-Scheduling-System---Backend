@@ -8,9 +8,9 @@ router = APIRouter(prefix="/scheduler")
 
 @router.post("/", status_code=201)
 async def generate_schedule(request: ScheduleApiRequest):
-    print("Received request: ", request)
+    print(f"Received Schedule Request:\n{request.model_dump_json(indent=2)}")
 
-    timeslots = [timeslot.code for timeslot in request.timeslots]
+    timeslots = request.timeslots
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
 
     constraints = request.constraints
@@ -25,6 +25,7 @@ async def generate_schedule(request: ScheduleApiRequest):
         timeslots=timeslots,
         days=days,
         population_size=100,
+        constraints=constraints,
     )
 
     print("Running scheduler...")

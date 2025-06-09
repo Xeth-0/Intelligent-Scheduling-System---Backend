@@ -6,6 +6,7 @@ export class CourseResponseDto {
   code!: string;
   description!: string | null;
   departmentId!: string | null;
+  ectsCredits!: number;
   sessionType!: SessionType;
   sessionsPerWeek!: number;
   department?: {

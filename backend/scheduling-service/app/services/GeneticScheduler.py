@@ -1,4 +1,12 @@
-from app.models.models import Classroom, Course, ScheduledItem, StudentGroup, Teacher
+from app.models.models import (
+    Classroom,
+    Course,
+    ScheduledItem,
+    StudentGroup,
+    Teacher,
+    Timeslot,
+    Constraint,
+)
 from app.services.Fitness import ScheduleFitnessEvaluator, FitnessReport
 from typing import List, Tuple, Optional
 import random
@@ -23,8 +31,9 @@ class GeneticScheduler:
         teachers: List[Teacher],
         rooms: List[Classroom],
         student_groups: List[StudentGroup],
-        timeslots: List[str],
+        timeslots: List[Timeslot],
         days: List[str],
+        constraints: List[Constraint],
         population_size: int = CHROMOSOME_POPULATION_SIZE,
         gene_mutation_rate: float = GENE_MUTATION_RATE,
         chromosome_mutation_rate: float = CHROMOSOME_MUTATION_RATE,
@@ -40,16 +49,18 @@ class GeneticScheduler:
         self.gene_mutation_rate = gene_mutation_rate
         self.chromosome_mutation_rate = chromosome_mutation_rate
         self.use_detailed_fitness = use_detailed_fitness
+        self.constraints = constraints
 
         # Create maps for faster lookups (keeping existing functionality)
         self.teacher_map = {teacher.teacherId: teacher for teacher in teachers}
         self.room_map = {room.classroomId: room for room in rooms}
         self.course_map = {course.courseId: course for course in courses}
         self.student_group_map = {sg.studentGroupId: sg for sg in student_groups}
+        self.timeslot_map = {ts.code: ts for ts in timeslots}
 
         # Initialize the new fitness evaluator
         self.fitness_evaluator = ScheduleFitnessEvaluator(
-            teachers, rooms, student_groups, courses
+            teachers, rooms, student_groups, courses, timeslots, days
         )
 
         # For storing detailed fitness reports during evolution
@@ -173,7 +184,7 @@ class GeneticScheduler:
                     teacherId=course.teacherId,
                     studentGroupIds=course.studentGroupIds,
                     classroomId=random.choice(self.rooms).classroomId,
-                    timeslot=random.choice(self.timeslots),
+                    timeslot=random.choice(self.timeslots).code,
                     day=random.choice(self.days),
                 )
             )
@@ -205,7 +216,7 @@ class GeneticScheduler:
                 chosen_room = random.choice(self.rooms)
 
             new_gene.classroomId = chosen_room.classroomId
-            new_gene.timeslot = random.choice(self.timeslots)
+            new_gene.timeslot = random.choice(self.timeslots).code
             new_gene.day = random.choice(self.days)
             chromosome.append(new_gene)
         return chromosome
@@ -267,7 +278,7 @@ class GeneticScheduler:
                         item_to_mutate.classroomId = new_room.classroomId
 
                 if mutation_type == "time" or mutation_type == "all":
-                    item_to_mutate.timeslot = random.choice(self.timeslots)
+                    item_to_mutate.timeslot = random.choice(self.timeslots).code
 
                 if mutation_type == "day" or mutation_type == "all":
                     item_to_mutate.day = random.choice(self.days)

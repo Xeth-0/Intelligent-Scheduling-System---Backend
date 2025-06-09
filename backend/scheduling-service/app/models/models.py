@@ -75,14 +75,26 @@ class StudentGroup(BaseModel):
     department: str
     accessibilityRequirement: bool  # blanket requirement for all reqs # ! for now
 
+from typing import Dict, Any, Union
+from pydantic import BaseModel, validator
 
 class Constraint(BaseModel):
+    # if teacherId is None, then it is a campus constraint
     constraintId: str
     constraintType: str
-    teacherId: str
-    value: dict
-    weight: int
+    teacherId: str | None = None
+    value: Dict[str, Any]
+    priority: float
     category: str
+    
+    @validator('value')
+    def validate_constraint_value(cls, v, values):
+        constraint_type = values.get('constraintType')
+        if constraint_type == 'time_preference' and 'timeslots' not in v:
+            raise ValueError('time_preference constraints must include timeslots')
+        elif constraint_type == 'workload_limit' and 'max_hours' not in v:
+            raise ValueError('workload_limit constraints must include max_hours')
+        return v
 
 
 class ScheduleApiRequest(BaseModel):

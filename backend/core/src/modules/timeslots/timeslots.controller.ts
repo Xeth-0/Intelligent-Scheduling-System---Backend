@@ -33,7 +33,7 @@ export class TimeslotController {
   @SwaggerResponse({
     status: 200,
     description: 'Timeslots retrieved successfully',
-    type: [TimeslotResponseDto],
+    type: ApiResponse<TimeslotResponseDto[]>,
   })
   async getAllTimeslots() {
     const timeslots = await this.timeslotService.getAllTimeslots();
@@ -51,7 +51,7 @@ export class TimeslotController {
   @SwaggerResponse({
     status: 200,
     description: 'Timeslot codes retrieved successfully',
-    type: [String],
+    type: ApiResponse<string[]>,
   })
   async getTimeslotCodes() {
     const codes = await this.timeslotService.getTimeslotCodesForScheduling();

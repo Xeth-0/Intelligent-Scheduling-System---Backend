@@ -7,16 +7,15 @@ import {
   Max,
   IsOptional,
 } from 'class-validator';
-import { ConstraintDefinitionKey } from './constraints.types';
+import {
+  CONSTRAINT_DEFINITIONS,
+  ConstraintDefinitionKey,
+} from './constraints.types';
 
 export class CreateConstraintDto {
   @ApiProperty({
     description: 'The type of constraint to create',
-    enum: [
-      'TEACHER_TIME_PREFERENCE',
-      'TEACHER_SCHEDULE_COMPACTNESS',
-      'TEACHER_ROOM_PREFERENCE',
-    ],
+    enum: Object.keys(CONSTRAINT_DEFINITIONS),
   })
   @IsString()
   @IsNotEmpty()
@@ -34,7 +33,7 @@ export class CreateConstraintDto {
   value!: Record<string, unknown>;
 
   @ApiProperty({
-    description: 'Weight/priority of the constraint (1-10)',
+    description: 'Priority of the constraint (1-10)',
     minimum: 1,
     maximum: 10,
     default: 5,
@@ -43,5 +42,5 @@ export class CreateConstraintDto {
   @Min(1)
   @Max(10)
   @IsOptional()
-  weight?: number = 5;
+  priority?: number = 5;
 }

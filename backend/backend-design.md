@@ -96,7 +96,7 @@ graph TB
     classDef external fill:#fce4ec,stroke:#c2185b,stroke-width:2px
 
     class CORE_API,AUTH,USERS,TEACHERS,COURSES,ROOMS,BUILDINGS,DEPARTMENTS,GROUPS,SCHEDULING,FILES,HEALTH coreService
-    class SCHED_API,GA_ENGINE,FITNESS schedService  
+    class SCHED_API,GA_ENGINE,FITNESS schedService
     class PYTHON_SERVICE,CSV_PARSER,VALIDATION dataService
     class RABBITMQ,POSTGRES,PRISMA infrastructure
     class SENTRY external

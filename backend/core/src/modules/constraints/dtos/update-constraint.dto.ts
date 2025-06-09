@@ -15,7 +15,7 @@ export class UpdateConstraintDto {
   value?: Record<string, unknown>;
 
   @ApiProperty({
-    description: 'Weight/priority of the constraint (1-10)',
+    description: 'Priority of the constraint (1-10)',
     minimum: 1,
     maximum: 10,
     required: false,
@@ -24,7 +24,7 @@ export class UpdateConstraintDto {
   @Min(1)
   @Max(10)
   @IsOptional()
-  weight?: number;
+  priority?: number;
 
   @ApiProperty({
     description: 'Whether the constraint is active (admin only)',

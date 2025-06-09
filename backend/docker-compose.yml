@@ -52,6 +52,7 @@ services:
     container_name: nestjs-app
     ports:
       - "3001:3001"
+      - "5555:5555"
     env_file:
       - path: ./core/.env
         required: true

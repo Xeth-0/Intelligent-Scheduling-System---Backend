@@ -1,12 +1,13 @@
-import os
+import sentry_sdk
 from fastapi import FastAPI
+
+from app.core.config import settings
 from app.api.endpoints import healthcheck
 from app.api.endpoints import scheduling
-import sentry_sdk
 
 try:
     sentry_sdk.init(
-        dsn=os.getenv("SENTRY_DSN"),
+        dsn=settings.SENTRY_DSN,
         send_default_pii=True,
         enable_tracing=True,
         traces_sample_rate=1.0,

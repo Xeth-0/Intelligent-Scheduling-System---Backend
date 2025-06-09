@@ -27,6 +27,12 @@ export class CreateCourseDto {
   description?: string;
 
   @ApiProperty({ required: false })
+  @IsInt()
+  @Min(0)
+  @IsOptional()
+  ectsCredits?: number;
+
+  @ApiProperty({ required: false })
   @IsString()
   @IsOptional()
   @IsUUID()

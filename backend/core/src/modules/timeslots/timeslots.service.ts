@@ -107,6 +107,7 @@ export class TimeslotService implements OnModuleInit {
     try {
       await this.prisma.timeslot.createMany({
         data: timeslotData,
+        skipDuplicates: true,
       });
 
       this.logger.log(`Successfully seeded ${timeslotData.length} timeslots`);
@@ -193,4 +194,3 @@ export class TimeslotService implements OnModuleInit {
     });
   }
 }
- 

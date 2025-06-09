@@ -17,7 +17,8 @@ ENV SENTRY_DSN=${SENTRY_DSN}
 
 # Copy package files and prisma schema
 COPY package*.json ./
-COPY prisma/schema.prisma ./prisma/
+COPY prisma/schema.prisma ./prisma/schema.prisma
+COPY prisma/seed.ts ./prisma/seed.ts
 
 # Install all dependencies (including dev dependencies for building)
 RUN npm ci
@@ -27,7 +28,6 @@ COPY . .
 
 # Generate prisma client and build the application
 RUN npx prisma generate && npm run build
-RUN npx prisma db seed
 
 # ---- Runner Stage ----
 FROM node:20-alpine AS runner
@@ -37,22 +37,25 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 COPY prisma/schema.prisma ./prisma/
+COPY prisma/seed.ts ./prisma/seed.ts
 
-# Install only production dependencies to keep the image small
 RUN npm ci --omit=dev
+RUN npm install -g ts-node
 
-# Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
-# Copy prisma schema and generated client from builder stage
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
-# Set node environment to production. Can be overridden by docker-compose for development.
+# Copy startup script directly from context (not from builder)
+COPY start.sh ./start.sh
+RUN chmod +x ./start.sh
+
 ENV NODE_ENV=production
 
 # Expose the port the app runs on
 EXPOSE 3001
 
-# Command to run migrations and start the application.
-# The DATABASE_URL for migrations will be taken from the runtime environment (from docker-compose).
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/src/main.js"]
+# Expose the port prisma studio runs on
+EXPOSE 5555
+
+CMD ["sh", "./start.sh"]

@@ -4,7 +4,7 @@ import {
   ConflictException,
   InternalServerErrorException,
 } from '@nestjs/common';
-import { Prisma, Role, Teacher } from '@prisma/client';
+import { Department, Prisma, Role, Teacher, User } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
 import { CampusValidationService } from '@/common/services/campus-validation.service';
 import { CreateTeacherDto, UpdateTeacherDto, TeacherResponseDto } from './dtos';
@@ -21,15 +21,8 @@ export class TeachersService {
    */
   private mapToResponse(
     teacher: Teacher & {
-      user: {
-        firstName: string;
-        lastName: string;
-        email: string;
-      };
-      department: {
-        name: string;
-        campusId: string;
-      };
+      user: User;
+      department: Department;
     },
   ): TeacherResponseDto {
     return {

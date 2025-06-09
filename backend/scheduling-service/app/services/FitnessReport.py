@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 from app.models.models import ScheduledItem
-from app.services.constraint import ConstraintCategory, ConstraintType
+from app.services.Constraint import ConstraintCategory, ConstraintType
 
 
 @dataclass
