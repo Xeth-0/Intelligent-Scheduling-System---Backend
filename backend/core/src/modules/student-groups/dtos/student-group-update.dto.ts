@@ -1,12 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import {
-  IsString,
-  IsOptional,
-  IsUUID,
-  IsInt,
-  IsBoolean,
-  Min,
-} from 'class-validator';
+import { IsString, IsOptional, IsInt, IsBoolean, Min } from 'class-validator';
 
 export class UpdateStudentGroupDto {
   @ApiProperty({ required: false })
@@ -28,6 +21,5 @@ export class UpdateStudentGroupDto {
   @ApiProperty({ required: false })
   @IsString()
   @IsOptional()
-  @IsUUID()
   departmentId?: string;
 }

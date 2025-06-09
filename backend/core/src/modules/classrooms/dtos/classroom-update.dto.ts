@@ -2,7 +2,6 @@ import { ApiProperty } from '@nestjs/swagger';
 import {
   IsString,
   IsOptional,
-  IsUUID,
   IsInt,
   IsBoolean,
   IsEnum,
@@ -30,7 +29,6 @@ export class UpdateClassroomDto {
   @ApiProperty({ required: false })
   @IsString()
   @IsOptional()
-  @IsUUID()
   buildingId?: string;
 
   @ApiProperty({ required: false })

@@ -1,7 +1,7 @@
 import numpy as np
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 from dataclasses import dataclass
-from app.models.models import Course
+from app.models.models import Course, Constraint
 from app.services.Constraint import ConstraintCategory
 
 
@@ -22,7 +22,16 @@ class PenaltyManager:
     Ensures mathematical guarantees that hard constraints always dominate soft constraints.
     """
 
-    def __init__(self):
+    def __init__(
+        self,
+        num_courses: int,
+        num_teachers: int,
+        constraints: List[Constraint] = [],
+    ):
+        self.constraints = constraints
+        self.num_courses = num_courses
+        self.num_teachers = num_teachers
+
         self._calculate_separation_bounds()
         self._init_penalty_configs()
         self.validate_mathematical_guarantees()

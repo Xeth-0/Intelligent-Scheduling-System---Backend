@@ -57,11 +57,20 @@ export class ClassroomsService {
     createClassroomDto: CreateClassroomDto,
   ): Promise<ClassroomResponseDto> {
     try {
+      const admin = await this.prismaService.admin.findFirst({
+        where: {
+          userId,
+        },
+      });
+
+      if (!admin) {
+        throw new NotFoundException('Admin not found');
+      }
+
+      const campusId = admin.campusId;
+
       // Validate campus access
-      await this.campusValidationService.validateCampusAccess(
-        userId,
-        createClassroomDto.campusId,
-      );
+      await this.campusValidationService.validateCampusAccess(userId, campusId);
 
       // If building is specified, validate it exists
       if (createClassroomDto.buildingId) {
@@ -75,7 +84,10 @@ export class ClassroomsService {
       }
 
       const classroom = await this.prismaService.classroom.create({
-        data: createClassroomDto,
+        data: {
+          ...createClassroomDto,
+          campusId,
+        },
         include: {
           campus: {
             select: {

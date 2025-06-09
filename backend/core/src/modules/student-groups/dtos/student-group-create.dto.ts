@@ -2,7 +2,6 @@ import { ApiProperty } from '@nestjs/swagger';
 import {
   IsString,
   IsNotEmpty,
-  IsUUID,
   IsInt,
   IsBoolean,
   IsOptional,
@@ -28,6 +27,5 @@ export class CreateStudentGroupDto {
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  @IsUUID()
   departmentId!: string;
 }

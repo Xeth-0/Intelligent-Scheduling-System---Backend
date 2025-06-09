@@ -2,7 +2,6 @@ import { ApiProperty } from '@nestjs/swagger';
 import {
   IsString,
   IsNotEmpty,
-  IsUUID,
   IsOptional,
   IsEnum,
   IsInt,
@@ -35,7 +34,6 @@ export class CreateCourseDto {
   @ApiProperty({ required: false })
   @IsString()
   @IsOptional()
-  @IsUUID()
   departmentId?: string;
 
   @ApiProperty({ enum: SessionType, required: false })

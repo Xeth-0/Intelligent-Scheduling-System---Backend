@@ -46,14 +46,25 @@ export class DepartmentsService {
     createDepartmentDto: CreateDepartmentDto,
   ): Promise<DepartmentResponseDto> {
     try {
+      const admin = await this.prismaService.admin.findFirst({
+        where: {
+          userId,
+        },
+      });
+
+      if (!admin) {
+        throw new NotFoundException('Admin not found');
+      }
+
+      const campusId = admin.campusId;
       // Validate campus access
-      await this.campusValidationService.validateCampusAccess(
-        userId,
-        createDepartmentDto.campusId,
-      );
+      await this.campusValidationService.validateCampusAccess(userId, campusId);
 
       const department = await this.prismaService.department.create({
-        data: createDepartmentDto,
+        data: {
+          ...createDepartmentDto,
+          campusId,
+        },
         include: {
           campus: {
             select: {

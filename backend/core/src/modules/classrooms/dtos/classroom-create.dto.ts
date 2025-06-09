@@ -2,7 +2,6 @@ import { ApiProperty } from '@nestjs/swagger';
 import {
   IsString,
   IsNotEmpty,
-  IsUUID,
   IsInt,
   IsBoolean,
   IsOptional,
@@ -26,16 +25,9 @@ export class CreateClassroomDto {
   @IsEnum(ClassroomType)
   type!: ClassroomType;
 
-  @ApiProperty()
-  @IsString()
-  @IsNotEmpty()
-  @IsUUID()
-  campusId!: string;
-
   @ApiProperty({ required: false })
   @IsString()
   @IsOptional()
-  @IsUUID()
   buildingId?: string;
 
   @ApiProperty({ required: false })

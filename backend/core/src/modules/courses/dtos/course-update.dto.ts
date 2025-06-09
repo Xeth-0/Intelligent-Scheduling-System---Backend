@@ -1,12 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import {
-  IsString,
-  IsOptional,
-  IsUUID,
-  IsEnum,
-  IsInt,
-  Min,
-} from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsInt, Min } from 'class-validator';
 import { SessionType } from '@prisma/client';
 
 export class UpdateCourseDto {
@@ -34,7 +27,6 @@ export class UpdateCourseDto {
   @ApiProperty({ required: false })
   @IsString()
   @IsOptional()
-  @IsUUID()
   departmentId?: string;
 
   @ApiProperty({ enum: SessionType, required: false })

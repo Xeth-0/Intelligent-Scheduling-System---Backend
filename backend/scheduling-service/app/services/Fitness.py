@@ -42,7 +42,11 @@ class ScheduleFitnessEvaluator:
         self.timeslots = timeslots
         self.days = days
         self.constraints = constraints or []
-        self.penalty_manager = penalty_manager or PenaltyManager()
+        self.penalty_manager = penalty_manager or PenaltyManager(
+            num_courses=len(courses),
+            num_teachers=len(teachers),
+            constraints=constraints or [],
+        )
 
         # Create lookup maps for efficient access
         self.teacher_map = {teacher.teacherId: teacher for teacher in teachers}
@@ -56,6 +60,10 @@ class ScheduleFitnessEvaluator:
             ts.code: ts.order for ts in sorted(timeslots, key=lambda x: x.order)
         }
 
+        # Sort soft constraints by type (admin/teacher)
+        self.admin_constraints = [
+            constraint for constraint in self.constraints if not constraint.teacherId
+        ]
         # Create constraint lookup maps for efficient access
         self.teacher_constraints: Dict[str, List[Constraint]] = {}
         for constraint in self.constraints:
@@ -66,6 +74,7 @@ class ScheduleFitnessEvaluator:
 
         # Calculate dynamic ECTS threshold for priority scheduling
         self.ects_threshold = self._calculate_ects_threshold()
+
 
     def _calculate_ects_threshold(self) -> float:
         """Calculate dynamic ECTS threshold based on course distribution (top 20%)."""
