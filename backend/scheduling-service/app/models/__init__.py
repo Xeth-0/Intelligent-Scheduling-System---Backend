@@ -13,6 +13,7 @@ from .student_group import StudentGroup
 from .scheduled_item import ScheduledItem
 from .constraint import Constraint
 from .schedule_request import ScheduleApiRequest
+from .evaluation_request import ScheduleEvaluationRequest
 
 __all__ = [
     "Timeslot",
@@ -23,4 +24,5 @@ __all__ = [
     "ScheduledItem",
     "Constraint",
     "ScheduleApiRequest",
+    "ScheduleEvaluationRequest",
 ]

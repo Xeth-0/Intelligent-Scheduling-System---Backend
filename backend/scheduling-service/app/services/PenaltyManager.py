@@ -97,7 +97,7 @@ class PenaltyManager:
 
             total_max_penalty += constraint_max_penalty
 
-        return total_max_penalty
+        return total_max_penalty / 2
 
     def _refine_estimates_from_registry(
         self,
@@ -175,7 +175,7 @@ class PenaltyManager:
             # Estimate based on teachers and average daily classes
             # Assume average 4 classes per teacher per day, max 3 movements per day
             avg_classes_per_teacher_per_day = 4
-            max_movements_per_day = 3
+            max_movements_per_day = 5
             working_days = 5
             return self.num_teachers * max_movements_per_day * working_days
 

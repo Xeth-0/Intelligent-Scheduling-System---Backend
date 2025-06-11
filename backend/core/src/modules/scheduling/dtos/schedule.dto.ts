@@ -143,3 +143,28 @@ export class ClassGroupScheduleResponse {
   @ValidateNested()
   scheduleMap!: ScheduleMap;
 }
+
+export interface ScheduleEvaluationResponse {
+  scheduleId: string;
+  scheduleName: string;
+  evaluation: {
+    status: string;
+    message: string;
+    data: {
+      summary: {
+        is_feasible: boolean;
+        total_hard_violations: number;
+        total_soft_penalty: number;
+        total_violations: number;
+        evaluation_time: number;
+      };
+      violations: string[];
+      categories: Record<string, {
+        count: number;
+        total_penalty: number;
+        violations: string[];
+      }>;
+      fitness_vector: number[];
+    };
+  };
+}
