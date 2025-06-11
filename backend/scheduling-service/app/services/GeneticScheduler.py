@@ -155,9 +155,9 @@ class GeneticScheduler:
             if self.use_detailed_fitness:
                 report = self.fitness_evaluator.evaluate(chromosome)
                 fitness_reports.append(report)
-                # For backward compatibility, use weighted sum as single score
-                # Prioritize hard constraints heavily
-                score = report.total_hard_violations * 1000 + report.total_soft_penalty
+                # Use calculated penalty bounds to ensure hard constraints always dominate
+                hard_penalty_weight = self.fitness_evaluator.penalty_manager.min_hard_penalty 
+                score = report.total_hard_violations * hard_penalty_weight + report.total_soft_penalty
                 fitness_scores.append(score)
             else:
                 # Fallback to original fitness function
@@ -350,4 +350,6 @@ class GeneticScheduler:
 
     def fitness(self, chromosome: List[ScheduledItem]) -> float:
         report = self.fitness_evaluator.evaluate(chromosome)
-        return report.total_hard_violations * 1000 + report.total_soft_penalty
+        # Use calculated penalty bounds to ensure hard constraints always dominate
+        hard_penalty_weight = self.fitness_evaluator.penalty_manager.min_hard_penalty
+        return report.total_hard_violations * hard_penalty_weight + report.total_soft_penalty
