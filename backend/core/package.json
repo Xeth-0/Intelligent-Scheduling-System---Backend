@@ -23,7 +23,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:init": "prisma generate && prisma migrate dev",
     "postinstall": "prisma generate",
-    "sentry:sourcemaps": "sentry-cli sourcemaps inject --org tewodros-berhanu --project node-nestjs ./dist && sentry-cli sourcemaps upload --org tewodros-berhanu --project node-nestjs ./dist"
+    "sentry:sourcemaps": "sentry-cli sourcemaps inject --org tewodros-berhanu --project node-nestjs-r7 ./dist && sentry-cli sourcemaps upload --org tewodros-berhanu --project node-nestjs-r7 ./dist"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
@@ -36,7 +36,7 @@
     "@nestjs/swagger": "^8.1.1",
     "@nestjs/terminus": "^10.0.0",
     "@prisma/client": "^6.8.0",
-    "@sentry/cli": "^2.41.1",
+    "@sentry/cli": "^2.46.0",
     "@sentry/nestjs": "^8.53.0",
     "@sentry/profiling-node": "^8.53.0",
     "amqp-connection-manager": "^4.1.14",

@@ -7,9 +7,11 @@ import {
 import { BaseExceptionFilter } from '@nestjs/core';
 import { Request, Response } from 'express';
 import { ApiResponse } from '../response/api-response.dto';
+import { SentryExceptionCaptured } from '@sentry/nestjs';
 
 @Catch()
 export class AllExceptionsFilter extends BaseExceptionFilter {
+  @SentryExceptionCaptured()
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();

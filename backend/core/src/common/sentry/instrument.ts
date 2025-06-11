@@ -3,7 +3,7 @@ import { nodeProfilingIntegration } from '@sentry/profiling-node';
 
 // Ensure to call this before importing any other modules!
 Sentry.init({
-  dsn: process.env.SENTRY_DSN,
+  dsn: 'https://474055e78c70154c0d6a34bbde83828c@o4507213915422720.ingest.de.sentry.io/4509478716506192',
   integrations: [
     // Add our Profiling integration
     nodeProfilingIntegration(),

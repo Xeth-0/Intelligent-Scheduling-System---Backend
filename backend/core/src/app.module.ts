@@ -1,5 +1,3 @@
-import './common/sentry/instrument';
-
 import { SentryGlobalFilter } from '@sentry/nestjs/setup';
 import { Module } from '@nestjs/common';
 import { APP_FILTER } from '@nestjs/core';
