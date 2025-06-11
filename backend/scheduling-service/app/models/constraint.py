@@ -1,3 +1,4 @@
+import logging
 from typing import Dict, Any, Optional
 from pydantic import BaseModel, Field, validator
 from app.services.SchedulingConstraint import (
@@ -40,7 +41,7 @@ class Constraint(BaseModel):
             return ConstraintTypeMapper.map_constraint_type(constraint_type)
         except ValueError as e:
             # Log warning but don't fail validation - let it be handled later
-            print(f"Warning: {e}")
+            logging.warning(f"Failed to map constraint type: {e}")
             return None
 
     @validator("value")

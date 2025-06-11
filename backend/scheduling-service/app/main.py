@@ -1,4 +1,5 @@
 import sentry_sdk
+import logging
 from fastapi import FastAPI
 
 from app.api.endpoints import healthcheck
@@ -14,8 +15,8 @@ try:
         profile_lifecycle="trace",
     )
 except Exception as e:
-    print("Sentry SDK initialization failed:", e)
-    print("Proceeding without SENTRY...")
+    logging.warning(f"Sentry SDK initialization failed: {e}")
+    logging.warning("Proceeding without SENTRY...")
 
 app = FastAPI(title="Scheduling Service", description="A service for scheduling events")
 

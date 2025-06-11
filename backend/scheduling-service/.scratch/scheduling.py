@@ -2,12 +2,11 @@ from pydantic import BaseModel  # Assuming models.py is structured like this
 from models import StudentGroup, Course, Teacher, Classroom, ScheduledItem
 import time
 import random
+import logging
 
 # --- GA Parameters ---
 MAX_GENERATIONS = 10000  # Consider adjusting based on problem size and performance
-GENE_MUTATION_RATE = (
-    0.1  # Probability of mutating a single gene (ScheduledItem's assignment)
-)
+GENE_MUTATION_RATE = 0.1  # Probability of mutating a single gene (ScheduledItem's assignment)
 CHROMOSOME_MUTATION_RATE = 0.2  # Probability that a whole chromosome undergoes mutation
 MAX_DURATION_SECONDS = 20  # Increased for potentially longer runs
 SELECTION_TOURNAMENT_SIZE = 3
@@ -77,25 +76,25 @@ class GeneticScheduler:
                 best_solution_overall = [
                     item.copy() for item in population[idx_min_fitness_current_gen]
                 ]
-                print(
+                logging.info(
                     f"Generation {generation}: New best fitness = {best_fitness_overall:.2f}"
                 )
 
             if best_fitness_overall == 0:
-                print(
+                logging.info(
                     f"Perfect solution found! Generations: {generation}/{generations}, Fitness: {best_fitness_overall}"
                 )
                 break
 
             elapsed_time = time.time() - start_time
             if elapsed_time > MAX_DURATION_SECONDS:
-                print(
+                logging.info(
                     f"Max duration ({MAX_DURATION_SECONDS}s) reached. Generations: {generation}/{generations}, Fitness: {best_fitness_overall}"
                 )
                 break
 
             if generation % 100 == 0 and generation > 0:  # Log progress
-                print(
+                logging.info(
                     f"Generation {generation}, Best Fitness: {best_fitness_overall:.2f}, Time: {elapsed_time:.2f}s"
                 )
 
@@ -103,7 +102,7 @@ class GeneticScheduler:
 
         final_elapsed_time = time.time() - start_time
         if best_fitness_overall > 0:
-            print(
+            logging.info(
                 f"Optimal solution (fitness 0) not found after {generation+1} generations. Time: {final_elapsed_time:.2f}s"
             )
 
@@ -121,7 +120,9 @@ class GeneticScheduler:
                     course.studentGroupIds, range(course.sessionsPerWeek[i])
                 ):
                     sg_name = "|".join(student_group_id)
-                    course_display_name = f"{course.name} [{session_type[:3]} - {session_num+1}] {sg_name}"
+                    course_display_name = (
+                        f"{course.name} [{session_type[:3]} - {session_num+1}] {sg_name}"
+                    )
                     base_chromosome.append(
                         ScheduledItem(
                             courseId=course.courseId,
@@ -142,7 +143,6 @@ class GeneticScheduler:
             chromosome = self.initialize_chromosome(base_chromosome)
             population.append(chromosome)
         return population
-
 
     def initialize_chromosome(self, base_chromosome):
         """
@@ -177,9 +177,7 @@ class GeneticScheduler:
         """Tournament selection."""
         selected_parents = []
         for _ in range(len(population)):  # Select N parents for N offspring
-            tournament_indices = random.sample(
-                range(len(population)), SELECTION_TOURNAMENT_SIZE
-            )
+            tournament_indices = random.sample(range(len(population)), SELECTION_TOURNAMENT_SIZE)
             tournament_fitnesses = [fitness_scores[i] for i in tournament_indices]
 
             # Find the index of the winner within the tournament_indices list
@@ -246,9 +244,7 @@ class GeneticScheduler:
         new_population = []
 
         # * Elitism: Carry over the best individuals
-        sorted_population_indices = sorted(
-            range(len(population)), key=lambda k: fitness_scores[k]
-        )
+        sorted_population_indices = sorted(range(len(population)), key=lambda k: fitness_scores[k])
         for i in range(ELITISM_COUNT):
             if i < len(sorted_population_indices):
                 new_population.append(population[sorted_population_indices[i]])
@@ -294,15 +290,13 @@ class GeneticScheduler:
                     offspring_generated += 1
                     parent_idx += 1
                 else:  # Should not happen if selection returns enough parents
-                    print(
+                    logging.info(
                         "Warning: Not enough parents to generate required offspring. Filling with random."
                     )
                     new_population.append(self.initialize_chromosome())
                     offspring_generated += 1
 
-        return new_population[
-            : self.population_size
-        ]  # Ensure population size is maintained
+        return new_population[: self.population_size]  # Ensure population size is maintained
 
     def fitness(self, chromosome: list[ScheduledItem]):
         total_penalty = 0
@@ -360,10 +354,7 @@ class GeneticScheduler:
                 # violation_reasons_for_item.append(f"RoomCap (Need:{current_students_count} > Has:{room.capacity})")
 
             # Hard Constraint 2. Teacher Wheelchair Accessibility
-            if (
-                teacher.needsWheelchairAccessibleRoom
-                and not room.isWheelchairAccessible
-            ):
+            if teacher.needsWheelchairAccessibleRoom and not room.isWheelchairAccessible:
                 item_penalty += penalties["teacher_wheelchair_accessibility"]
                 # violation_reasons_for_item.append("TeachAccess")
 
@@ -411,15 +402,10 @@ class GeneticScheduler:
                     item_penalty += penalties["student_group_conflict"]
                     # violation_reasons_for_item.append(f"StudGrpConflict {sg_id} (with {student_group_schedule[time_key_student_group].courseName})")
                 else:
-                    student_group_schedule_tracker[time_key_student_group] = (
-                        scheduled_item
-                    )
+                    student_group_schedule_tracker[time_key_student_group] = scheduled_item
 
                 # Hard Constraint 7. Student Group Wheelchair Accessibility
-                if (
-                    student_group.accessibilityRequirement
-                    and not room.isWheelchairAccessible
-                ):
+                if student_group.accessibilityRequirement and not room.isWheelchairAccessible:
                     item_penalty += penalties["student_group_wheelchair_accessibility"]
 
             # Update item's validity flag (optional, for external use)

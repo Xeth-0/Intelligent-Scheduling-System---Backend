@@ -1,4 +1,6 @@
 import time
+import asyncio
+import logging
 from fastapi import APIRouter
 from app.services.GeneticScheduler import GeneticScheduler
 from app.services.SchedulingConstraintRegistry import SchedulingConstraintRegistry
@@ -9,11 +11,11 @@ router = APIRouter(prefix="/scheduler")
 
 @router.post("/", status_code=201)
 async def generate_schedule(request: ScheduleApiRequest):
-    print(f"Received Schedule Request with {len(request.constraints)} constraints")
+    logging.info(f"Received Schedule Request with {len(request.constraints)} constraints")
 
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
 
-    print("Initializing scheduler...")
+    logging.info("Initializing scheduler...")
     scheduler = GeneticScheduler(
         courses=request.courses,
         teachers=request.teachers,
@@ -25,15 +27,16 @@ async def generate_schedule(request: ScheduleApiRequest):
         population_size=100,
     )
 
-    print("Running scheduler...")
+    logging.info("Running scheduler...")
     start_time = time.time()
-    best_schedule, best_fitness, report = scheduler.run()
+    loop = asyncio.get_running_loop()
+    best_schedule, best_fitness, report = await loop.run_in_executor(None, scheduler.run)
     end_time = time.time()
-    print(f"Scheduler finished running in {end_time - start_time} seconds")
+    logging.info(f"Scheduler finished running in {end_time - start_time} seconds")
     if report:
         report.print_detailed_report()
 
-    print("Scheduler finished running.")
+    logging.info("Scheduler finished running.")
     return {
         "status": "success",
         "message": "Schedule generated successfully.",
