@@ -104,6 +104,12 @@ class BaseConstraintValidator(ABC):
             conflicting_item=conflicting_item,
         )
 
+    def _get_max_penalty_for_violation(self) -> float:
+        """Get the maximum penalty for a violation."""
+        return self.penalty_manager.get_penalty(
+            self.category, violation_count=1, severity_factor=1.0,
+        )
+
 
 class StatelessConstraintValidator(BaseConstraintValidator):
     """
