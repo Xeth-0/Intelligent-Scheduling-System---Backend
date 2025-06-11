@@ -22,7 +22,7 @@ export const GenerateScheduleDocs = () => {
         'Generate a new optimized schedule for the campus using the scheduling algorithm. Only admins can trigger schedule generation.',
     }),
     ApiBearerAuth(),
-    ApiParam({
+    ApiQuery({
       name: 'scheduleName',
       description: 'Schedule name',
       example: 'Unnamed Schedule',

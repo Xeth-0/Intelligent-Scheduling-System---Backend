@@ -20,6 +20,7 @@ import {
   ConstraintDefinitionKey,
 } from './dtos/constraints.types';
 import { CreateConstraintDto, UpdateConstraintDto } from './dtos';
+import { zodToJsonSchema } from 'zod-to-json-schema';
 
 @Injectable()
 export class ConstraintService implements OnModuleInit {
@@ -49,16 +50,9 @@ export class ConstraintService implements OnModuleInit {
             description: definition.description,
             category: definition.category,
             valueType: definition.valueType,
-            jsonSchema: {
-              type: 'object',
-              properties: {
-                timeslotCodes: { type: 'array', items: { type: 'string' } },
-                preference: {
-                  type: 'string',
-                  enum: ['PREFER', 'AVOID', 'NEUTRAL'],
-                },
-              },
-            } as Prisma.JsonObject,
+            jsonSchema: zodToJsonSchema(
+              definition.jsonSchema,
+            ) as Prisma.JsonObject,
           },
         });
       } else {

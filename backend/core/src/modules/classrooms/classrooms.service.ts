@@ -78,6 +78,7 @@ export class ClassroomsService {
           where: { buildingId: createClassroomDto.buildingId },
         });
 
+        // TODO: check if building is in the same campus
         if (!building) {
           throw new NotFoundException('Building not found');
         }
