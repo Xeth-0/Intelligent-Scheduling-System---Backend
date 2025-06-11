@@ -1,4 +1,4 @@
-from app.models.models import (
+from app.models import (
     Classroom,
     Course,
     ScheduledItem,
@@ -8,6 +8,7 @@ from app.models.models import (
     Constraint,
 )
 from app.services.Fitness import ScheduleFitnessEvaluator, FitnessReport
+from app.services.SchedulingConstraintRegistry import SchedulingConstraintRegistry
 from typing import List, Tuple, Optional
 import random
 import time
@@ -49,7 +50,10 @@ class GeneticScheduler:
         self.gene_mutation_rate = gene_mutation_rate
         self.chromosome_mutation_rate = chromosome_mutation_rate
         self.use_detailed_fitness = use_detailed_fitness
-        self.constraints = constraints
+
+        # Initialize the constraint registry
+        self.constraint_registry = SchedulingConstraintRegistry(constraints)
+        self.constraint_registry.print_summary()
 
         # Create maps for faster lookups (keeping existing functionality)
         self.teacher_map = {teacher.teacherId: teacher for teacher in teachers}
@@ -58,9 +62,15 @@ class GeneticScheduler:
         self.student_group_map = {sg.studentGroupId: sg for sg in student_groups}
         self.timeslot_map = {ts.code: ts for ts in timeslots}
 
-        # Initialize the new fitness evaluator
+        # Initialize the new fitness evaluator with constraint registry
         self.fitness_evaluator = ScheduleFitnessEvaluator(
-            teachers, rooms, student_groups, courses, timeslots, days
+            teachers,
+            rooms,
+            student_groups,
+            courses,
+            timeslots,
+            days,
+            constraint_registry=self.constraint_registry,
         )
 
         # For storing detailed fitness reports during evolution

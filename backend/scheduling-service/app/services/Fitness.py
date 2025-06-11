@@ -3,7 +3,8 @@ import time  # TODO: Remove
 
 from app.services.FitnessReport import FitnessReport, ConstraintViolation
 from app.services.PenaltyManager import PenaltyManager
-from app.models.models import (
+from app.services.SchedulingConstraintRegistry import SchedulingConstraintRegistry
+from app.models import (
     Classroom,
     Course,
     ScheduledItem,
@@ -12,7 +13,10 @@ from app.models.models import (
     Constraint,
     Timeslot,
 )
-from app.services.Constraint import ConstraintCategory, ConstraintType
+from app.services.SchedulingConstraint import (
+    SchedulingConstraintCategory,
+    SchedulingConstraintType,
+)
 
 from typing import Dict, List, Tuple, Optional, Set
 import numpy as np
@@ -32,7 +36,7 @@ class ScheduleFitnessEvaluator:
         courses: List[Course],
         timeslots: List[Timeslot],
         days: List[str],
-        constraints: Optional[List[Constraint]] = None,
+        constraint_registry: SchedulingConstraintRegistry,
         penalty_manager: Optional[PenaltyManager] = None,
     ):
         self.teachers = teachers
@@ -41,11 +45,14 @@ class ScheduleFitnessEvaluator:
         self.courses = courses
         self.timeslots = timeslots
         self.days = days
-        self.constraints = constraints or []
+        self.constraint_registry = constraint_registry
+
+        # Initialize penalty manager with constraints from registry
+        constraints = constraint_registry.constraints
         self.penalty_manager = penalty_manager or PenaltyManager(
             num_courses=len(courses),
             num_teachers=len(teachers),
-            constraints=constraints or [],
+            constraints=constraints,
         )
 
         # Create lookup maps for efficient access
@@ -60,21 +67,8 @@ class ScheduleFitnessEvaluator:
             ts.code: ts.order for ts in sorted(timeslots, key=lambda x: x.order)
         }
 
-        # Sort soft constraints by type (admin/teacher)
-        self.admin_constraints = [
-            constraint for constraint in self.constraints if not constraint.teacherId
-        ]
-        # Create constraint lookup maps for efficient access
-        self.teacher_constraints: Dict[str, List[Constraint]] = {}
-        for constraint in self.constraints:
-            if constraint.teacherId:
-                if constraint.teacherId not in self.teacher_constraints:
-                    self.teacher_constraints[constraint.teacherId] = []
-                self.teacher_constraints[constraint.teacherId].append(constraint)
-
         # Calculate dynamic ECTS threshold for priority scheduling
         self.ects_threshold = self._calculate_ects_threshold()
-
 
     def _calculate_ects_threshold(self) -> float:
         """Calculate dynamic ECTS threshold based on course distribution (top 20%)."""
@@ -135,8 +129,8 @@ class ScheduleFitnessEvaluator:
         if not course:
             violations.append(
                 ConstraintViolation(
-                    ConstraintCategory.MISSING_DATA,
-                    ConstraintType.HARD,
+                    SchedulingConstraintCategory.MISSING_DATA,
+                    SchedulingConstraintType.HARD,
                     1.0,
                     scheduled_item,
                     f"Course {scheduled_item.courseId} not found",
@@ -145,8 +139,8 @@ class ScheduleFitnessEvaluator:
         if not room:
             violations.append(
                 ConstraintViolation(
-                    ConstraintCategory.MISSING_DATA,
-                    ConstraintType.HARD,
+                    SchedulingConstraintCategory.MISSING_DATA,
+                    SchedulingConstraintType.HARD,
                     1.0,
                     scheduled_item,
                     f"Room {scheduled_item.classroomId} not found",
@@ -155,8 +149,8 @@ class ScheduleFitnessEvaluator:
         if not teacher:
             violations.append(
                 ConstraintViolation(
-                    ConstraintCategory.MISSING_DATA,
-                    ConstraintType.HARD,
+                    SchedulingConstraintCategory.MISSING_DATA,
+                    SchedulingConstraintType.HARD,
                     1.0,
                     scheduled_item,
                     f"Teacher {scheduled_item.teacherId} not found",
@@ -199,12 +193,12 @@ class ScheduleFitnessEvaluator:
 
         if not room:  # Unscheduled. Large penalty and early return
             penalty = self.penalty_manager.get_penalty(
-                ConstraintCategory.UNASSIGNED_ROOM
+                SchedulingConstraintCategory.UNASSIGNED_ROOM
             )
             violations.append(
                 ConstraintViolation(
-                    ConstraintCategory.UNASSIGNED_ROOM,
-                    ConstraintType.HARD,
+                    SchedulingConstraintCategory.UNASSIGNED_ROOM,
+                    SchedulingConstraintType.HARD,
                     penalty,
                     scheduled_item,
                     "Unscheduled item",
@@ -216,12 +210,12 @@ class ScheduleFitnessEvaluator:
         # Check for invalid scheduling (hard constraint)
         if not scheduled_item.timeslot or not scheduled_item.day:
             penalty = self.penalty_manager.get_penalty(
-                ConstraintCategory.INVALID_SCHEDULING
+                SchedulingConstraintCategory.INVALID_SCHEDULING
             )
             violations.append(
                 ConstraintViolation(
-                    ConstraintCategory.INVALID_SCHEDULING,
-                    ConstraintType.HARD,
+                    SchedulingConstraintCategory.INVALID_SCHEDULING,
+                    SchedulingConstraintType.HARD,
                     penalty,
                     scheduled_item,
                     "Missing timeslot or day assignment",
@@ -232,12 +226,12 @@ class ScheduleFitnessEvaluator:
         # Hard Constraint: Teacher wheelchair accessibility
         if teacher.needsWheelchairAccessibleRoom and not room.isWheelchairAccessible:
             penalty = self.penalty_manager.get_penalty(
-                ConstraintCategory.TEACHER_WHEELCHAIR_ACCESS
+                SchedulingConstraintCategory.TEACHER_WHEELCHAIR_ACCESS
             )
             violations.append(
                 ConstraintViolation(
-                    ConstraintCategory.TEACHER_WHEELCHAIR_ACCESS,
-                    ConstraintType.HARD,
+                    SchedulingConstraintCategory.TEACHER_WHEELCHAIR_ACCESS,
+                    SchedulingConstraintType.HARD,
                     penalty,
                     scheduled_item,
                     f"Teacher {teacher.name} needs wheelchair accessible room, but {room.name} is not accessible",
@@ -253,12 +247,12 @@ class ScheduleFitnessEvaluator:
                 and not room.isWheelchairAccessible
             ):
                 penalty = self.penalty_manager.get_penalty(
-                    ConstraintCategory.STUDENT_GROUP_WHEELCHAIR_ACCESS
+                    SchedulingConstraintCategory.STUDENT_GROUP_WHEELCHAIR_ACCESS
                 )
                 violations.append(
                     ConstraintViolation(
-                        ConstraintCategory.STUDENT_GROUP_WHEELCHAIR_ACCESS,
-                        ConstraintType.HARD,
+                        SchedulingConstraintCategory.STUDENT_GROUP_WHEELCHAIR_ACCESS,
+                        SchedulingConstraintType.HARD,
                         penalty,
                         scheduled_item,
                         f"Student group {student_group.name} needs wheelchair accessible room, but {room.name} is not accessible",
@@ -268,12 +262,12 @@ class ScheduleFitnessEvaluator:
         # Hard Constraint: Room type mismatch
         if room.type != scheduled_item.sessionType:
             penalty = self.penalty_manager.get_penalty(
-                ConstraintCategory.ROOM_TYPE_MISMATCH
+                SchedulingConstraintCategory.ROOM_TYPE_MISMATCH
             )
             violations.append(
                 ConstraintViolation(
-                    ConstraintCategory.ROOM_TYPE_MISMATCH,
-                    ConstraintType.HARD,
+                    SchedulingConstraintCategory.ROOM_TYPE_MISMATCH,
+                    SchedulingConstraintType.HARD,
                     penalty,
                     scheduled_item,
                     f"Session type '{scheduled_item.sessionType}' requires different room type than '{room.type}'",
@@ -295,11 +289,13 @@ class ScheduleFitnessEvaluator:
         # Room conflict
         if time_key_room in room_tracker:
             conflicting_item = room_tracker[time_key_room]
-            penalty = self.penalty_manager.get_penalty(ConstraintCategory.ROOM_CONFLICT)
+            penalty = self.penalty_manager.get_penalty(
+                SchedulingConstraintCategory.ROOM_CONFLICT
+            )
             violations.append(
                 ConstraintViolation(
-                    ConstraintCategory.ROOM_CONFLICT,
-                    ConstraintType.HARD,
+                    SchedulingConstraintCategory.ROOM_CONFLICT,
+                    SchedulingConstraintType.HARD,
                     penalty,
                     scheduled_item,
                     f"Room {room.name} already occupied at {scheduled_item.day} {scheduled_item.timeslot}",
@@ -313,12 +309,12 @@ class ScheduleFitnessEvaluator:
         if time_key_teacher in teacher_tracker:
             conflicting_item = teacher_tracker[time_key_teacher]
             penalty = self.penalty_manager.get_penalty(
-                ConstraintCategory.TEACHER_CONFLICT
+                SchedulingConstraintCategory.TEACHER_CONFLICT
             )
             violations.append(
                 ConstraintViolation(
-                    ConstraintCategory.TEACHER_CONFLICT,
-                    ConstraintType.HARD,
+                    SchedulingConstraintCategory.TEACHER_CONFLICT,
+                    SchedulingConstraintType.HARD,
                     penalty,
                     scheduled_item,
                     f"Teacher {teacher.name} already teaching at {scheduled_item.day} {scheduled_item.timeslot}",
@@ -340,12 +336,12 @@ class ScheduleFitnessEvaluator:
                 student_group = self.student_group_map.get(sg_id)
                 sg_name = student_group.name if student_group else sg_id
                 penalty = self.penalty_manager.get_penalty(
-                    ConstraintCategory.STUDENT_GROUP_CONFLICT
+                    SchedulingConstraintCategory.STUDENT_GROUP_CONFLICT
                 )
                 violations.append(
                     ConstraintViolation(
-                        ConstraintCategory.STUDENT_GROUP_CONFLICT,
-                        ConstraintType.HARD,
+                        SchedulingConstraintCategory.STUDENT_GROUP_CONFLICT,
+                        SchedulingConstraintType.HARD,
                         penalty,
                         scheduled_item,
                         f"Student group {sg_name} already has class at {scheduled_item.day} {scheduled_item.timeslot}",
@@ -380,12 +376,12 @@ class ScheduleFitnessEvaluator:
                 total_student_count += student_group.size
             else:
                 penalty = self.penalty_manager.get_penalty(
-                    ConstraintCategory.MISSING_DATA
+                    SchedulingConstraintCategory.MISSING_DATA
                 )
                 violations.append(
                     ConstraintViolation(
-                        ConstraintCategory.MISSING_DATA,
-                        ConstraintType.HARD,
+                        SchedulingConstraintCategory.MISSING_DATA,
+                        SchedulingConstraintType.HARD,
                         penalty,
                         scheduled_item,
                         f"Student group {sg_id} not found",
@@ -396,12 +392,13 @@ class ScheduleFitnessEvaluator:
         if room.capacity < total_student_count:
             overflow = total_student_count - room.capacity
             penalty = self.penalty_manager.get_penalty(
-                ConstraintCategory.ROOM_CAPACITY_OVERFLOW, violation_count=overflow
+                SchedulingConstraintCategory.ROOM_CAPACITY_OVERFLOW,
+                violation_count=overflow,
             )
             violations.append(
                 ConstraintViolation(
-                    ConstraintCategory.ROOM_CAPACITY_OVERFLOW,
-                    ConstraintType.SOFT,
+                    SchedulingConstraintCategory.ROOM_CAPACITY_OVERFLOW,
+                    SchedulingConstraintType.SOFT,
                     penalty,
                     scheduled_item,
                     f"Room capacity: {room.capacity} - exceeded by {overflow} students (total students: {total_student_count})",
@@ -409,7 +406,11 @@ class ScheduleFitnessEvaluator:
             )
 
         # Get teacher constraints for preference evaluation
-        teacher_constraints = self.teacher_constraints.get(scheduled_item.teacherId, [])
+        teacher_constraints = []
+        if self.constraint_registry:
+            teacher_constraints = self.constraint_registry.get_teacher_constraints(
+                scheduled_item.teacherId
+            )
 
         # Evaluate teacher time preferences
         time_preference_violations = self._evaluate_teacher_time_preferences(
@@ -435,9 +436,11 @@ class ScheduleFitnessEvaluator:
         """Compile violations into a comprehensive fitness report."""
 
         # Categorize violations
-        violation_summary: Dict[ConstraintCategory, List[ConstraintViolation]] = {}
-        hard_constraint_scores: Dict[ConstraintCategory, int] = {}
-        soft_constraint_scores: Dict[ConstraintCategory, float] = {}
+        violation_summary: Dict[
+            SchedulingConstraintCategory, List[ConstraintViolation]
+        ] = {}
+        hard_constraint_scores: Dict[SchedulingConstraintCategory, int] = {}
+        soft_constraint_scores: Dict[SchedulingConstraintCategory, float] = {}
 
         total_hard_violations = 0
         total_soft_penalty = 0.0
@@ -449,7 +452,7 @@ class ScheduleFitnessEvaluator:
             violation_summary[violation.constraint_category].append(violation)
 
             # Update scores
-            if violation.constraint_type == ConstraintType.HARD:
+            if violation.constraint_type == SchedulingConstraintType.HARD:
                 hard_constraint_scores[violation.constraint_category] = (
                     hard_constraint_scores.get(violation.constraint_category, 0) + 1
                 )
@@ -465,7 +468,7 @@ class ScheduleFitnessEvaluator:
         fitness_vector = [float(total_hard_violations), total_soft_penalty]
 
         # Add individual category scores to vector (for multi-objective optimization)
-        all_categories = list(ConstraintCategory)
+        all_categories = list(SchedulingConstraintCategory)
         for category in all_categories:
             if category in hard_constraint_scores:
                 fitness_vector.append(float(hard_constraint_scores[category]))
@@ -496,7 +499,10 @@ class ScheduleFitnessEvaluator:
         violations: List[ConstraintViolation] = []
 
         for constraint in teacher_constraints:
-            if constraint.constraintType != "Teacher Time Preference":
+            if (
+                constraint.constraintCategory
+                != SchedulingConstraintCategory.TEACHER_TIME_PREFERENCE
+            ):
                 continue
 
             constraint_value = constraint.value
@@ -509,13 +515,13 @@ class ScheduleFitnessEvaluator:
                 if preference == "AVOID":
                     # Teacher wants to avoid this time - violation
                     penalty = self.penalty_manager.get_penalty(
-                        ConstraintCategory.TEACHER_TIME_PREFERENCE,
+                        SchedulingConstraintCategory.TEACHER_TIME_PREFERENCE,
                         severity_factor=constraint.priority / 10.0,
                     )
                     violations.append(
                         ConstraintViolation(
-                            ConstraintCategory.TEACHER_TIME_PREFERENCE,
-                            ConstraintType.SOFT,
+                            SchedulingConstraintCategory.TEACHER_TIME_PREFERENCE,
+                            SchedulingConstraintType.SOFT,
                             penalty,
                             scheduled_item,
                             f"Teacher {teacher.name} prefers to avoid {scheduled_item.day} {scheduled_item.timeslot}",
@@ -525,14 +531,14 @@ class ScheduleFitnessEvaluator:
                 # Teacher prefers specific times, but this isn't one of them
                 # This is a lighter penalty since it's not explicitly avoided
                 penalty = self.penalty_manager.get_penalty(
-                    ConstraintCategory.TEACHER_TIME_PREFERENCE,
+                    SchedulingConstraintCategory.TEACHER_TIME_PREFERENCE,
                     severity_factor=(constraint.priority / 10.0)
                     * 0.5,  # Half penalty for non-preferred
                 )
                 violations.append(
                     ConstraintViolation(
-                        ConstraintCategory.TEACHER_TIME_PREFERENCE,
-                        ConstraintType.SOFT,
+                        SchedulingConstraintCategory.TEACHER_TIME_PREFERENCE,
+                        SchedulingConstraintType.SOFT,
                         penalty,
                         scheduled_item,
                         f"Teacher {teacher.name} prefers different time slots",
@@ -552,7 +558,10 @@ class ScheduleFitnessEvaluator:
         violations: List[ConstraintViolation] = []
 
         for constraint in teacher_constraints:
-            if constraint.constraintType != "Teacher Room Preference":
+            if (
+                constraint.constraintCategory
+                != SchedulingConstraintCategory.TEACHER_ROOM_PREFERENCE
+            ):
                 continue
 
             constraint_value = constraint.value
@@ -564,13 +573,13 @@ class ScheduleFitnessEvaluator:
             if preference == "AVOID":
                 if room.classroomId in room_ids or room.buildingId in building_ids:
                     penalty = self.penalty_manager.get_penalty(
-                        ConstraintCategory.TEACHER_ROOM_PREFERENCE,
+                        SchedulingConstraintCategory.TEACHER_ROOM_PREFERENCE,
                         severity_factor=constraint.priority / 10.0,
                     )
                     violations.append(
                         ConstraintViolation(
-                            ConstraintCategory.TEACHER_ROOM_PREFERENCE,
-                            ConstraintType.SOFT,
+                            SchedulingConstraintCategory.TEACHER_ROOM_PREFERENCE,
+                            SchedulingConstraintType.SOFT,
                             penalty,
                             scheduled_item,
                             f"Teacher {teacher.name} prefers to avoid room {room.name}",
@@ -584,13 +593,13 @@ class ScheduleFitnessEvaluator:
                     and room.buildingId not in building_ids
                 ):
                     penalty = self.penalty_manager.get_penalty(
-                        ConstraintCategory.TEACHER_ROOM_PREFERENCE,
+                        SchedulingConstraintCategory.TEACHER_ROOM_PREFERENCE,
                         severity_factor=(constraint.priority / 10.0) * 0.5,
                     )
                     violations.append(
                         ConstraintViolation(
-                            ConstraintCategory.TEACHER_ROOM_PREFERENCE,
-                            ConstraintType.SOFT,
+                            SchedulingConstraintCategory.TEACHER_ROOM_PREFERENCE,
+                            SchedulingConstraintType.SOFT,
                             penalty,
                             scheduled_item,
                             f"Teacher {teacher.name} prefers different rooms",
@@ -617,13 +626,13 @@ class ScheduleFitnessEvaluator:
                 # Calculate penalty based on how late it is
                 delay_penalty = (timeslot_order - early_timeslot_threshold) * 0.5
                 penalty = self.penalty_manager.get_penalty(
-                    ConstraintCategory.ECTS_PRIORITY_VIOLATION,
+                    SchedulingConstraintCategory.ECTS_PRIORITY_VIOLATION,
                     severity_factor=delay_penalty,
                 )
                 violations.append(
                     ConstraintViolation(
-                        ConstraintCategory.ECTS_PRIORITY_VIOLATION,
-                        ConstraintType.SOFT,
+                        SchedulingConstraintCategory.ECTS_PRIORITY_VIOLATION,
+                        SchedulingConstraintType.SOFT,
                         penalty,
                         scheduled_item,
                         f"High-ECTS course {course.name} ({course.ectsCredits} ECTS) scheduled late in the day",
@@ -661,48 +670,15 @@ class ScheduleFitnessEvaluator:
                     ):
                         if current.classroomId != next_item.classroomId:
                             penalty = self.penalty_manager.get_penalty(
-                                ConstraintCategory.TEACHER_CONSECUTIVE_MOVEMENT
+                                SchedulingConstraintCategory.TEACHER_CONSECUTIVE_MOVEMENT
                             )
                             violations.append(
                                 ConstraintViolation(
-                                    ConstraintCategory.TEACHER_CONSECUTIVE_MOVEMENT,
-                                    ConstraintType.SOFT,
+                                    SchedulingConstraintCategory.TEACHER_CONSECUTIVE_MOVEMENT,
+                                    SchedulingConstraintType.SOFT,
                                     penalty,
                                     next_item,
                                     f"Teacher {teacher_id} moves from {current.classroomId} to {next_item.classroomId}",
-                                    current,
-                                )
-                            )
-
-        # Similar logic for student groups (with lower penalty)
-        student_daily_schedules = self._group_by_entity_and_day(
-            schedule, "student_group"
-        )
-
-        for sg_id, daily_schedule in student_daily_schedules.items():
-            for day, day_items in daily_schedule.items():
-                sorted_items = sorted(
-                    day_items, key=lambda x: self.timeslot_order.get(x.timeslot, 0)
-                )
-
-                for i in range(len(sorted_items) - 1):
-                    current = sorted_items[i]
-                    next_item = sorted_items[i + 1]
-
-                    if self._are_consecutive_timeslots(
-                        current.timeslot, next_item.timeslot
-                    ):
-                        if current.classroomId != next_item.classroomId:
-                            penalty = self.penalty_manager.get_penalty(
-                                ConstraintCategory.STUDENT_CONSECUTIVE_MOVEMENT
-                            )
-                            violations.append(
-                                ConstraintViolation(
-                                    ConstraintCategory.STUDENT_CONSECUTIVE_MOVEMENT,
-                                    ConstraintType.SOFT,
-                                    penalty,
-                                    next_item,
-                                    f"Student group {sg_id} moves from {current.classroomId} to {next_item.classroomId}",
                                     current,
                                 )
                             )

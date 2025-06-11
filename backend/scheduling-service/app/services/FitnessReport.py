@@ -1,16 +1,16 @@
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
-from app.models.models import ScheduledItem
-from app.services.Constraint import ConstraintCategory, ConstraintType
+from app.models import ScheduledItem
+from app.services.SchedulingConstraint import SchedulingConstraintCategory, SchedulingConstraintType
 
 
 @dataclass
 class ConstraintViolation:
     """Represents a specific constraint violation with detailed information."""
 
-    constraint_category: ConstraintCategory
-    constraint_type: ConstraintType
+    constraint_category: SchedulingConstraintCategory
+    constraint_type: SchedulingConstraintType
     severity: float  # How severe this violation is (for soft constraints, this could be the penalty)
     scheduled_item: ScheduledItem
     description: str
@@ -31,13 +31,13 @@ class FitnessReport:
     total_hard_violations: int
     total_soft_penalty: float
     hard_constraint_scores: Dict[
-        ConstraintCategory, int
+        SchedulingConstraintCategory, int
     ]  # Count of violations per category
-    soft_constraint_scores: Dict[ConstraintCategory, float]  # Penalty per category
+    soft_constraint_scores: Dict[SchedulingConstraintCategory, float]  # Penalty per category
 
     # Qualitative feedback
     violations: List[ConstraintViolation]
-    violation_summary: Dict[ConstraintCategory, List[ConstraintViolation]]
+    violation_summary: Dict[SchedulingConstraintCategory, List[ConstraintViolation]]
 
     # Overall metrics
     is_feasible: bool  # True if no hard constraint violations
@@ -46,12 +46,12 @@ class FitnessReport:
     ]  # [hard_violations, soft_penalty, category1, category2, ...]
     evaluation_time: float
 
-    def get_violation_count_by_category(self, category: ConstraintCategory) -> int:
+    def get_violation_count_by_category(self, category: SchedulingConstraintCategory) -> int:
         """Get count of violations for a specific category."""
         return len(self.violation_summary.get(category, []))
 
     def get_violations_by_type(
-        self, constraint_type: ConstraintType
+        self, constraint_type: SchedulingConstraintType
     ) -> List[ConstraintViolation]:
         """Get all violations of a specific type (hard/soft)."""
         return [v for v in self.violations if v.constraint_type == constraint_type]

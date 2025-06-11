@@ -60,6 +60,24 @@ Soft constraints:
 - Student group preference
 - Classroom accessibility (for now. this will be moved to hard constraints later)
 
+```mermaid
+graph TD
+    A["API Request<br/>List[Dict] constraints"] --> B["Pydantic Validation<br/>constraint.py"]
+    B --> C["List[Constraint]<br/>Validated & Mapped"]
+    C --> D["SchedulingConstraintRegistry<br/>Organized Access"]
+    D --> E["GeneticScheduler<br/>Population Evolution"]
+    E --> F["ScheduleFitnessEvaluator<br/>Enum-based Evaluation"]
+
+    G["SchedulingConstraint.py<br/>Central Definitions"] --> B
+    G --> D
+    G --> F
+    
+    style A fill:#ffeeee
+    style C fill:#eeffee
+    style F fill:#eeeeff
+    style G fill:#fff2cc
+```
+
 Performance will be critical here, so we will need to optimize the fitness function. Maybe a lookup table for checking timeslot/room conflicts?
 
 ### Selection

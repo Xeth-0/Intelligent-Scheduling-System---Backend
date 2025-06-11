@@ -1,20 +1,17 @@
 import time
 from fastapi import APIRouter
 from app.services.GeneticScheduler import GeneticScheduler
-from app.models.models import ScheduleApiRequest
+from app.services.SchedulingConstraintRegistry import SchedulingConstraintRegistry
+from app.models import ScheduleApiRequest
 
 router = APIRouter(prefix="/scheduler")
 
 
 @router.post("/", status_code=201)
 async def generate_schedule(request: ScheduleApiRequest):
-    print(f"Received Schedule Request:\n{request.model_dump_json(indent=2)}")
+    print(f"Received Schedule Request with {len(request.constraints)} constraints")
 
-    timeslots = request.timeslots
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
-
-    constraints = request.constraints
-    # print("Constraints: ", constraints)
 
     print("Initializing scheduler...")
     scheduler = GeneticScheduler(
@@ -22,10 +19,10 @@ async def generate_schedule(request: ScheduleApiRequest):
         teachers=request.teachers,
         rooms=request.rooms,
         student_groups=request.studentGroups,
-        timeslots=timeslots,
+        constraints=request.constraints,
+        timeslots=request.timeslots,
         days=days,
         population_size=100,
-        constraints=constraints,
     )
 
     print("Running scheduler...")

@@ -1,8 +1,8 @@
 import numpy as np
 from typing import Dict, Optional, List
 from dataclasses import dataclass
-from app.models.models import Course, Constraint
-from app.services.Constraint import ConstraintCategory
+from app.models import Course, Constraint
+from app.services.SchedulingConstraint import SchedulingConstraintCategory
 
 
 @dataclass
@@ -42,13 +42,13 @@ class PenaltyManager:
         """
         hard_penalty_configs = {
             key: PenaltyConfig(base_penalty=self.min_hard_penalty, strategy="fixed")
-            for key in ConstraintCategory.get_hard_constraints()
+            for key in SchedulingConstraintCategory.get_hard_constraints()
         }
         soft_penalty_configs = {
             key: PenaltyConfig(
                 base_penalty=self.max_soft_penalty, strategy="proportional"
             )
-            for key in ConstraintCategory.get_soft_constraints()
+            for key in SchedulingConstraintCategory.get_soft_constraints()
         }
         self._penalty_configs = {**hard_penalty_configs, **soft_penalty_configs}
 
@@ -79,9 +79,11 @@ class PenaltyManager:
         # Individual soft penalties cannot exceed this
         self.max_soft_penalty = self.min_hard_penalty * 0.1
 
+
+
     def get_penalty(
         self,
-        constraint_category: ConstraintCategory,
+        constraint_category: SchedulingConstraintCategory,
         violation_count: int = 1,
         severity_factor: float = 1.0,
     ) -> float:
@@ -119,7 +121,7 @@ class PenaltyManager:
         return penalty
 
     def update_penalty_config(
-        self, constraint_category: ConstraintCategory, config: PenaltyConfig
+        self, constraint_category: SchedulingConstraintCategory, config: PenaltyConfig
     ) -> None:
         """
         Update penalty configuration for a constraint category.
@@ -138,7 +140,7 @@ class PenaltyManager:
         self._penalty_configs[constraint_category] = config
 
     def get_penalty_config(
-        self, constraint_category: ConstraintCategory
+        self, constraint_category: SchedulingConstraintCategory
     ) -> Optional[PenaltyConfig]:
         """Get current penalty configuration for a constraint category."""
         return self._penalty_configs.get(constraint_category)

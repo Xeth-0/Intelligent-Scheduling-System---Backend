@@ -2,7 +2,7 @@ from typing import Dict, List, Any
 import numpy as np
 from app.services.PenaltyManager import PenaltyConfig
 from app.services.Fitness import ScheduleFitnessEvaluator
-from app.services.Constraint import ConstraintCategory
+from app.services.SchedulingConstraint import SchedulingConstraintCategory
 
 try:
     from skopt import gp_minimize  # type: ignore
@@ -140,7 +140,7 @@ class PenaltyOptimizer:
 
         return True
 
-    def _backup_penalty_configs(self) -> Dict[ConstraintCategory, PenaltyConfig]:
+    def _backup_penalty_configs(self) -> Dict[SchedulingConstraintCategory, PenaltyConfig]:
         """
         Backup current penalty configurations.
           (Just a copy of the current penalty configurations.)
@@ -156,7 +156,7 @@ class PenaltyOptimizer:
         }
 
     def _restore_penalty_configs(
-        self, configs: Dict[ConstraintCategory, PenaltyConfig]
+        self, configs: Dict[SchedulingConstraintCategory, PenaltyConfig]
     ) -> None:
         """Restore penalty configurations from backup."""
         for category, config in configs.items():
@@ -165,13 +165,12 @@ class PenaltyOptimizer:
     def _update_penalty_manager(self, penalty_params: Dict[str, float]) -> None:
         """Update penalty manager with new parameters."""
         param_mapping = {
-            "room_capacity_overflow_base": ConstraintCategory.ROOM_CAPACITY_OVERFLOW,
-            "teacher_time_preference_base": ConstraintCategory.TEACHER_TIME_PREFERENCE,
-            "teacher_room_preference_base": ConstraintCategory.TEACHER_ROOM_PREFERENCE,
-            "teacher_consecutive_movement_base": ConstraintCategory.TEACHER_CONSECUTIVE_MOVEMENT,
-            "student_consecutive_movement_base": ConstraintCategory.STUDENT_CONSECUTIVE_MOVEMENT,
-            "ects_priority_violation_base": ConstraintCategory.ECTS_PRIORITY_VIOLATION,
-            "schedule_compactness_base": ConstraintCategory.SCHEDULE_COMPACTNESS,
+            "room_capacity_overflow_base": SchedulingConstraintCategory.ROOM_CAPACITY_OVERFLOW,
+            "teacher_time_preference_base": SchedulingConstraintCategory.TEACHER_TIME_PREFERENCE,
+            "teacher_room_preference_base": SchedulingConstraintCategory.TEACHER_ROOM_PREFERENCE,
+            "teacher_consecutive_movement_base": SchedulingConstraintCategory.TEACHER_CONSECUTIVE_MOVEMENT,
+            "ects_priority_violation_base": SchedulingConstraintCategory.ECTS_PRIORITY_VIOLATION,
+            # "schedule_compactness_base": SchedulingConstraintCategory.SCHEDULE_COMPACTNESS,
         }
 
         for param_name, value in penalty_params.items():
@@ -193,12 +192,11 @@ class PenaltyOptimizer:
         soft_configs = [
             self.penalty_manager.get_penalty_config(cat)
             for cat in [
-                ConstraintCategory.ROOM_CAPACITY_OVERFLOW,
-                ConstraintCategory.TEACHER_TIME_PREFERENCE,
-                ConstraintCategory.TEACHER_ROOM_PREFERENCE,
-                ConstraintCategory.TEACHER_CONSECUTIVE_MOVEMENT,
-                ConstraintCategory.STUDENT_CONSECUTIVE_MOVEMENT,
-                ConstraintCategory.ECTS_PRIORITY_VIOLATION,
+                SchedulingConstraintCategory.ROOM_CAPACITY_OVERFLOW,
+                SchedulingConstraintCategory.TEACHER_TIME_PREFERENCE,
+                SchedulingConstraintCategory.TEACHER_ROOM_PREFERENCE,
+                SchedulingConstraintCategory.TEACHER_CONSECUTIVE_MOVEMENT,
+                SchedulingConstraintCategory.ECTS_PRIORITY_VIOLATION,
             ]
             if self.penalty_manager.get_penalty_config(cat) is not None
         ]
@@ -266,32 +264,28 @@ class PenaltyOptimizer:
             param_name = dim.name
             if param_name == "room_capacity_overflow_base":
                 config = self.penalty_manager.get_penalty_config(
-                    ConstraintCategory.ROOM_CAPACITY_OVERFLOW
+                    SchedulingConstraintCategory.ROOM_CAPACITY_OVERFLOW
                 )
             elif param_name == "teacher_time_preference_base":
                 config = self.penalty_manager.get_penalty_config(
-                    ConstraintCategory.TEACHER_TIME_PREFERENCE
+                    SchedulingConstraintCategory.TEACHER_TIME_PREFERENCE
                 )
             elif param_name == "teacher_room_preference_base":
                 config = self.penalty_manager.get_penalty_config(
-                    ConstraintCategory.TEACHER_ROOM_PREFERENCE
+                    SchedulingConstraintCategory.TEACHER_ROOM_PREFERENCE
                 )
             elif param_name == "teacher_consecutive_movement_base":
                 config = self.penalty_manager.get_penalty_config(
-                    ConstraintCategory.TEACHER_CONSECUTIVE_MOVEMENT
-                )
-            elif param_name == "student_consecutive_movement_base":
-                config = self.penalty_manager.get_penalty_config(
-                    ConstraintCategory.STUDENT_CONSECUTIVE_MOVEMENT
+                    SchedulingConstraintCategory.TEACHER_CONSECUTIVE_MOVEMENT
                 )
             elif param_name == "ects_priority_violation_base":
                 config = self.penalty_manager.get_penalty_config(
-                    ConstraintCategory.ECTS_PRIORITY_VIOLATION
+                    SchedulingConstraintCategory.ECTS_PRIORITY_VIOLATION
                 )
-            elif param_name == "schedule_compactness_base":
-                config = self.penalty_manager.get_penalty_config(
-                    ConstraintCategory.SCHEDULE_COMPACTNESS
-                )
+            # elif param_name == "schedule_compactness_base":
+            #     config = self.penalty_manager.get_penalty_config(
+            #         SchedulingConstraintCategory.SCHEDULE_COMPACTNESS
+            #     )
             else:
                 config = None
 

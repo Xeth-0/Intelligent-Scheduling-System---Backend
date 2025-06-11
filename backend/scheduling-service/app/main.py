@@ -1,13 +1,12 @@
 import sentry_sdk
 from fastapi import FastAPI
 
-from app.core.config import settings
 from app.api.endpoints import healthcheck
 from app.api.endpoints import scheduling
 
 try:
     sentry_sdk.init(
-        dsn=settings.SENTRY_DSN,
+        dsn="https://ec5ad676078d626f9095cd8395d34341@o4507213915422720.ingest.de.sentry.io/4509336235737168",
         send_default_pii=True,
         enable_tracing=True,
         traces_sample_rate=1.0,
