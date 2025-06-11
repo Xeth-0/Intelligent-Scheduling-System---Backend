@@ -11,6 +11,9 @@ CREATE TYPE "SessionType" AS ENUM ('LECTURE', 'LAB', 'SEMINAR');
 CREATE TYPE "DayOfWeek" AS ENUM ('MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY');
 
 -- CreateEnum
+CREATE TYPE "TaskStatus" AS ENUM ('COMPLETED', 'QUEUED', 'FAILED');
+
+-- CreateEnum
 CREATE TYPE "ConstraintScope" AS ENUM ('CAMPUS_PREFERENCE', 'TEACHER_PREFERENCE', 'STUDENT_GROUP_PREFERENCE');
 
 -- CreateEnum
@@ -184,6 +187,29 @@ CREATE TABLE "RefreshToken" (
 );
 
 -- CreateTable
+CREATE TABLE "Task" (
+    "taskId" TEXT NOT NULL,
+    "adminId" TEXT NOT NULL,
+    "campusId" TEXT,
+    "status" "TaskStatus" NOT NULL,
+    "errorCount" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Task_pkey" PRIMARY KEY ("taskId")
+);
+
+-- CreateTable
+CREATE TABLE "TaskError" (
+    "id" TEXT NOT NULL,
+    "taskId" TEXT NOT NULL,
+    "message" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "TaskError_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "ConstraintType" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
@@ -324,6 +350,15 @@ ALTER TABLE "Schedule" ADD CONSTRAINT "Schedule_generatedByAdminId_fkey" FOREIGN
 
 -- AddForeignKey
 ALTER TABLE "Schedule" ADD CONSTRAINT "Schedule_campusId_fkey" FOREIGN KEY ("campusId") REFERENCES "Campus"("campusId") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Task" ADD CONSTRAINT "Task_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "Admin"("adminId") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Task" ADD CONSTRAINT "Task_campusId_fkey" FOREIGN KEY ("campusId") REFERENCES "Campus"("campusId") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TaskError" ADD CONSTRAINT "TaskError_taskId_fkey" FOREIGN KEY ("taskId") REFERENCES "Task"("taskId") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Constraint" ADD CONSTRAINT "Constraint_constraintTypeId_fkey" FOREIGN KEY ("constraintTypeId") REFERENCES "ConstraintType"("id") ON DELETE CASCADE ON UPDATE CASCADE;

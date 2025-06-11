@@ -27,3 +27,10 @@ import { ValidationController } from './validation.controller';
   exports: [ValidationService],
 })
 export class FileModule {}
+/**
+ * TODO:
+ * - [x] send campusId  and adminId with the queue request nad use it to ensure uniqueness for all id fields
+ * - [x] keep track of teskId and status as well as errors
+ * - [x] parse db prisma errors to a readable error
+ * - [x] create an endpoint for status check
+ */

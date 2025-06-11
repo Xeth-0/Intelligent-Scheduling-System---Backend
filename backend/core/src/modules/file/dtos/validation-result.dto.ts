@@ -10,6 +10,8 @@ export class ValidationResultDto<T> {
 export class RabbitDto<T> {
   taskId!: string;
   result!: ValidationResultDto<T>;
+  adminId!: string;
+  campusId?: string;
 }
 
 export enum fileTypes {
@@ -46,7 +48,7 @@ export interface Course {
   sessionsPerWeek: number;
 }
 
-export interface User {
+export interface IUser {
   firstName: string;
   lastName: string;
   email: string;
@@ -54,7 +56,7 @@ export interface User {
   passwordHash?: string;
   role: string;
 }
-export interface Teacher extends User {
+export interface Teacher extends IUser {
   teacherId: string;
 
   needWheelchairAccessibleRoom: boolean;
@@ -83,7 +85,7 @@ export interface StudentGroup {
   departmentId: Department['departmentId'];
 }
 
-export interface Student extends User {
+export interface Student extends IUser {
   studentId: string;
 
   needWheelchairAccessibleRoom: boolean;
