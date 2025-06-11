@@ -27,24 +27,32 @@ class RoomCapacityConstraint(StatelessConstraintValidator):
             return violations
 
         room = context.rooms.get(item.classroomId)
+        course = context.courses.get(item.courseId)
 
-        if not room:
+        if not room or not course:
             return violations
 
         # Calculate total student count
         total_student_count = 0
+        student_group_names = []
         for sg_id in item.studentGroupIds:
             student_group = context.student_groups.get(sg_id)
             if student_group:
                 total_student_count += student_group.size
+                student_group_names.append(student_group.name)
 
         # Check capacity overflow
         if room.capacity < total_student_count:
             overflow = total_student_count - room.capacity
+            penalty = self.penalty_manager.get_penalty(
+                self.category, violation_count=overflow
+            )
             violations.append(
                 self._create_violation(
                     context,
-                    f"Room capacity: {room.capacity} - exceeded by {overflow} students (total students: {total_student_count})",
+                    f"Course '{course.name}' ({course.courseId}) assigned to {room.name} (capacity: {room.capacity}) "
+                    f"but needs {total_student_count} seats for groups: {', '.join(student_group_names)}. "
+                    f"Overcapacity by {overflow} students. Penalty: {penalty:.2f}",
                     violation_count=overflow,
                 )
             )
@@ -78,11 +86,18 @@ class EctsPriorityConstraint(StatelessConstraintValidator):
 
         if timeslot_order > early_timeslot_threshold:
             delay_penalty = (timeslot_order - early_timeslot_threshold) * 0.5
+            severity_factor = delay_penalty
+            penalty = self.penalty_manager.get_penalty(
+                self.category, severity_factor=severity_factor
+            )
             violations.append(
                 self._create_violation(
                     context,
-                    f"High-ECTS course {course.name} ({course.ectsCredits} ECTS) scheduled late in the day",
-                    severity_factor=delay_penalty,
+                    f"High-ECTS course '{course.name}' ({course.ectsCredits} ECTS, ID: {course.courseId}) "
+                    f"scheduled late at {item.day} {item.timeslot} (position {timeslot_order}). "
+                    f"Should be scheduled earlier (position ≤ {early_timeslot_threshold}). "
+                    f"Penalty: {penalty:.2f}",
+                    severity_factor=severity_factor,
                 )
             )
 
@@ -107,8 +122,9 @@ class TeacherTimePreferenceConstraint(UserPreferenceConstraintValidator):
             return violations
 
         teacher = context.teachers.get(item.teacherId)
+        course = context.courses.get(item.courseId)
 
-        if not teacher or item.teacherId != self.constraint.teacherId:
+        if not teacher or not course or item.teacherId != self.constraint.teacherId:
             return violations
 
         constraint_value = self.constraint.value
@@ -119,20 +135,33 @@ class TeacherTimePreferenceConstraint(UserPreferenceConstraintValidator):
         # Check preference violations
         if item.day in days and item.timeslot in timeslot_codes:
             if preference == "AVOID":
+                severity_factor = self.constraint.priority / 10.0
+                penalty = self.penalty_manager.get_penalty(
+                    self.category, severity_factor=severity_factor
+                )
                 violations.append(
                     self._create_violation(
                         context,
-                        f"Teacher {teacher.name} prefers to avoid {item.day} {item.timeslot}",
-                        severity_factor=self.constraint.priority / 10.0,
+                        f"Course '{course.name}' ({course.courseId}) assigned to teacher {teacher.name} "
+                        f"at {item.day} {item.timeslot}, but teacher prefers to AVOID this time. "
+                        f"Priority: {self.constraint.priority}/10. Penalty: {penalty:.2f}",
+                        severity_factor=severity_factor,
                     )
                 )
         elif preference == "PREFER" and timeslot_codes and days:
             # Light penalty for not being in preferred time
+            severity_factor = (self.constraint.priority / 10.0) * 0.5
+            penalty = self.penalty_manager.get_penalty(
+                self.category, severity_factor=severity_factor
+            )
+            preferred_slots = [f"{d} {ts}" for d in days for ts in timeslot_codes]
             violations.append(
                 self._create_violation(
                     context,
-                    f"Teacher {teacher.name} prefers different time slots",
-                    severity_factor=(self.constraint.priority / 10.0) * 0.5,
+                    f"Course '{course.name}' ({course.courseId}) assigned to teacher {teacher.name} "
+                    f"at {item.day} {item.timeslot}, but teacher PREFERS: {', '.join(preferred_slots)}. "
+                    f"Priority: {self.constraint.priority}/10. Penalty: {penalty:.2f}",
+                    severity_factor=severity_factor,
                 )
             )
 
@@ -158,8 +187,9 @@ class TeacherRoomPreferenceConstraint(UserPreferenceConstraintValidator):
 
         teacher = context.teachers.get(item.teacherId)
         room = context.rooms.get(item.classroomId)
+        course = context.courses.get(item.courseId)
 
-        if not teacher or not room or item.teacherId != self.constraint.teacherId:
+        if not teacher or not room or not course or item.teacherId != self.constraint.teacherId:
             return violations
 
         constraint_value = self.constraint.value
@@ -167,13 +197,32 @@ class TeacherRoomPreferenceConstraint(UserPreferenceConstraintValidator):
         room_ids = constraint_value.get("roomIds", [])
         building_ids = constraint_value.get("buildingIds", [])
 
+        # Get preferred room/building names for better descriptions
+        preferred_rooms = []
+        preferred_buildings = []
+        
+        if room_ids:
+            for room_id in room_ids:
+                if room_id in context.rooms:
+                    preferred_rooms.append(context.rooms[room_id].name)
+        
+        if building_ids:
+            # Note: We don't have building lookup, so we'll use IDs
+            preferred_buildings = building_ids
+
         if preference == "AVOID":
             if room.classroomId in room_ids or room.buildingId in building_ids:
+                severity_factor = self.constraint.priority / 10.0
+                penalty = self.penalty_manager.get_penalty(
+                    self.category, severity_factor=severity_factor
+                )
                 violations.append(
                     self._create_violation(
                         context,
-                        f"Teacher {teacher.name} prefers to avoid room {room.name}",
-                        severity_factor=self.constraint.priority / 10.0,
+                        f"Course '{course.name}' ({course.courseId}) assigned to teacher {teacher.name} "
+                        f"in room {room.name} (Building: {room.buildingId}), but teacher prefers to AVOID this room. "
+                        f"Priority: {self.constraint.priority}/10. Penalty: {penalty:.2f}",
+                        severity_factor=severity_factor,
                     )
                 )
         elif preference == "PREFER":
@@ -183,11 +232,24 @@ class TeacherRoomPreferenceConstraint(UserPreferenceConstraintValidator):
             )
 
             if room_not_preferred or building_not_preferred:
+                severity_factor = (self.constraint.priority / 10.0) * 0.5
+                penalty = self.penalty_manager.get_penalty(
+                    self.category, severity_factor=severity_factor
+                )
+                
+                preferred_text = []
+                if preferred_rooms:
+                    preferred_text.append(f"rooms: {', '.join(preferred_rooms)}")
+                if preferred_buildings:
+                    preferred_text.append(f"buildings: {', '.join(preferred_buildings)}")
+                
                 violations.append(
                     self._create_violation(
                         context,
-                        f"Teacher {teacher.name} prefers different rooms",
-                        severity_factor=(self.constraint.priority / 10.0) * 0.5,
+                        f"Course '{course.name}' ({course.courseId}) assigned to teacher {teacher.name} "
+                        f"in room {room.name} (Building: {room.buildingId}), but teacher PREFERS: {' or '.join(preferred_text)}. "
+                        f"Priority: {self.constraint.priority}/10. Penalty: {penalty:.2f}",
+                        severity_factor=severity_factor,
                     )
                 )
 
@@ -240,6 +302,9 @@ class TeacherConsecutiveMovementConstraint(WholeScheduleConstraintValidator):
         )
 
         for teacher_id, daily_schedule in teacher_daily_schedules.items():
+            teacher = context.teachers.get(teacher_id)
+            teacher_name = teacher.name if teacher else teacher_id
+            
             for day, day_items in daily_schedule.items():
                 sorted_items = sorted(
                     day_items, key=lambda x: context.timeslot_order.get(x.timeslot, 0)
@@ -257,11 +322,21 @@ class TeacherConsecutiveMovementConstraint(WholeScheduleConstraintValidator):
                     are_different_rooms = current.classroomId != next_item.classroomId
 
                     if are_consecutive and are_different_rooms:
+                        current_room = context.rooms.get(current.classroomId)
+                        next_room = context.rooms.get(next_item.classroomId)
+                        current_course = context.courses.get(current.courseId)
+                        next_course = context.courses.get(next_item.courseId)
+                        
+                        penalty = self.penalty_manager.get_penalty(self.category)
+                        
                         violations.append(
                             self._create_schedule_violation(
                                 context,
                                 next_item,
-                                f"Teacher {teacher_id} moves from {current.classroomId} to {next_item.classroomId}",
+                                f"Teacher {teacher_name} must move between consecutive classes on {day}: "
+                                f"'{current_course.name if current_course else current.courseId}' in {current_room.name if current_room else current.classroomId} "
+                                f"at {current.timeslot} → '{next_course.name if next_course else next_item.courseId}' in {next_room.name if next_room else next_item.classroomId} "
+                                f"at {next_item.timeslot}. Penalty: {penalty:.2f}",
                                 conflicting_item=current,
                             )
                         )
