@@ -11,10 +11,10 @@ CREATE TYPE "SessionType" AS ENUM ('LECTURE', 'LAB', 'SEMINAR');
 CREATE TYPE "DayOfWeek" AS ENUM ('MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY');
 
 -- CreateEnum
-CREATE TYPE "ConstraintScope" AS ENUM ('TEACHER_PREFERENCE', 'CAMPUS', 'DEPARTMENT', 'COURSE');
+CREATE TYPE "ConstraintScope" AS ENUM ('CAMPUS_PREFERENCE', 'TEACHER_PREFERENCE', 'STUDENT_GROUP_PREFERENCE');
 
 -- CreateEnum
-CREATE TYPE "ConstraintValueType" AS ENUM ('TIME_SLOT', 'DAY_OF_WEEK', 'ROOM', 'NUMERIC_SCALE', 'BOOLEAN', 'COURSE_CRITERIA');
+CREATE TYPE "ConstraintValueType" AS ENUM ('TIME_SLOT', 'DAY_OF_WEEK', 'ROOM', 'NUMERIC_SCALE', 'BOOLEAN', 'COURSE_CRITERIA', 'SCHEDULE_STRUCTURE');
 
 -- CreateTable
 CREATE TABLE "Timeslot" (
@@ -146,8 +146,6 @@ CREATE TABLE "ScheduleItem" (
     "isFinalized" BOOLEAN NOT NULL DEFAULT false,
     "sessionType" "SessionType",
     "timeslotId" TEXT NOT NULL,
-    "startTime" TEXT NOT NULL,
-    "endTime" TEXT NOT NULL,
     "day" "DayOfWeek" NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -163,6 +161,7 @@ CREATE TABLE "ScheduleItem" (
 -- CreateTable
 CREATE TABLE "Schedule" (
     "scheduleId" TEXT NOT NULL,
+    "scheduleName" TEXT NOT NULL DEFAULT 'Unnamed Schedule',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "fitnessScore" DOUBLE PRECISION,
@@ -204,7 +203,7 @@ CREATE TABLE "Constraint" (
     "id" TEXT NOT NULL,
     "constraintTypeId" TEXT NOT NULL,
     "value" JSONB NOT NULL,
-    "weight" DOUBLE PRECISION NOT NULL DEFAULT 1.0,
+    "priority" DOUBLE PRECISION NOT NULL DEFAULT 5.0,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -234,19 +233,7 @@ CREATE TABLE "_CourseToStudentGroup" (
 CREATE UNIQUE INDEX "Timeslot_code_key" ON "Timeslot"("code");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Timeslot_label_key" ON "Timeslot"("label");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Timeslot_startTime_key" ON "Timeslot"("startTime");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Timeslot_endTime_key" ON "Timeslot"("endTime");
-
--- CreateIndex
 CREATE UNIQUE INDEX "Timeslot_order_key" ON "Timeslot"("order");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Timeslot_timeslotId_startTime_endTime_key" ON "Timeslot"("timeslotId", "startTime", "endTime");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
@@ -264,13 +251,13 @@ CREATE UNIQUE INDEX "Admin_userId_key" ON "Admin"("userId");
 CREATE UNIQUE INDEX "StudentGroup_departmentId_name_key" ON "StudentGroup"("departmentId", "name");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "ScheduleItem_scheduleId_timeslotId_startTime_endTime_day_cl_key" ON "ScheduleItem"("scheduleId", "timeslotId", "startTime", "endTime", "day", "classroomId");
+CREATE UNIQUE INDEX "ScheduleItem_scheduleId_timeslotId_day_classroomId_key" ON "ScheduleItem"("scheduleId", "timeslotId", "day", "classroomId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "ScheduleItem_scheduleId_timeslotId_startTime_endTime_day_te_key" ON "ScheduleItem"("scheduleId", "timeslotId", "startTime", "endTime", "day", "teacherId");
+CREATE UNIQUE INDEX "ScheduleItem_scheduleId_timeslotId_day_teacherId_key" ON "ScheduleItem"("scheduleId", "timeslotId", "day", "teacherId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "ScheduleItem_scheduleId_timeslotId_startTime_endTime_day_st_key" ON "ScheduleItem"("scheduleId", "timeslotId", "startTime", "endTime", "day", "studentGroupId");
+CREATE UNIQUE INDEX "ScheduleItem_scheduleId_timeslotId_day_studentGroupId_key" ON "ScheduleItem"("scheduleId", "timeslotId", "day", "studentGroupId");
 
 -- CreateIndex
 CREATE INDEX "Schedule_campusId_active_idx" ON "Schedule"("campusId", "active");
@@ -330,7 +317,7 @@ ALTER TABLE "ScheduleItem" ADD CONSTRAINT "ScheduleItem_classroomId_fkey" FOREIG
 ALTER TABLE "ScheduleItem" ADD CONSTRAINT "ScheduleItem_studentGroupId_fkey" FOREIGN KEY ("studentGroupId") REFERENCES "StudentGroup"("studentGroupId") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ScheduleItem" ADD CONSTRAINT "ScheduleItem_timeslotId_startTime_endTime_fkey" FOREIGN KEY ("timeslotId", "startTime", "endTime") REFERENCES "Timeslot"("timeslotId", "startTime", "endTime") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "ScheduleItem" ADD CONSTRAINT "ScheduleItem_timeslotId_fkey" FOREIGN KEY ("timeslotId") REFERENCES "Timeslot"("timeslotId") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Schedule" ADD CONSTRAINT "Schedule_generatedByAdminId_fkey" FOREIGN KEY ("generatedByAdminId") REFERENCES "Admin"("adminId") ON DELETE RESTRICT ON UPDATE CASCADE;

@@ -35,11 +35,19 @@ import {
 export class SchedulingController {
   constructor(private readonly schedulingService: SchedulingService) {}
 
-  @Post('/generate')
+  @Post('/generate/:scheduleName?')
   @Roles(Role.ADMIN)
   @GenerateScheduleDocs()
-  async generateSchedule(@GetUser() admin: User) {
-    const resp = await this.schedulingService.generateSchedule(admin.userId);
+  async generateSchedule(
+    @GetUser() admin: User,
+    @Param('scheduleName') scheduleName?: string,
+  ) {
+    const finalScheduleName =
+      scheduleName ?? 'Unnamed Schedule - ' + new Date().toISOString();
+    const resp = await this.schedulingService.generateSchedule(
+      admin.userId,
+      finalScheduleName,
+    );
     return ApiResponse.success(201, resp, 'Schedule generated successfully');
   }
 

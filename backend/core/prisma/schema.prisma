@@ -216,6 +216,7 @@ model ScheduledSession {
 // ========== Schedule ==========
 model Schedule {
   scheduleId         String             @id @default(uuid())
+  scheduleName       String             @default("Unnamed Schedule")
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
   fitnessScore       Float?

@@ -22,6 +22,13 @@ export const GenerateScheduleDocs = () => {
         'Generate a new optimized schedule for the campus using the scheduling algorithm. Only admins can trigger schedule generation.',
     }),
     ApiBearerAuth(),
+    ApiParam({
+      name: 'scheduleName',
+      description: 'Schedule name',
+      example: 'Unnamed Schedule',
+      type: 'string',
+      required: false,
+    }),
     ApiCreatedResponse({
       description: 'Schedule generated successfully',
       schema: {
@@ -37,6 +44,8 @@ export const GenerateScheduleDocs = () => {
             type: 'object',
             properties: {
               scheduleId: { type: 'string', example: 'uuid-string' },
+              scheduleName: { type: 'string', example: 'Unnamed Schedule' },
+              isActive: { type: 'boolean', example: false },
               sessions: {
                 type: 'array',
                 items: {
@@ -143,6 +152,8 @@ export const GetScheduleByIdDocs = () => {
             type: 'object',
             properties: {
               scheduleId: { type: 'string', example: 'uuid-string' },
+              scheduleName: { type: 'string', example: 'Unnamed Schedule' },
+              isActive: { type: 'boolean', example: false },
               sessions: {
                 type: 'array',
                 items: {
@@ -258,6 +269,8 @@ export const GetAllSchedulesDocs = () => {
               type: 'object',
               properties: {
                 scheduleId: { type: 'string', example: 'uuid-string' },
+                scheduleName: { type: 'string', example: 'Unnamed Schedule' },
+                isActive: { type: 'boolean', example: false },
                 sessions: {
                   type: 'array',
                   items: {
@@ -359,6 +372,8 @@ export const ActivateScheduleDocs = () => {
             type: 'object',
             properties: {
               scheduleId: { type: 'string', example: 'uuid-string' },
+              scheduleName: { type: 'string', example: 'Unnamed Schedule' },
+              isActive: { type: 'boolean', example: false },
               sessions: {
                 type: 'array',
                 items: {
@@ -526,6 +541,8 @@ export const SearchSessionsDocs = () => {
             type: 'object',
             properties: {
               scheduleId: { type: 'string', example: 'uuid-string' },
+              scheduleName: { type: 'string', example: 'Unnamed Schedule' },
+              isActive: { type: 'boolean', example: false },
               sessions: {
                 type: 'array',
                 items: {

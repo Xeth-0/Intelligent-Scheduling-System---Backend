@@ -2,7 +2,10 @@ import { type GeneralScheduleResponse } from '../scheduling/dtos/schedule.dto';
 import { type SearchSessionsBody } from '../scheduling/dtos/scheduleSearch.dto';
 
 export interface ISchedulingService {
-  generateSchedule(userId: string): Promise<GeneralScheduleResponse>;
+  generateSchedule(
+    userId: string,
+    scheduleName: string,
+  ): Promise<GeneralScheduleResponse>;
   getAllSchedules(userId: string): Promise<GeneralScheduleResponse[]>;
   activateSchedule(
     userId: string,

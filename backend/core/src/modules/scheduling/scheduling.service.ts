@@ -17,6 +17,7 @@ import {
   ScheduledSession,
   Timeslot,
   Role,
+  Schedule,
 } from '@prisma/client';
 import axios from 'axios';
 import { plainToInstance } from 'class-transformer';
@@ -65,6 +66,24 @@ export class SchedulingService implements ISchedulingService {
       timeslot: session.timeslot.startTime + '-' + session.timeslot.endTime,
       day: session.day,
     };
+  }
+
+  private _mapScheduleToResponse(
+    schedule: Schedule,
+    sessions: (ScheduledSession & {
+      course: Course;
+      teacher: Teacher;
+      timeslot: Timeslot;
+      classroom: Classroom | null;
+      studentGroup: StudentGroup | null;
+    })[],
+  ) {
+    return plainToInstance(GeneralScheduleResponse, {
+      scheduleId: schedule.scheduleId,
+      scheduleName: schedule.scheduleName,
+      isActive: schedule.active,
+      sessions: sessions.map((session) => this._mapSessionToResponse(session)),
+    });
   }
 
   /**
@@ -262,12 +281,7 @@ export class SchedulingService implements ISchedulingService {
       const { schedule } = await this._findSchedule(scheduleId, userId);
       const sessions = await this._fetchSessions(scheduleId);
 
-      return plainToInstance(GeneralScheduleResponse, {
-        scheduleId: schedule.scheduleId,
-        sessions: sessions.map((session) =>
-          this._mapSessionToResponse(session),
-        ),
-      });
+      return this._mapScheduleToResponse(schedule, sessions);
     } catch (e) {
       throw e;
     }
@@ -332,6 +346,7 @@ export class SchedulingService implements ISchedulingService {
    * @returns Promise with array of all campus schedules
    */
   async getAllSchedules(userId: string) {
+    // ! return schedule id, name, isActive, createdAt
     const admin = await this.prismaService.admin.findFirst({
       where: {
         userId: userId,
@@ -354,12 +369,7 @@ export class SchedulingService implements ISchedulingService {
       schedules.map(async (schedule) => {
         const sessions = await this._fetchSessions(schedule.scheduleId);
 
-        return plainToInstance(GeneralScheduleResponse, {
-          scheduleId: schedule.scheduleId,
-          sessions: sessions.map((session) =>
-            this._mapSessionToResponse(session),
-          ),
-        });
+        return this._mapScheduleToResponse(schedule, sessions);
       }),
     );
     return response;
@@ -414,12 +424,7 @@ export class SchedulingService implements ISchedulingService {
         },
       });
 
-      return plainToInstance(GeneralScheduleResponse, {
-        scheduleId: schedule.scheduleId,
-        sessions: sessions.map((session) =>
-          this._mapSessionToResponse(session),
-        ),
-      });
+      return this._mapScheduleToResponse(schedule, sessions);
     } catch (error) {
       throw error;
     }
@@ -428,10 +433,12 @@ export class SchedulingService implements ISchedulingService {
   /**
    * Generates a new schedule based on available courses, teachers,
    * student groups, and rooms from the database.
+   * The newly generated schedule is automatically activated,
+   * deactivating any previously active schedules for the campus.
    * @param userId - ID of the admin user generating the schedule
    * @returns Promise with the generated schedule details
    */
-  async generateSchedule(userId: string) {
+  async generateSchedule(userId: string, scheduleName: string) {
     const admin = await this.prismaService.admin.findFirst({
       where: {
         userId: userId,
@@ -587,6 +594,7 @@ export class SchedulingService implements ISchedulingService {
         data: {
           generatedByAdminId: admin.adminId,
           campusId: admin.campusId,
+          scheduleName: scheduleName,
           scheduleItems: {
             createMany: {
               data: scheduleItemsData,
