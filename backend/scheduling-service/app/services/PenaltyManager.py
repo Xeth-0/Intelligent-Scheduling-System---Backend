@@ -3,6 +3,7 @@ from typing import Dict, Optional, List
 from dataclasses import dataclass
 from app.models import Course, Constraint
 from app.services.SchedulingConstraint import SchedulingConstraintCategory
+from app.services.SchedulingConstraintRegistry import SchedulingConstraintRegistry
 
 
 @dataclass
@@ -26,9 +27,9 @@ class PenaltyManager:
         self,
         num_courses: int,
         num_teachers: int,
-        constraints: List[Constraint] = [],
+        constraint_registry: SchedulingConstraintRegistry,
     ):
-        self.constraints = constraints
+        self.constraint_registry = constraint_registry
         self.num_courses = num_courses
         self.num_teachers = num_teachers
 
@@ -60,6 +61,7 @@ class PenaltyManager:
         """
         # Estimate maximum possible soft penalty in a schedule
         # Assumptions: 100 courses, each could have multiple soft violations
+        
         estimated_max_courses = 100
         estimated_max_soft_violations_per_course = 10
         estimated_max_soft_penalty_per_violation = 20.0
@@ -78,8 +80,6 @@ class PenaltyManager:
 
         # Individual soft penalties cannot exceed this
         self.max_soft_penalty = self.min_hard_penalty * 0.1
-
-
 
     def get_penalty(
         self,
