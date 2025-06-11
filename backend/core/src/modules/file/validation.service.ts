@@ -84,7 +84,12 @@ export class ValidationService {
   // GET /status -> list of tasks
   // @GetUser() user: User
   async getAllTasks(): Promise<TaskDto[]> {
-    return await this.prismaService.task.findMany();
+    const tasks = await this.prismaService.task.findMany();
+    if (!tasks) {
+      throw new NotFoundException('No Task Found');
+    }
+    return tasks;
+    // return await this.prismaService.task.findMany();
   }
 
   // GET /status/:taskId -> detail of a single task

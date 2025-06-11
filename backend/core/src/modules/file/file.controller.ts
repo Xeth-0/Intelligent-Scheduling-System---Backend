@@ -14,7 +14,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { FileService } from './file.service';
 import { ValidationQueuedDto } from './dtos/validation-queued.dto';
 import { ApiTags } from '@nestjs/swagger';
-import { UploadFieDocs } from 'src/common/decorators/swagger/file.swagger.docs';
+import { UploadFileDocs } from 'src/common/decorators/swagger/file.swagger.docs';
 import { UploadFileDto } from './dtos/upload.dto';
 import { ApiResponse } from '@/common/response/api-response.dto';
 import { GetUser, Roles } from '@/common/decorators/auth';
@@ -33,7 +33,7 @@ export class FileController {
 
   // Endpoint to handle CSV file uploads
   @Post('upload')
-  @UploadFieDocs()
+  @UploadFileDocs()
   @UseInterceptors(FileInterceptor('file')) // Handle file uploads with Multer
   @Roles(Role.ADMIN)
   async uploadFile(

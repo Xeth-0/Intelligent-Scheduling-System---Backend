@@ -4,6 +4,10 @@ import { ValidationService } from './validation.service';
 import { RabbitDto, ValidatedDataType } from './dtos/validation-result.dto';
 import { ApiResponse } from '@/common/response/api-response.dto';
 import { TaskDetailDto, TaskDto } from './dtos/task.dto';
+import {
+  GetAllTasks,
+  GetTaskById,
+} from '@/common/decorators/swagger/file.swagger.docs';
 
 @Controller('validation')
 export class ValidationController {
@@ -18,7 +22,7 @@ export class ValidationController {
       context,
     );
   }
-
+  @GetAllTasks()
   @Get('status')
   async getAllTasks(): Promise<ApiResponse<TaskDto[]>> {
     const response = new ApiResponse<TaskDto[]>({
@@ -28,6 +32,7 @@ export class ValidationController {
     });
     return response;
   }
+  @GetTaskById()
   @Get('status/:taskId')
   async getTaskById(
     @Param('taskId') taskId: string,
