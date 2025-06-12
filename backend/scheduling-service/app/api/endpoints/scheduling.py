@@ -3,7 +3,6 @@ import asyncio
 import logging
 from fastapi import APIRouter
 from app.services.GeneticScheduler import GeneticScheduler
-from app.services.AdaptiveGeneticScheduler import AdaptiveGeneticScheduler
 from app.services.SchedulingConstraintRegistry import SchedulingConstraintRegistry
 from app.services.Fitness import ScheduleFitnessEvaluator
 from app.models import ScheduleApiRequest, ScheduledItem
@@ -19,17 +18,7 @@ async def generate_schedule(request: ScheduleApiRequest):
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
 
     logging.info("Initializing scheduler...")
-    # scheduler = GeneticScheduler(
-    #     courses=request.courses,
-    #     teachers=request.teachers,
-    #     rooms=request.rooms,
-    #     student_groups=request.studentGroups,
-    #     constraints=request.constraints,
-    #     timeslots=request.timeslots,
-    #     days=days,
-    #     population_size=100,
-    # )
-    scheduler = AdaptiveGeneticScheduler(
+    scheduler = GeneticScheduler(
         courses=request.courses,
         teachers=request.teachers,
         rooms=request.rooms,
@@ -37,17 +26,13 @@ async def generate_schedule(request: ScheduleApiRequest):
         constraints=request.constraints,
         timeslots=request.timeslots,
         days=days,
-        enable_adaptive_optimization=True,
-        penalty_optimization_interval=50,
-        max_restarts=3,
+        population_size=100,
     )
 
     logging.info("Running scheduler...")
     start_time = time.time()
     loop = asyncio.get_running_loop()
-    best_schedule, best_fitness, report, metrics = await loop.run_in_executor(
-        None, scheduler.run_adaptive
-    )
+    best_schedule, best_fitness, report = await loop.run_in_executor(None, scheduler.run)
     end_time = time.time()
     logging.info(f"Scheduler finished running in {end_time - start_time} seconds")
     if report:
