@@ -1,4 +1,8 @@
 import {
+  PaginatedResponse,
+  PaginationData,
+} from '@/common/response/api-response.dto';
+import {
   Injectable,
   NotFoundException,
   ConflictException,
@@ -56,9 +60,31 @@ export class BuildingsService {
   /**
    * Finds all buildings
    */
-  async findAllBuildings(): Promise<BuildingResponseDto[]> {
-    const buildings = await this.prismaService.building.findMany();
-    return buildings.map((building) => this.mapToResponse(building));
+  async findAllBuildings(
+    page: number,
+    size: number,
+  ): Promise<PaginatedResponse<BuildingResponseDto>> {
+    
+    const skip = (page - 1) * size;
+    const [items, totalItems] = await Promise.all([
+      this.prismaService.building.findMany({
+        skip: skip,
+        take: size,
+        orderBy: [{ name: 'asc' }],
+      }),
+      this.prismaService.building.count(),
+    ]);
+
+    const itemDtos = items.map((item) => this.mapToResponse(item));
+    const totalPages = Math.ceil(totalItems / size);
+    const paginationData: PaginationData = {
+      totalItems: totalItems,
+      currentPage: page,
+      totalPages: totalPages,
+      itemsPerPage: size,
+    };
+
+    return new PaginatedResponse<BuildingResponseDto>(itemDtos, paginationData);
   }
 
   /**

@@ -1,4 +1,8 @@
 import {
+  PaginatedResponse,
+  PaginationData,
+} from '@/common/response/api-response.dto';
+import {
   Injectable,
   NotFoundException,
   ConflictException,
@@ -104,28 +108,54 @@ export class StudentGroupsService {
    */
   async findAllStudentGroups(
     userId: string,
-  ): Promise<StudentGroupResponseDto[]> {
+    page: number,
+    size: number,
+  ): Promise<PaginatedResponse<StudentGroupResponseDto>> {
     const userCampusId =
       await this.campusValidationService.getCampusIdForUser(userId);
 
-    const studentGroups = await this.prismaService.studentGroup.findMany({
-      where: {
-        department: {
-          campusId: userCampusId,
-        },
-      },
-      include: {
-        department: {
-          select: {
-            name: true,
-            campusId: true,
+    const skip = (page - 1) * size;
+    const [items, totalItems] = await Promise.all([
+      this.prismaService.studentGroup.findMany({
+        where: {
+          department: {
+            campusId: userCampusId,
           },
         },
-      },
-    });
+        include: {
+          department: {
+            select: {
+              name: true,
+              campusId: true,
+            },
+          },
+        },
+        skip: skip,
+        take: size,
+        orderBy: [{ name: 'asc' }],
+      }),
 
-    return studentGroups.map((studentGroup) =>
-      this.mapToResponse(studentGroup),
+      this.prismaService.studentGroup.count({
+        where: {
+          department: {
+            campusId: userCampusId,
+          },
+        },
+      }),
+    ]);
+
+    const itemDtos = items.map((item) => this.mapToResponse(item));
+    const totalPages = Math.ceil(totalItems / size);
+    const paginationData: PaginationData = {
+      totalItems: totalItems,
+      currentPage: page,
+      totalPages: totalPages,
+      itemsPerPage: size,
+    };
+
+    return new PaginatedResponse<StudentGroupResponseDto>(
+      itemDtos,
+      paginationData,
     );
   }
 
