@@ -60,7 +60,6 @@ class PenaltyOptimizer:
             Real(1.0, 20.0, name="teacher_time_preference_base"),
             Real(1.0, 15.0, name="teacher_room_preference_base"),
             Real(1.0, 25.0, name="teacher_consecutive_movement_base"),
-            Real(1.0, 15.0, name="student_consecutive_movement_base"),
             Real(1.0, 10.0, name="ects_priority_violation_base"),
             Real(1.0, 20.0, name="schedule_compactness_base"),
         ]
@@ -170,7 +169,7 @@ class PenaltyOptimizer:
             "teacher_room_preference_base": SchedulingConstraintCategory.TEACHER_ROOM_PREFERENCE,
             "teacher_consecutive_movement_base": SchedulingConstraintCategory.TEACHER_CONSECUTIVE_MOVEMENT,
             "ects_priority_violation_base": SchedulingConstraintCategory.ECTS_PRIORITY_VIOLATION,
-            # "schedule_compactness_base": SchedulingConstraintCategory.SCHEDULE_COMPACTNESS,
+            "schedule_compactness_base": SchedulingConstraintCategory.TEACHER_SCHEDULE_COMPACTNESS,
         }
 
         for param_name, value in penalty_params.items():
@@ -282,17 +281,22 @@ class PenaltyOptimizer:
                 config = self.penalty_manager.get_penalty_config(
                     SchedulingConstraintCategory.ECTS_PRIORITY_VIOLATION
                 )
-            # elif param_name == "schedule_compactness_base":
-            #     config = self.penalty_manager.get_penalty_config(
-            #         SchedulingConstraintCategory.SCHEDULE_COMPACTNESS
-            #     )
+            elif param_name == "schedule_compactness_base":
+                config = self.penalty_manager.get_penalty_config(
+                    SchedulingConstraintCategory.TEACHER_SCHEDULE_COMPACTNESS
+                )
             else:
                 config = None
 
+            # Get current value and clamp it to search space bounds
             if config is not None:
-                current_point.append(config.base_penalty)
+                current_value = config.base_penalty
             else:
-                current_point.append(10.0)  # Default value
+                current_value = 10.0  # Default value
+
+            # Clamp to bounds to ensure validity for skopt
+            clamped_value = max(dim.low, min(dim.high, current_value))
+            current_point.append(clamped_value)
 
         return current_point
 
@@ -312,7 +316,6 @@ class PenaltyOptimizer:
                         "teacher_time_preference_base": teacher_time,
                         "teacher_room_preference_base": teacher_time * 0.5,
                         "teacher_consecutive_movement_base": movement,
-                        "student_consecutive_movement_base": movement * 0.5,
                         "ects_priority_violation_base": 5.0,
                         "schedule_compactness_base": 7.0,
                     }
