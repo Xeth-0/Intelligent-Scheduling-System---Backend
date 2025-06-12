@@ -11,6 +11,10 @@ import { Prisma, Role, User } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
 import { IUsersService } from '@/modules/__interfaces__/user.service.interface';
 import { CreateUserDto, UpdateUserDto, UserResponseDto } from './dtos';
+import {
+  PaginatedResponse,
+  PaginationData,
+} from '@/common/response/api-response.dto';
 
 @Injectable()
 export class UsersService implements IUsersService {
@@ -75,9 +79,32 @@ export class UsersService implements IUsersService {
     return count === 0;
   }
 
-  async findAllUsers(): Promise<UserResponseDto[]> {
-    const users = await this.prismaService.user.findMany();
-    return users.map((user) => this.mapToResponse(user));
+  async findAllUsers(
+    page: number = 1,
+    size: number = 10,
+  ): Promise<PaginatedResponse<UserResponseDto>> {
+    
+    // pagination logic
+    const skip = (page - 1) * size;
+    const [users, totalItems] = await Promise.all([
+      this.prismaService.user.findMany({
+        skip: skip,
+        take: size,
+        orderBy: [{ firstName: 'asc' }],
+      }),
+      this.prismaService.user.count(),
+    ]);
+
+    const userDtos = users.map((user) => this.mapToResponse(user));
+    const totalPages = Math.ceil(totalItems / size);
+    const paginationData: PaginationData = {
+      totalItems: totalItems,
+      currentPage: page,
+      totalPages: totalPages,
+      itemsPerPage: size,
+    };
+
+    return new PaginatedResponse<UserResponseDto>(userDtos, paginationData);
   }
 
   async findUserById(id: string): Promise<UserResponseDto> {

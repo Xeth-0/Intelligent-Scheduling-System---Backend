@@ -11,6 +11,9 @@ import {
   UseInterceptors,
   ClassSerializerInterceptor,
   UseGuards,
+  Query,
+  DefaultValuePipe,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { Role } from '@prisma/client';
@@ -45,12 +48,16 @@ export class BuildingsController {
 
   @Get()
   @Roles(Role.ADMIN, Role.TEACHER, Role.STUDENT)
-  async findAll(): Promise<ApiResponse<BuildingResponseDto[]>> {
-    const buildings = await this.buildingsService.findAllBuildings();
+  async findAll(
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('size', new DefaultValuePipe(10), ParseIntPipe) size: number,
+  ): Promise<ApiResponse<BuildingResponseDto[]>> {
+    const buildings = await this.buildingsService.findAllBuildings(page, size);
     return ApiResponse.success(
       200,
-      buildings,
+      buildings.data,
       'Buildings fetched successfully',
+      buildings.pagination,
     );
   }
 

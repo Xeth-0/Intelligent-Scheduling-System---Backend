@@ -1,4 +1,8 @@
 import {
+  PaginatedResponse,
+  PaginationData,
+} from '@/common/response/api-response.dto';
+import {
   Injectable,
   NotFoundException,
   ConflictException,
@@ -101,34 +105,43 @@ export class CoursesService {
   /**
    * Finds all courses for the user's campus
    */
-  async findAllCourses(userId: string): Promise<CourseResponseDto[]> {
+  async findAllCourses(
+    userId: string,
+    page: number,
+    size: number,
+  ): Promise<PaginatedResponse<CourseResponseDto>> {
     const userCampusId =
       await this.campusValidationService.getCampusIdForUser(userId);
 
-    const courses = await this.prismaService.course.findMany({
-      where: {
-        OR: [
-          {
-            department: {
-              campusId: userCampusId,
+    const skip = (page - 1) * size;
+
+    const [courses, totalItems] = await Promise.all([
+      this.prismaService.course.findMany({
+        include: {
+          department: {
+            select: {
+              name: true,
+              campusId: true,
             },
           },
-          {
-            department: null, // Include courses without department
-          },
-        ],
-      },
-      include: {
-        department: {
-          select: {
-            name: true,
-            campusId: true,
-          },
         },
-      },
-    });
+        skip: skip,
+        take: size,
+        orderBy: [{ name: 'asc' }],
+      }),
+      this.prismaService.course.count(),
+    ]);
 
-    return courses.map((course) => this.mapToResponse(course));
+    const courseDtos = courses.map((course) => this.mapToResponse(course));
+    const totalPages = Math.ceil(totalItems / size);
+    const paginationData: PaginationData = {
+      totalItems: totalItems,
+      currentPage: page,
+      totalPages: totalPages,
+      itemsPerPage: size,
+    };
+
+    return new PaginatedResponse<CourseResponseDto>(courseDtos, paginationData);
   }
 
   /**
