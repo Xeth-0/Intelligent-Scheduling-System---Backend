@@ -4,6 +4,7 @@ import {
   Param,
   Patch,
   Delete,
+  Post,
   Controller,
   UseInterceptors,
   ClassSerializerInterceptor,
@@ -25,7 +26,9 @@ import {
   GetTeacherByIdDocs,
   UpdateTeacherDocs,
   DeleteTeacherDocs,
+  UnassignTeacherDocs,
 } from '@/common/decorators/swagger/teachers.swagger.docs';
+import { UnassignTeacherDto } from './dtos/teacher-delete.dto';
 
 @Controller('teachers')
 @ApiBearerAuth()
@@ -90,5 +93,20 @@ export class TeachersController {
   ): Promise<ApiResponse<void>> {
     await this.teachersService.deleteTeacher(userId, teacherId);
     return ApiResponse.success(200, undefined, 'Teacher deleted successfully');
+  }
+
+  @Post('unassign')
+  @Roles(Role.ADMIN)
+  @UnassignTeacherDocs()
+  async unassign(
+    @GetUser('sub') userId: string,
+    @Body() unassignTeacherDto: UnassignTeacherDto,
+  ): Promise<ApiResponse<void>> {
+    await this.teachersService.unassignTeacher(userId, unassignTeacherDto);
+    return ApiResponse.success(
+      200,
+      undefined,
+      'Teacher unassigned successfully',
+    );
   }
 }

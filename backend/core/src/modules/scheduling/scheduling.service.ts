@@ -453,6 +453,11 @@ export class SchedulingService implements ISchedulingService {
     // first teacher in the list takes that course for now
     // ! Schema needs updating to disallow multiple teachers per course
     const courses = await this.prismaService.course.findMany({
+      where: {
+        teacherId: {
+          not: null,
+        },
+      },
       include: {
         teacher: true,
         studentGroups: true,

@@ -2,11 +2,16 @@ import {
   PaginatedResponse,
   PaginationData,
 } from '@/common/response/api-response.dto';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Course, Department, Teacher, User } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
 import { CampusValidationService } from '@/common/services/campus-validation.service';
 import { UpdateTeacherDto, TeacherResponseDto } from './dtos';
+import { UnassignTeacherDto } from './dtos/teacher-delete.dto';
 
 @Injectable()
 export class TeachersService {
@@ -174,6 +179,21 @@ export class TeachersService {
       throw new NotFoundException('The user is not an admin');
     }
 
+    const teacher = await this.prismaService.teacher.findUnique({
+      where: { teacherId },
+      include: {
+        department: true,
+      },
+    });
+    if (!teacher) {
+      throw new NotFoundException('Teacher not found');
+    }
+    if (teacher.department.campusId !== admin.campusId) {
+      throw new UnauthorizedException(
+        'The user is not an admin or the teacher is not in the same campus',
+      );
+    }
+
     const courses = await this.prismaService.course.findMany({
       where: {
         teacherId: teacherId,
@@ -187,5 +207,65 @@ export class TeachersService {
         },
       });
     }
+  }
+
+  /**
+   * Unassigns a teacher from specific courses
+   */
+  async unassignTeacher(
+    userId: string,
+    unassignTeacherDto: UnassignTeacherDto,
+  ): Promise<void> {
+    const admin = await this.prismaService.admin.findFirst({
+      where: {
+        userId: userId,
+      },
+    });
+    if (!admin) {
+      throw new NotFoundException('The user is not an admin');
+    }
+    const { teacherId, courseIds } = unassignTeacherDto;
+
+    // Validate that teacher exists
+    const teacher = await this.prismaService.teacher.findUnique({
+      where: { teacherId },
+      include: {
+        department: true,
+      },
+    });
+    if (!teacher) {
+      throw new NotFoundException('Teacher not found');
+    }
+
+    if (teacher.department.campusId !== admin.campusId) {
+      throw new UnauthorizedException(
+        'The user is not an admin or the teacher is not in the same campus',
+      );
+    }
+
+    // Validate that all course IDs exist and are assigned to this teacher
+    const courses = await this.prismaService.course.findMany({
+      where: {
+        courseId: { in: courseIds },
+        teacherId: teacherId,
+      },
+    });
+
+    if (courses.length !== courseIds.length) {
+      throw new NotFoundException(
+        'Some courses not found or not assigned to this teacher',
+      );
+    }
+
+    // Unassign teacher from courses by setting teacherId to null
+    await this.prismaService.course.updateMany({
+      where: {
+        courseId: { in: courseIds },
+        teacherId: teacherId,
+      },
+      data: {
+        teacherId: null,
+      },
+    });
   }
 }

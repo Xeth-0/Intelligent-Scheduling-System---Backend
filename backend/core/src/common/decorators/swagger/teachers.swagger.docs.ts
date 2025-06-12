@@ -439,3 +439,93 @@ export const DeleteTeacherDocs = () => {
     }),
   );
 };
+
+export const UnassignTeacherDocs = () => {
+  return applyDecorators(
+    ApiOperation({
+      summary: 'Unassign teacher from courses (admin only)',
+      description:
+        'Remove a teacher from specific courses. The courses will have their teacherId set to null. Only admins can perform this action.',
+    }),
+    ApiBearerAuth(),
+    ApiBody({
+      type: 'UnassignTeacherDto',
+      description: 'Unassign teacher data',
+      schema: {
+        type: 'object',
+        properties: {
+          teacherId: {
+            type: 'string',
+            example: 'uuid-string',
+            description: 'Teacher ID (UUID)',
+          },
+          courseIds: {
+            type: 'array',
+            items: { type: 'string' },
+            example: ['course-001', 'course-002'],
+            description: 'List of course IDs to unassign from teacher',
+          },
+        },
+        required: ['teacherId', 'courseIds'],
+      },
+    }),
+    ApiOkResponse({
+      description: 'Teacher unassigned successfully',
+      schema: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', example: true },
+          statusCode: { type: 'number', example: 200 },
+          message: {
+            type: 'string',
+            example: 'Teacher unassigned successfully',
+          },
+        },
+      },
+    }),
+    ApiUnauthorizedResponse({
+      description: 'Invalid or expired access token',
+      schema: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', example: false },
+          statusCode: { type: 'number', example: 401 },
+          message: { type: 'string', example: 'Unauthorized' },
+        },
+      },
+    }),
+    ApiForbiddenResponse({
+      description: 'Insufficient permissions - Admin access required',
+      schema: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', example: false },
+          statusCode: { type: 'number', example: 403 },
+          message: { type: 'string', example: 'Forbidden' },
+        },
+      },
+    }),
+    ApiNotFoundResponse({
+      description: 'Teacher not found or user is not an admin',
+      schema: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', example: false },
+          statusCode: { type: 'number', example: 404 },
+          message: { type: 'string', example: 'Teacher not found' },
+        },
+      },
+    }),
+    ApiBadRequestResponse({
+      description: 'Invalid request data or course IDs not found',
+      schema: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', example: false },
+          statusCode: { type: 'number', example: 400 },
+          message: { type: 'string', example: 'Invalid request data' },
+        },
+      },
+    }),
+  );
+};
