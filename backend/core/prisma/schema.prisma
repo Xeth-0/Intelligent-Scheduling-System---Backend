@@ -102,7 +102,7 @@ model Teacher {
   userId        String             @unique
   department    Department         @relation(fields: [departmentId], references: [deptId], onDelete: Restrict)
   departmentId  String
-  courses       Course[]           @relation("CourseTeachers")
+  courses       Course[]           
   scheduleItems ScheduledSession[]
   Constraint    Constraint[]
 }
@@ -150,7 +150,8 @@ model Course {
   description     String?
   departmentId    String?
   ectsCredits     Int                @default(0)
-  teachers        Teacher[]          @relation("CourseTeachers")
+  teacherId       String?
+  teacher         Teacher?            @relation(fields: [teacherId], references: [teacherId], onDelete: Cascade)
   scheduleItems   ScheduledSession[]
   studentGroups   StudentGroup[]
   sessionType     SessionType        @default(LECTURE)

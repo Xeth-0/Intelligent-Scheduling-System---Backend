@@ -1,13 +1,8 @@
-import {
-  Injectable,
-  NotFoundException,
-  ConflictException,
-  InternalServerErrorException,
-} from '@nestjs/common';
-import { Department, Prisma, Role, Teacher, User } from '@prisma/client';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { Course, Department, Teacher, User } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
 import { CampusValidationService } from '@/common/services/campus-validation.service';
-import { CreateTeacherDto, UpdateTeacherDto, TeacherResponseDto } from './dtos';
+import { UpdateTeacherDto, TeacherResponseDto } from './dtos';
 
 @Injectable()
 export class TeachersService {
@@ -23,6 +18,7 @@ export class TeachersService {
     teacher: Teacher & {
       user: User;
       department: Department;
+      courses: Course[];
     },
   ): TeacherResponseDto {
     return {
@@ -31,63 +27,8 @@ export class TeachersService {
       departmentId: teacher.departmentId,
       user: teacher.user,
       department: teacher.department,
+      courses: teacher.courses,
     };
-  }
-
-  /**
-   * Creates a new teacher
-   */
-  async createTeacher(
-    userId: string,
-    createTeacherDto: CreateTeacherDto,
-  ): Promise<TeacherResponseDto> {
-    try {
-      const department = await this.prismaService.department.findUnique({
-        where: { deptId: createTeacherDto.departmentId },
-      });
-      if (!department) {
-        throw new NotFoundException('Department not found');
-      }
-      await this.campusValidationService.validateCampusAccess(
-        userId,
-        department.campusId,
-      );
-
-      const user = await this.prismaService.user.findUnique({
-        where: { userId: createTeacherDto.userId },
-      });
-      if (!user) {
-        throw new NotFoundException('User not found');
-      } else if (user.role !== Role.TEACHER) {
-        throw new ConflictException('User must have TEACHER role');
-      }
-      const teacher = await this.prismaService.teacher.create({
-        data: createTeacherDto,
-        include: {
-          user: true,
-          department: true,
-        },
-      });
-
-      return this.mapToResponse(teacher);
-    } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (error.code === 'P2002') {
-          throw new ConflictException('Teacher already exists for this user');
-        } else if (error.code === 'P2025') {
-          throw new NotFoundException(
-            error.meta?.cause ?? 'Related entity not found',
-          );
-        }
-      }
-      if (
-        error instanceof NotFoundException ||
-        error instanceof ConflictException
-      ) {
-        throw error;
-      }
-      throw new InternalServerErrorException('An unexpected error occurred');
-    }
   }
 
   /**
@@ -106,6 +47,7 @@ export class TeachersService {
       include: {
         user: true,
         department: true,
+        courses: true,
       },
     });
 
@@ -124,6 +66,7 @@ export class TeachersService {
       include: {
         user: true,
         department: true,
+        courses: true,
       },
     });
 
@@ -145,76 +88,75 @@ export class TeachersService {
    */
   async updateTeacher(
     userId: string,
-    teacherId: string,
     updateTeacherDto: UpdateTeacherDto,
   ): Promise<TeacherResponseDto> {
-    try {
-      await this.findTeacherById(userId, teacherId);
+    const admin = await this.prismaService.admin.findFirst({
+      where: {
+        userId: userId,
+      },
+    });
+    if (!admin) {
+      throw new NotFoundException(
+        'Error updating teacher: The user is not an admin',
+      );
+    }
 
-      // If updating department, validate new department
-      if (updateTeacherDto.departmentId) {
-        const department = await this.prismaService.department.findUnique({
-          where: { deptId: updateTeacherDto.departmentId },
-        });
+    const teacher = await this.prismaService.teacher.findUnique({
+      where: { teacherId: updateTeacherDto.teacherId },
+    });
+    if (!teacher) {
+      throw new NotFoundException('Teacher not found');
+    }
 
-        if (!department) {
-          throw new NotFoundException('Department not found');
-        }
-
-        // Validate campus access for new department
-        await this.campusValidationService.validateCampusAccess(
-          userId,
-          department.campusId,
-        );
-      }
-
-      const teacher = await this.prismaService.teacher.update({
-        where: { teacherId },
-        data: updateTeacherDto,
-        include: {
-          user: true,
-          department: true,
+    // Update course's teacherId if courseId is provided
+    if (updateTeacherDto.courseId) {
+      await this.prismaService.course.update({
+        where: { courseId: updateTeacherDto.courseId },
+        data: {
+          teacherId: updateTeacherDto.teacherId,
         },
       });
-
-      return this.mapToResponse(teacher);
-    } catch (error) {
-      if (
-        error instanceof NotFoundException ||
-        error instanceof ConflictException
-      ) {
-        throw error;
-      }
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (error.code === 'P2025') {
-          throw new NotFoundException('Teacher not found');
-        }
-      }
-      throw new InternalServerErrorException('An unexpected error occurred');
     }
+
+    const updatedTeacher = await this.prismaService.teacher.update({
+      where: { teacherId: updateTeacherDto.teacherId },
+      data: {
+        departmentId: updateTeacherDto.departmentId,
+      },
+      include: {
+        user: true,
+        department: true,
+        courses: true,
+      },
+    });
+    return this.mapToResponse(updatedTeacher);
   }
 
   /**
-   * Deletes a teacher
+   * Deletes a teacher (admin only, removes all courses from the teacher)
    */
   async deleteTeacher(userId: string, teacherId: string): Promise<void> {
-    try {
-      // First validate the teacher exists and campus access
-      await this.findTeacherById(userId, teacherId);
+    const admin = await this.prismaService.admin.findFirst({
+      where: {
+        userId: userId,
+      },
+    });
+    if (!admin) {
+      throw new NotFoundException('The user is not an admin');
+    }
 
-      await this.prismaService.teacher.delete({
-        where: { teacherId },
+    const courses = await this.prismaService.course.findMany({
+      where: {
+        teacherId: teacherId,
+      },
+    });
+    for (const course of courses) {
+      await this.prismaService.course.update({
+        where: { courseId: course.courseId },
+        data: {
+          teacherId: null,
+        },
       });
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (error.code === 'P2025') {
-          throw new NotFoundException('Teacher not found');
-        }
-      }
-      throw new InternalServerErrorException('An unexpected error occurred');
     }
   }
 }

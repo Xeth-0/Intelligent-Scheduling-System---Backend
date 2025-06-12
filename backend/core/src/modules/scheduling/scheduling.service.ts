@@ -454,7 +454,7 @@ export class SchedulingService implements ISchedulingService {
     // ! Schema needs updating to disallow multiple teachers per course
     const courses = await this.prismaService.course.findMany({
       include: {
-        teachers: true,
+        teacher: true,
         studentGroups: true,
       },
     });
@@ -491,7 +491,7 @@ export class SchedulingService implements ISchedulingService {
         description: course.description ?? 'No description available',
         ectsCredits: course.ectsCredits,
         department: course.departmentId,
-        teacherId: course.teachers[0].teacherId,
+        teacherId: course.teacherId,
         studentGroupIds: course.studentGroups.map(
           (studentGroup) => studentGroup.studentGroupId,
         ),

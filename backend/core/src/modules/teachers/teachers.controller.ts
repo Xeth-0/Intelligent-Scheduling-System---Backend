@@ -1,12 +1,9 @@
 import {
   Get,
-  Post,
   Body,
   Param,
-  Put,
+  Patch,
   Delete,
-  HttpCode,
-  HttpStatus,
   Controller,
   UseInterceptors,
   ClassSerializerInterceptor,
@@ -15,11 +12,17 @@ import {
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { Role } from '@prisma/client';
 import { TeachersService } from './teachers.service';
-import { CreateTeacherDto, UpdateTeacherDto, TeacherResponseDto } from './dtos';
+import { UpdateTeacherDto, TeacherResponseDto } from './dtos';
 import { JwtAuthGuard, RolesGuard } from '@/common/guards';
 import { Roles } from '@/common/decorators/auth/roles.decorator';
 import { ApiResponse } from '@/common/response/api-response.dto';
 import { GetUser } from '@/common/decorators/auth/get-user.decorator';
+import {
+  GetAllTeachersDocs,
+  GetTeacherByIdDocs,
+  UpdateTeacherDocs,
+  DeleteTeacherDocs,
+} from '@/common/decorators/swagger/teachers.swagger.docs';
 
 @Controller('teachers')
 @ApiBearerAuth()
@@ -29,22 +32,9 @@ import { GetUser } from '@/common/decorators/auth/get-user.decorator';
 export class TeachersController {
   constructor(private readonly teachersService: TeachersService) {}
 
-  @Post()
-  @Roles(Role.ADMIN)
-  @HttpCode(HttpStatus.CREATED)
-  async create(
-    @GetUser('sub') userId: string,
-    @Body() createTeacherDto: CreateTeacherDto,
-  ): Promise<ApiResponse<TeacherResponseDto>> {
-    const teacher = await this.teachersService.createTeacher(
-      userId,
-      createTeacherDto,
-    );
-    return ApiResponse.success(201, teacher, 'Teacher created successfully');
-  }
-
   @Get()
   @Roles(Role.ADMIN, Role.TEACHER, Role.STUDENT)
+  @GetAllTeachersDocs()
   async findAll(
     @GetUser('sub') userId: string,
   ): Promise<ApiResponse<TeacherResponseDto[]>> {
@@ -54,6 +44,7 @@ export class TeachersController {
 
   @Get(':id')
   @Roles(Role.ADMIN, Role.TEACHER, Role.STUDENT)
+  @GetTeacherByIdDocs()
   async findOne(
     @GetUser('sub') userId: string,
     @Param('id') id: string,
@@ -62,16 +53,15 @@ export class TeachersController {
     return ApiResponse.success(200, teacher, 'Teacher fetched successfully');
   }
 
-  @Put(':id')
+  @Patch()
   @Roles(Role.ADMIN)
+  @UpdateTeacherDocs()
   async update(
     @GetUser('sub') userId: string,
-    @Param('id') id: string,
     @Body() updateTeacherDto: UpdateTeacherDto,
   ): Promise<ApiResponse<TeacherResponseDto>> {
     const teacher = await this.teachersService.updateTeacher(
       userId,
-      id,
       updateTeacherDto,
     );
     return ApiResponse.success(200, teacher, 'Teacher updated successfully');
@@ -79,11 +69,12 @@ export class TeachersController {
 
   @Delete(':id')
   @Roles(Role.ADMIN)
+  @DeleteTeacherDocs()
   async remove(
     @GetUser('sub') userId: string,
-    @Param('id') id: string,
+    @Param('id') teacherId: string,
   ): Promise<ApiResponse<void>> {
-    await this.teachersService.deleteTeacher(userId, id);
+    await this.teachersService.deleteTeacher(userId, teacherId);
     return ApiResponse.success(200, undefined, 'Teacher deleted successfully');
   }
 }

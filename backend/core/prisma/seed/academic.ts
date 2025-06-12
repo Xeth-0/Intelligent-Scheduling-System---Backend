@@ -350,9 +350,7 @@ export async function seedCourses(
             sessionsPerWeek: sessionsPerWeek,
             departmentId: department.deptId,
             ectsCredits: course.ectsCredits,
-            teachers: {
-              connect: { teacherId: teacher.teacherId },
-            },
+            teacherId: teacher.teacherId,
           },
         });
 
