@@ -1,0 +1,364 @@
+{
+  "timeslots": [
+    {
+      "code": "08:00-09:00",
+      "startTime": "08:00",
+      "endTime": "09:00"
+    },
+    {
+      "code": "09:00-10:00",
+      "startTime": "09:00",
+      "endTime": "10:00"
+    },
+    {
+      "code": "10:00-11:00",
+      "startTime": "10:00",
+      "endTime": "11:00"
+    },
+    {
+      "code": "11:00-12:00",
+      "startTime": "11:00",
+      "endTime": "12:00"
+    },
+    {
+      "code": "13:00-14:00",
+      "startTime": "13:00",
+      "endTime": "14:00"
+    },
+    {
+      "code": "14:00-15:00",
+      "startTime": "14:00",
+      "endTime": "15:00"
+    },
+    {
+      "code": "15:00-16:00",
+      "startTime": "15:00",
+      "endTime": "16:00"
+    },
+    {
+      "code": "16:00-17:00",
+      "startTime": "16:00",
+      "endTime": "17:00"
+    }
+  ],
+  "rooms": [
+    {
+      "classroomId": "CR-101",
+      "name": "Computer Lab 1",
+      "capacity": 30,
+      "type": "LAB"
+    },
+    {
+      "classroomId": "CR-102",
+      "name": "Computer Lab 2",
+      "capacity": 25,
+      "type": "LAB"
+    },
+    {
+      "classroomId": "LR-201",
+      "name": "Lecture Room 201",
+      "capacity": 100,
+      "type": "LECTURE"
+    },
+    {
+      "classroomId": "LR-202",
+      "name": "Lecture Room 202",
+      "capacity": 80,
+      "type": "LECTURE"
+    },
+    {
+      "classroomId": "LR-203",
+      "name": "Lecture Room 203",
+      "capacity": 60,
+      "type": "LECTURE"
+    },
+    {
+      "classroomId": "TR-301",
+      "name": "Tutorial Room 301",
+      "capacity": 40,
+      "type": "TUTORIAL"
+    },
+    {
+      "classroomId": "TR-302",
+      "name": "Tutorial Room 302",
+      "capacity": 35,
+      "type": "TUTORIAL"
+    }
+  ],
+  "teachers": [
+    {
+      "teacherId": "T001",
+      "name": "Dr. Smith",
+      "email": "smith@university.edu"
+    },
+    {
+      "teacherId": "T002",
+      "name": "Prof. Johnson",
+      "email": "johnson@university.edu"
+    },
+    {
+      "teacherId": "T003",
+      "name": "Dr. Williams",
+      "email": "williams@university.edu"
+    },
+    {
+      "teacherId": "T004",
+      "name": "Prof. Brown",
+      "email": "brown@university.edu"
+    },
+    {
+      "teacherId": "T005",
+      "name": "Dr. Davis",
+      "email": "davis@university.edu"
+    },
+    {
+      "teacherId": "T006",
+      "name": "Prof. Miller",
+      "email": "miller@university.edu"
+    }
+  ],
+  "studentGroups": [
+    {
+      "studentGroupId": "CS-2A",
+      "name": "Computer Science Year 2A",
+      "size": 28
+    },
+    {
+      "studentGroupId": "CS-2B",
+      "name": "Computer Science Year 2B",
+      "size": 25
+    },
+    {
+      "studentGroupId": "CS-3A",
+      "name": "Computer Science Year 3A",
+      "size": 30
+    },
+    {
+      "studentGroupId": "CS-3B",
+      "name": "Computer Science Year 3B",
+      "size": 22
+    },
+    {
+      "studentGroupId": "CS-4A",
+      "name": "Computer Science Year 4A",
+      "size": 18
+    },
+    {
+      "studentGroupId": "IT-2A",
+      "name": "Information Technology Year 2A",
+      "size": 24
+    }
+  ],
+  "courses": [
+    {
+      "courseId": "CS201-LEC",
+      "name": "Data Structures",
+      "teacherId": "T001",
+      "sessionType": "LECTURE",
+      "studentGroupIds": [
+        "CS-2A",
+        "CS-2B"
+      ]
+    },
+    {
+      "courseId": "CS201-LAB",
+      "name": "Data Structures Lab",
+      "teacherId": "T001",
+      "sessionType": "LAB",
+      "studentGroupIds": [
+        "CS-2A"
+      ]
+    },
+    {
+      "courseId": "CS201-LAB2",
+      "name": "Data Structures Lab",
+      "teacherId": "T001",
+      "sessionType": "LAB",
+      "studentGroupIds": [
+        "CS-2B"
+      ]
+    },
+    {
+      "courseId": "CS202-LEC",
+      "name": "Algorithms",
+      "teacherId": "T002",
+      "sessionType": "LECTURE",
+      "studentGroupIds": [
+        "CS-2A",
+        "CS-2B"
+      ]
+    },
+    {
+      "courseId": "CS202-TUT",
+      "name": "Algorithms Tutorial",
+      "teacherId": "T002",
+      "sessionType": "TUTORIAL",
+      "studentGroupIds": [
+        "CS-2A"
+      ]
+    },
+    {
+      "courseId": "CS202-TUT2",
+      "name": "Algorithms Tutorial",
+      "teacherId": "T002",
+      "sessionType": "TUTORIAL",
+      "studentGroupIds": [
+        "CS-2B"
+      ]
+    },
+    {
+      "courseId": "CS301-LEC",
+      "name": "Database Systems",
+      "teacherId": "T003",
+      "sessionType": "LECTURE",
+      "studentGroupIds": [
+        "CS-3A",
+        "CS-3B"
+      ]
+    },
+    {
+      "courseId": "CS301-LAB",
+      "name": "Database Lab",
+      "teacherId": "T003",
+      "sessionType": "LAB",
+      "studentGroupIds": [
+        "CS-3A"
+      ]
+    },
+    {
+      "courseId": "CS301-LAB2",
+      "name": "Database Lab",
+      "teacherId": "T003",
+      "sessionType": "LAB",
+      "studentGroupIds": [
+        "CS-3B"
+      ]
+    },
+    {
+      "courseId": "CS302-LEC",
+      "name": "Software Engineering",
+      "teacherId": "T004",
+      "sessionType": "LECTURE",
+      "studentGroupIds": [
+        "CS-3A",
+        "CS-3B"
+      ]
+    },
+    {
+      "courseId": "CS302-TUT",
+      "name": "Software Engineering Tutorial",
+      "teacherId": "T004",
+      "sessionType": "TUTORIAL",
+      "studentGroupIds": [
+        "CS-3A"
+      ]
+    },
+    {
+      "courseId": "CS302-TUT2",
+      "name": "Software Engineering Tutorial",
+      "teacherId": "T004",
+      "sessionType": "TUTORIAL",
+      "studentGroupIds": [
+        "CS-3B"
+      ]
+    },
+    {
+      "courseId": "CS401-LEC",
+      "name": "Machine Learning",
+      "teacherId": "T005",
+      "sessionType": "LECTURE",
+      "studentGroupIds": [
+        "CS-4A"
+      ]
+    },
+    {
+      "courseId": "CS401-LAB",
+      "name": "Machine Learning Lab",
+      "teacherId": "T005",
+      "sessionType": "LAB",
+      "studentGroupIds": [
+        "CS-4A"
+      ]
+    },
+    {
+      "courseId": "CS402-LEC",
+      "name": "Computer Vision",
+      "teacherId": "T006",
+      "sessionType": "LECTURE",
+      "studentGroupIds": [
+        "CS-4A"
+      ]
+    },
+    {
+      "courseId": "CS402-TUT",
+      "name": "Computer Vision Tutorial",
+      "teacherId": "T006",
+      "sessionType": "TUTORIAL",
+      "studentGroupIds": [
+        "CS-4A"
+      ]
+    },
+    {
+      "courseId": "IT201-LEC",
+      "name": "Network Security",
+      "teacherId": "T003",
+      "sessionType": "LECTURE",
+      "studentGroupIds": [
+        "IT-2A"
+      ]
+    },
+    {
+      "courseId": "IT201-LAB",
+      "name": "Network Security Lab",
+      "teacherId": "T003",
+      "sessionType": "LAB",
+      "studentGroupIds": [
+        "IT-2A"
+      ]
+    },
+    {
+      "courseId": "IT202-LEC",
+      "name": "Web Development",
+      "teacherId": "T004",
+      "sessionType": "LECTURE",
+      "studentGroupIds": [
+        "IT-2A"
+      ]
+    },
+    {
+      "courseId": "IT202-LAB",
+      "name": "Web Development Lab",
+      "teacherId": "T004",
+      "sessionType": "LAB",
+      "studentGroupIds": [
+        "IT-2A"
+      ]
+    }
+  ],
+  "constraints": [
+    {
+      "constraintId": "C001",
+      "type": "TEACHER_AVAILABILITY",
+      "name": "No Friday Afternoon Classes",
+      "description": "Teachers prefer no classes on Friday afternoon",
+      "isHard": false,
+      "penalty": 50,
+      "parameters": {
+        "day": "Friday",
+        "timeSlots": [
+          "15:00-16:00",
+          "16:00-17:00"
+        ]
+      }
+    },
+    {
+      "constraintId": "C002",
+      "type": "ROOM_CAPACITY",
+      "name": "Room Capacity Check",
+      "description": "Room capacity must accommodate all students",
+      "isHard": true,
+      "penalty": 1000,
+      "parameters": {}
+    }
+  ]
+}
