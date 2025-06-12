@@ -70,7 +70,7 @@ export class SchedulingService implements ISchedulingService {
 
   private _mapScheduleToResponse(
     schedule: Schedule,
-    sessions: (ScheduledSession & {
+    sessions?: (ScheduledSession & {
       course: Course;
       teacher: Teacher;
       timeslot: Timeslot;
@@ -78,11 +78,20 @@ export class SchedulingService implements ISchedulingService {
       studentGroup: StudentGroup | null;
     })[],
   ) {
+    if (sessions) {
+      return plainToInstance(GeneralScheduleResponse, {
+        scheduleId: schedule.scheduleId,
+        scheduleName: schedule.scheduleName,
+        isActive: schedule.active,
+        sessions: sessions.map((session) =>
+          this._mapSessionToResponse(session),
+        ),
+      });
+    }
     return plainToInstance(GeneralScheduleResponse, {
       scheduleId: schedule.scheduleId,
       scheduleName: schedule.scheduleName,
       isActive: schedule.active,
-      sessions: sessions.map((session) => this._mapSessionToResponse(session)),
     });
   }
 
@@ -346,7 +355,6 @@ export class SchedulingService implements ISchedulingService {
    * @returns Promise with array of all campus schedules
    */
   async getAllSchedules(userId: string) {
-    // ! return schedule id, name, isActive, createdAt
     const admin = await this.prismaService.admin.findFirst({
       where: {
         userId: userId,
@@ -365,14 +373,7 @@ export class SchedulingService implements ISchedulingService {
       },
     });
 
-    const response = await Promise.all(
-      schedules.map(async (schedule) => {
-        const sessions = await this._fetchSessions(schedule.scheduleId);
-
-        return this._mapScheduleToResponse(schedule, sessions);
-      }),
-    );
-    return response;
+    return schedules.map((schedule) => this._mapScheduleToResponse(schedule));
   }
 
   async searchSessions(userId: string, body: SearchSessionsBody) {
