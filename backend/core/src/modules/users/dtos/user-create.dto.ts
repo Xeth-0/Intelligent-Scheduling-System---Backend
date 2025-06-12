@@ -51,4 +51,9 @@ export class CreateUserDto {
   @IsBoolean()
   @IsOptional()
   needWheelchairAccessibleRoom?: boolean;
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  departmentId?: string;
 }

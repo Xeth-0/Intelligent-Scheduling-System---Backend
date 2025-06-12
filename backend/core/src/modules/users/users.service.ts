@@ -29,45 +29,52 @@ export class UsersService implements IUsersService {
   }
 
   async createUser(createUserDto: CreateUserDto): Promise<UserResponseDto> {
-    const { password, ...rest } = createUserDto;
-    console.log('createUserDto: ', createUserDto);
     // Validate required fields
-    if (!rest.role) {
-      throw new ConflictException('Role is required');
+    const { password, departmentId, ...rest } = createUserDto;
+    if (!createUserDto.role) {
+      throw new ConflictException(
+        'Error creating a new user: Role is required',
+      );
+    }
+    if (!password) {
+      throw new BadRequestException('Password is required');
     }
 
-    try {
-      let passwordHash: string;
-      if (password) {
-        passwordHash = await bcrypt.hash(password, 10);
-      } else {
-        throw new BadRequestException('Password is required');
-      }
+    const passwordHash = await bcrypt.hash(password, 10);
 
-      const user = await this.prismaService.user.create({
+    const user = await this.prismaService.$transaction(async (tx) => {
+      const user = await tx.user.create({
         data: {
           ...rest,
           passwordHash,
         },
       });
 
-      console.log('user created: ', user);
-      return this.mapToResponse(user);
-    } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (error.code === 'P2002') {
-          throw new ConflictException(`User with this email already exists`);
-        } else if (error.code === 'P2025') {
-          throw new NotFoundException(error.meta?.cause ?? 'User not found');
-        } else {
-          throw new InternalServerErrorException(
-            'An unexpected error occurred',
+      if (createUserDto.role === Role.TEACHER) {
+        if (!departmentId) {
+          throw new BadRequestException(
+            'Error creating a new Teacher: Department ID is required',
           );
         }
-      } else {
-        throw error;
+        const department = await tx.department.findUnique({
+          where: { deptId: departmentId },
+        });
+        if (!department) {
+          throw new NotFoundException(
+            'Error creating a new Teacher: Department not found',
+          );
+        }
+        await tx.teacher.create({
+          data: {
+            userId: user.userId,
+            departmentId: department.deptId,
+          },
+        });
       }
-    }
+      return user;
+    });
+
+    return this.mapToResponse(user);
   }
 
   async isFirstUser(): Promise<boolean> {

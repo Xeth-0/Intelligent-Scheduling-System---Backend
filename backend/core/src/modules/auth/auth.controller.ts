@@ -9,7 +9,7 @@ import {
   DebugTeacherLoginDocs,
 } from '../../common/decorators/swagger/auth.swagger.docs';
 import { LoginDto, RegisterDto, TokensDto } from './dtos';
-import { Role, User } from '@prisma/client';
+import { User } from '@prisma/client';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import {

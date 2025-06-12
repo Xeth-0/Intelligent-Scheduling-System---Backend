@@ -12,6 +12,7 @@ import {
   ClassSerializerInterceptor,
   UseGuards,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { Role } from '@prisma/client';
@@ -63,6 +64,11 @@ export class UsersController {
       throw new ForbiddenException(
         'Admins can only create admin and teacher accounts',
       );
+    }
+    if (createUserDto.role === Role.TEACHER) {
+      if (!createUserDto.departmentId) {
+        throw new BadRequestException('Department ID is required');
+      }
     }
     const user = await this.usersService.createUser(createUserDto);
     return ApiResponse.success(201, user, 'User created successfully');
