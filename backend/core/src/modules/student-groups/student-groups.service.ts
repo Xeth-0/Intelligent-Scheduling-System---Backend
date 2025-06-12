@@ -33,6 +33,11 @@ export class StudentGroupsService {
         name: string;
         campusId: string;
       };
+    } & {
+      students?: {
+        studentId: string;
+        userId: string;
+      }[];
     },
   ): StudentGroupResponseDto {
     return {
@@ -42,6 +47,7 @@ export class StudentGroupsService {
       accessibilityRequirement: studentGroup.accessibilityRequirement,
       departmentId: studentGroup.departmentId,
       department: studentGroup.department,
+      students: studentGroup.students,
     };
   }
 
@@ -127,6 +133,12 @@ export class StudentGroupsService {
             select: {
               name: true,
               campusId: true,
+            },
+          },
+          students: {
+            select: {
+              studentId: true,
+              userId: true,
             },
           },
         },
