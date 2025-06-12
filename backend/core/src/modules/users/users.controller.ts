@@ -106,8 +106,11 @@ export class UsersController {
   @Delete(':id')
   @Roles(Role.ADMIN)
   @DeleteUserDocs()
-  async remove(@Param('id') id: string): Promise<ApiResponse<void>> {
-    await this.usersService.deleteUser(id);
+  async remove(
+    @Param('id') id: string,
+    @GetUser('sub') userId: string,
+  ): Promise<ApiResponse<void>> {
+    await this.usersService.deleteUser(userId, id);
     return ApiResponse.success(200, undefined, 'User deleted successfully');
   }
 }

@@ -6,7 +6,7 @@ import {
 import { type User } from '@prisma/client';
 
 export interface IUsersService {
-  deleteUser(id: string): Promise<void>;
+  deleteUser(adminId: string, userId: string): Promise<void>;
   findAllUsers(): Promise<UserResponseDto[]>;
   findByEmail(email: string): Promise<User | null>;
   findUserById(id: string): Promise<UserResponseDto>;

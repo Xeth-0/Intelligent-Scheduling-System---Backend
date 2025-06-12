@@ -25,6 +25,8 @@ export class UsersService implements IUsersService {
       lastName: user.lastName,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
+      needWheelchairAccessibleRoom: user.needWheelchairAccessibleRoom,
+      phoneNumber: user.phone ?? '',
     };
   }
 
@@ -129,34 +131,45 @@ export class UsersService implements IUsersService {
     }
   }
 
-  async deleteUser(id: string): Promise<void> {
-    try {
-      // Check if the user exists
-      const user = await this.findUserById(id);
-      if (!user) throw new NotFoundException('User not found');
+  async deleteUser(adminId: string, userId: string): Promise<void> {
+    const admin = await this.prismaService.admin.findFirst({
+      where: {
+        userId: adminId,
+      },
+    });
+    if (!admin) throw new NotFoundException('Admin not found');
 
-      // Check if the user is an admin
-      if (user.role === Role.ADMIN) {
-        throw new ForbiddenException('Admins cannot be deleted');
+    const user = await this.findUserById(userId);
+    if (!user) throw new NotFoundException('User not found');
+    if (user.role === Role.ADMIN) {
+      const adminToDelete = await this.prismaService.admin.findFirst({
+        where: {
+          userId: userId,
+        },
+      });
+
+      if (!adminToDelete) throw new NotFoundException('Admin not found');
+      if (admin.campusId !== adminToDelete.campusId) {
+        throw new ForbiddenException('Cannot delete admin from another campus');
       }
+      const campusAdmins = await this.prismaService.admin.findMany({
+        where: {
+          userId: {
+            not: adminId,
+          },
+          campusId: admin.campusId,
+        },
+      });
 
-      // Delete the user
-      await this.prismaService.user.delete({ where: { userId: id } });
-    } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (error.code === 'P2002') {
-          throw new ConflictException(`User with this email already exists`);
-        } else if (error.code === 'P2025') {
-          throw new NotFoundException(error.meta?.cause ?? 'User not found');
-        } else {
-          throw new InternalServerErrorException(
-            'An unexpected error occurred',
-          );
-        }
-      } else {
-        throw error;
+      if (campusAdmins.length === 0) {
+        throw new ForbiddenException(
+          'Cannot delete last admin for this campus',
+        );
       }
     }
+
+    // Delete the user
+    await this.prismaService.user.delete({ where: { userId: userId } });
   }
 
   async findByEmail(email: string) {
