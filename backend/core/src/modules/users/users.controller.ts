@@ -12,6 +12,9 @@ import {
   ClassSerializerInterceptor,
   UseGuards,
   ForbiddenException,
+  DefaultValuePipe,
+  ParseIntPipe,
+  Query,
   BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
@@ -77,9 +80,18 @@ export class UsersController {
   @Get()
   @Roles(Role.ADMIN)
   @GetAllUsersDocs()
-  async findAll(): Promise<ApiResponse<UserResponseDto[]>> {
-    const users = await this.usersService.findAllUsers();
-    return ApiResponse.success(200, users, 'Users fetched successfully');
+  async findAll(
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('size', new DefaultValuePipe(10), ParseIntPipe) size: number,
+  ): Promise<ApiResponse<UserResponseDto[]>> {
+    const paginatedItems = await this.usersService.findAllUsers(page, size);
+
+    return ApiResponse.success(
+      200,
+      paginatedItems.data,
+      'Users fetched successfully',
+      paginatedItems.pagination,
+    );
   }
 
   @Get(':id')
