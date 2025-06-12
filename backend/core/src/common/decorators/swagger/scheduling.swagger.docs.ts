@@ -271,47 +271,6 @@ export const GetAllSchedulesDocs = () => {
                 scheduleId: { type: 'string', example: 'uuid-string' },
                 scheduleName: { type: 'string', example: 'Unnamed Schedule' },
                 isActive: { type: 'boolean', example: false },
-                sessions: {
-                  type: 'array',
-                  items: {
-                    type: 'object',
-                    properties: {
-                      scheduleId: { type: 'string', example: 'uuid-string' },
-                      courseId: { type: 'string', example: 'COURSE001' },
-                      courseName: {
-                        type: 'string',
-                        example: 'Mathematics 101',
-                      },
-                      teacherId: { type: 'string', example: 'TEACHER001' },
-                      teacherName: {
-                        type: 'string',
-                        example: 'Dr. John Smith',
-                      },
-                      classroomId: { type: 'string', example: 'ROOM001' },
-                      classroomName: { type: 'string', example: 'Room 101' },
-                      classGroupIds: {
-                        type: 'array',
-                        items: { type: 'string' },
-                        example: ['GROUP001', 'GROUP002'],
-                      },
-                      sessionType: {
-                        type: 'string',
-                        enum: ['LECTURE', 'LAB', 'TUTORIAL', 'SEMINAR'],
-                      },
-                      timeslot: { type: 'string', example: '08:00-09:30' },
-                      day: {
-                        type: 'string',
-                        enum: [
-                          'MONDAY',
-                          'TUESDAY',
-                          'WEDNESDAY',
-                          'THURSDAY',
-                          'FRIDAY',
-                        ],
-                      },
-                    },
-                  },
-                },
               },
             },
           },

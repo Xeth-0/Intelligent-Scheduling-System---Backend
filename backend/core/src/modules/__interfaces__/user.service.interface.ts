@@ -1,3 +1,4 @@
+import { type PaginatedResponse } from '@/common/response/api-response.dto';
 import {
   type CreateUserDto,
   type UpdateUserDto,
@@ -6,8 +7,11 @@ import {
 import { type User } from '@prisma/client';
 
 export interface IUsersService {
-  deleteUser(id: string): Promise<void>;
-  findAllUsers(): Promise<UserResponseDto[]>;
+  deleteUser(adminId: string, userId: string): Promise<void>;
+  findAllUsers(
+    page: number,
+    size: number,
+  ): Promise<PaginatedResponse<UserResponseDto>>;
   findByEmail(email: string): Promise<User | null>;
   findUserById(id: string): Promise<UserResponseDto>;
   createUser(createUserDto: CreateUserDto): Promise<UserResponseDto>;

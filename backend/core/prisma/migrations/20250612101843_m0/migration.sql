@@ -110,6 +110,7 @@ CREATE TABLE "Course" (
     "description" TEXT,
     "departmentId" TEXT,
     "ectsCredits" INTEGER NOT NULL DEFAULT 0,
+    "teacherId" TEXT NOT NULL,
     "sessionType" "SessionType" NOT NULL DEFAULT 'LECTURE',
     "sessionsPerWeek" INTEGER NOT NULL,
 
@@ -240,14 +241,6 @@ CREATE TABLE "Constraint" (
 );
 
 -- CreateTable
-CREATE TABLE "_CourseTeachers" (
-    "A" TEXT NOT NULL,
-    "B" TEXT NOT NULL,
-
-    CONSTRAINT "_CourseTeachers_AB_pkey" PRIMARY KEY ("A","B")
-);
-
--- CreateTable
 CREATE TABLE "_CourseToStudentGroup" (
     "A" TEXT NOT NULL,
     "B" TEXT NOT NULL,
@@ -289,9 +282,6 @@ CREATE UNIQUE INDEX "ScheduleItem_scheduleId_timeslotId_day_studentGroupId_key" 
 CREATE INDEX "Schedule_campusId_active_idx" ON "Schedule"("campusId", "active");
 
 -- CreateIndex
-CREATE INDEX "_CourseTeachers_B_index" ON "_CourseTeachers"("B");
-
--- CreateIndex
 CREATE INDEX "_CourseToStudentGroup_B_index" ON "_CourseToStudentGroup"("B");
 
 -- AddForeignKey
@@ -314,6 +304,9 @@ ALTER TABLE "Admin" ADD CONSTRAINT "Admin_userId_fkey" FOREIGN KEY ("userId") RE
 
 -- AddForeignKey
 ALTER TABLE "Department" ADD CONSTRAINT "Department_campusId_fkey" FOREIGN KEY ("campusId") REFERENCES "Campus"("campusId") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Course" ADD CONSTRAINT "Course_teacherId_fkey" FOREIGN KEY ("teacherId") REFERENCES "Teacher"("teacherId") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Course" ADD CONSTRAINT "Course_departmentId_fkey" FOREIGN KEY ("departmentId") REFERENCES "Department"("deptId") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -368,12 +361,6 @@ ALTER TABLE "Constraint" ADD CONSTRAINT "Constraint_teacherId_fkey" FOREIGN KEY 
 
 -- AddForeignKey
 ALTER TABLE "Constraint" ADD CONSTRAINT "Constraint_campusId_fkey" FOREIGN KEY ("campusId") REFERENCES "Campus"("campusId") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "_CourseTeachers" ADD CONSTRAINT "_CourseTeachers_A_fkey" FOREIGN KEY ("A") REFERENCES "Course"("courseId") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "_CourseTeachers" ADD CONSTRAINT "_CourseTeachers_B_fkey" FOREIGN KEY ("B") REFERENCES "Teacher"("teacherId") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "_CourseToStudentGroup" ADD CONSTRAINT "_CourseToStudentGroup_A_fkey" FOREIGN KEY ("A") REFERENCES "Course"("courseId") ON DELETE CASCADE ON UPDATE CASCADE;

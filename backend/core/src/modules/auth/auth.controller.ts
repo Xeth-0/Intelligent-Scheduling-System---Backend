@@ -9,7 +9,7 @@ import {
   DebugTeacherLoginDocs,
 } from '../../common/decorators/swagger/auth.swagger.docs';
 import { LoginDto, RegisterDto, TokensDto } from './dtos';
-import { Role, User } from '@prisma/client';
+import { User } from '@prisma/client';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import {
@@ -78,7 +78,7 @@ export class AuthController {
   @DebugGetAllUsersDocs()
   async debugGetAllUsers(): Promise<ApiResponse<UserResponseDto[]>> {
     const users = await this.usersService.findAllUsers();
-    return ApiResponse.success(200, users, 'Users fetched successfully');
+    return ApiResponse.success(200, users.data, 'Users fetched successfully');
   }
 
   @Post('debug_admin_login')

@@ -1,3 +1,5 @@
+import type { Course } from '@prisma/client';
+
 export class TeacherResponseDto {
   teacherId!: string;
   userId!: string;
@@ -11,4 +13,5 @@ export class TeacherResponseDto {
     name: string;
     campusId: string;
   };
+  courses!: Course[];
 }

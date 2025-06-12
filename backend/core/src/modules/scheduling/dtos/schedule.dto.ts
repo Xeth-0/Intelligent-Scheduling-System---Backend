@@ -5,6 +5,7 @@ import {
   IsEnum,
   ValidateNested,
   IsBoolean,
+  IsOptional,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { SessionType } from '@prisma/client';
@@ -91,7 +92,8 @@ export class GeneralScheduleResponse {
   @ApiProperty({ type: [ScheduledSessionDto] })
   @ValidateNested({ each: true })
   @Type(() => ScheduledSessionDto)
-  sessions!: ScheduledSessionDto[];
+  @IsOptional()
+  sessions?: ScheduledSessionDto[];
 }
 
 export class TeacherScheduleResponse {

@@ -6,4 +6,14 @@ export class UpdateTeacherDto {
   @IsString()
   @IsOptional()
   departmentId?: string;
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  teacherId?: string;
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  courseId?: string;
 }

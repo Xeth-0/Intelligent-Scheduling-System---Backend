@@ -71,7 +71,7 @@ export class SchedulingService implements ISchedulingService {
 
   private _mapScheduleToResponse(
     schedule: Schedule,
-    sessions: (ScheduledSession & {
+    sessions?: (ScheduledSession & {
       course: Course;
       teacher: Teacher;
       timeslot: Timeslot;
@@ -79,11 +79,20 @@ export class SchedulingService implements ISchedulingService {
       studentGroup: StudentGroup | null;
     })[],
   ) {
+    if (sessions) {
+      return plainToInstance(GeneralScheduleResponse, {
+        scheduleId: schedule.scheduleId,
+        scheduleName: schedule.scheduleName,
+        isActive: schedule.active,
+        sessions: sessions.map((session) =>
+          this._mapSessionToResponse(session),
+        ),
+      });
+    }
     return plainToInstance(GeneralScheduleResponse, {
       scheduleId: schedule.scheduleId,
       scheduleName: schedule.scheduleName,
       isActive: schedule.active,
-      sessions: sessions.map((session) => this._mapSessionToResponse(session)),
     });
   }
 
@@ -347,7 +356,6 @@ export class SchedulingService implements ISchedulingService {
    * @returns Promise with array of all campus schedules
    */
   async getAllSchedules(userId: string) {
-    // ! return schedule id, name, isActive, createdAt
     const admin = await this.prismaService.admin.findFirst({
       where: {
         userId: userId,
@@ -366,14 +374,7 @@ export class SchedulingService implements ISchedulingService {
       },
     });
 
-    const response = await Promise.all(
-      schedules.map(async (schedule) => {
-        const sessions = await this._fetchSessions(schedule.scheduleId);
-
-        return this._mapScheduleToResponse(schedule, sessions);
-      }),
-    );
-    return response;
+    return schedules.map((schedule) => this._mapScheduleToResponse(schedule));
   }
 
   async searchSessions(userId: string, body: SearchSessionsBody) {
@@ -453,8 +454,13 @@ export class SchedulingService implements ISchedulingService {
     // first teacher in the list takes that course for now
     // ! Schema needs updating to disallow multiple teachers per course
     const courses = await this.prismaService.course.findMany({
+      where: {
+        teacherId: {
+          not: null,
+        },
+      },
       include: {
-        teachers: true,
+        teacher: true,
         studentGroups: true,
       },
     });
@@ -491,7 +497,7 @@ export class SchedulingService implements ISchedulingService {
         description: course.description ?? 'No description available',
         ectsCredits: course.ectsCredits,
         department: course.departmentId,
-        teacherId: course.teachers[0].teacherId,
+        teacherId: course.teacherId,
         studentGroupIds: course.studentGroups.map(
           (studentGroup) => studentGroup.studentGroupId,
         ),

@@ -20,6 +20,11 @@ export class CreateCourseDto {
   @IsNotEmpty()
   code!: string;
 
+  @ApiProperty()
+  @IsString()
+  @IsOptional()
+  teacherId?: string;
+
   @ApiProperty({ required: false })
   @IsString()
   @IsOptional()
