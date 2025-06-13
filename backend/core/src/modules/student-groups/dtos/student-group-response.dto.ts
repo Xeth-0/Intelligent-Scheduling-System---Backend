@@ -8,4 +8,8 @@ export class StudentGroupResponseDto {
     name: string;
     campusId: string;
   };
+  students?: {
+    studentId: string;
+    userId: string;
+  }[] = [];
 }
