@@ -35,6 +35,7 @@ export class ConstraintResponseDto {
   constraintType?: {
     id: string;
     name: string;
+    constraintTypeKey: string;
     description: string;
     category: string;
     valueType: string;

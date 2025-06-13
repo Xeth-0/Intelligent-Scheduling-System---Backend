@@ -18,6 +18,10 @@ import {
   VALID_TIMESLOT_CODES,
   CONSTRAINT_DEFINITIONS,
   ConstraintDefinitionKey,
+  TimeslotConstraintValue,
+  RoomConstraintValue,
+  TeacherCompactnessConstraintValue,
+  WorkloadDistributionConstraintValue,
 } from './dtos/constraints.types';
 import { CreateConstraintDto, UpdateConstraintDto } from './dtos';
 import { zodToJsonSchema } from 'zod-to-json-schema';
@@ -66,6 +70,33 @@ export class ConstraintService implements OnModuleInit {
     }
   }
 
+  private _mapToResponse(
+    constraint: Constraint & { constraintType: ConstraintType },
+  ) {
+    // Find the constraint definition key by matching the constraint type name
+    const constraintTypeKey = Object.entries(CONSTRAINT_DEFINITIONS).find(
+      ([_, definition]) => definition.name === constraint.constraintType.name,
+    )?.[0] as ConstraintDefinitionKey | undefined;
+
+    return {
+      id: constraint.id,
+      constraintTypeId: constraint.constraintTypeId,
+      value: constraint.value,
+      weight: constraint.priority, // Map priority to weight for DTO compatibility
+      isActive: constraint.isActive,
+      campusId: constraint.campusId,
+      teacherId: constraint.teacherId,
+      constraintType: {
+        id: constraint.constraintType.id,
+        name: constraint.constraintType.name,
+        constraintTypeKey: constraintTypeKey,
+        description: constraint.constraintType.description,
+        category: constraint.constraintType.category,
+        valueType: constraint.constraintType.valueType,
+      },
+    };
+  }
+
   /**
    * Validates if timeslot codes are valid
    */
@@ -76,117 +107,12 @@ export class ConstraintService implements OnModuleInit {
   }
 
   /**
-   * Validate if a time preference conflicts with existing constraints
-   */
-  private async validateTeacherTimePreference(
-    teacherId: string,
-    timeslotCodes: string[],
-    preference: 'PREFER' | 'AVOID' | 'NEUTRAL',
-  ): Promise<{
-    hasConflict: boolean;
-    conflicts: Array<{
-      conflictingConstraintId: string;
-      timeslotCode: string;
-      existingPreference: string;
-      newPreference: string;
-    }>;
-  }> {
-    // Skip conflict checking for NEUTRAL preferences
-    if (preference === 'NEUTRAL') {
-      return {
-        hasConflict: false,
-        conflicts: [],
-      };
-    }
-
-    // Validate timeslot codes first
-    if (!this.validateTimeslotCodes(timeslotCodes)) {
-      throw new BadRequestException('Invalid timeslot codes provided');
-    }
-
-    // Get existing time preferences for this teacher
-    const existingConstraints = await this.prisma.constraint.findMany({
-      where: {
-        teacherId,
-        isActive: true,
-        constraintType: {
-          // name: 'Teacher Time Preference',
-          valueType: ConstraintValueType.TIME_SLOT,
-          category: ConstraintCategory.TEACHER_PREFERENCE,
-        },
-      },
-      include: {
-        constraintType: true,
-      },
-    });
-
-    const conflicts: Array<{
-      conflictingConstraintId: string;
-      timeslotCode: string;
-      existingPreference: string;
-      newPreference: string;
-    }> = [];
-
-    // Check each timeslot for conflicts
-    for (const code of timeslotCodes) {
-      for (const constraint of existingConstraints) {
-        const constraintValue = constraint.value as {
-          timeslotCodes?: string[];
-          preference?: string;
-        };
-
-        if (
-          constraintValue.timeslotCodes?.includes(code) &&
-          constraintValue.preference !== preference &&
-          constraintValue.preference !== 'NEUTRAL' // Don't conflict with NEUTRAL
-        ) {
-          conflicts.push({
-            conflictingConstraintId: constraint.id,
-            timeslotCode: code,
-            existingPreference: constraintValue.preference ?? 'UNKNOWN',
-            newPreference: preference,
-          });
-        }
-      }
-    }
-
-    return {
-      hasConflict: conflicts.length > 0,
-      conflicts,
-    };
-  }
-
-  /**
    * Creates a new constraint for a user
    */
   async createConstraint(
     userId: string,
     createDto: CreateConstraintDto,
   ): Promise<Constraint> {
-    const constraintDefinition =
-      CONSTRAINT_DEFINITIONS[createDto.constraintTypeKey];
-    if (!constraintDefinition) {
-      throw new BadRequestException(
-        `Constraint type ${createDto.constraintTypeKey} not found`,
-      );
-    }
-
-    // Validate the constraint value against the schema
-    const validatedValue = constraintDefinition.jsonSchema.parse(
-      createDto.value,
-    );
-
-    // Get constraint type UUID from database
-    const constraintTypeId = this.constraintTypeMap.get(
-      createDto.constraintTypeKey,
-    );
-    if (!constraintTypeId) {
-      throw new BadRequestException(
-        `Constraint type ${createDto.constraintTypeKey} not properly seeded`,
-      );
-    }
-
-    // Determine the type of user and validate permissions
     const user = await this.prisma.user.findFirst({
       where: { userId },
       include: {
@@ -197,69 +123,23 @@ export class ConstraintService implements OnModuleInit {
 
     if (!user) {
       throw new NotFoundException('User not found');
-    }
-
-    if (user.role === Role.STUDENT) {
+    } else if (user.role === Role.STUDENT) {
       throw new BadRequestException('Students cannot create constraints');
     }
 
-    // Check for time preference conflicts if this is a time preference constraint
-    if (
-      createDto.constraintTypeKey === 'TEACHER_TIME_PREFERENCE' &&
-      user.teacher
-    ) {
-      const timeValue = validatedValue as {
-        timeslotCodes: string[];
-        preference: 'PREFER' | 'AVOID' | 'NEUTRAL';
-      };
-
-      const conflictCheck = await this.validateTeacherTimePreference(
-        user.teacher.teacherId,
-        timeValue.timeslotCodes,
-        timeValue.preference,
-      );
-
-      if (conflictCheck.hasConflict) {
-        const conflictMessages = conflictCheck.conflicts.map(
-          (conflict) =>
-            `Timeslot ${conflict.timeslotCode}: existing preference is ${conflict.existingPreference}, new preference is ${conflict.newPreference}`,
-        );
-        throw new BadRequestException(
-          `Time preference conflicts detected: ${conflictMessages.join('; ')}`,
-        );
-      }
-    }
-
-    // TODO: Implement constraint limits (max 10 constraints per teacher)
-    // const existingConstraints = await this.prisma.constraint.count({
-    //   where: {
-    //     teacherId: user.teacher?.teacherId,
-    //     constraintTypeId,
-    //     isActive: true,
-    //   },
-    // });
-    // if (existingConstraints >= 10) {
-    //   throw new BadRequestException('Maximum number of constraints reached (10)');
-    // }
-
-    return this.prisma.constraint.create({
-      data: {
-        constraintTypeId,
-        campusId: user.admin ? user.admin.campusId : null,
-        teacherId: user.teacher ? user.teacher.teacherId : null,
-        value: validatedValue as Prisma.JsonObject,
-        priority: createDto.priority ?? 5.0,
-      },
-      include: {
-        constraintType: true,
-      },
-    });
+    return await this._setConstraint(
+      createDto.constraintTypeKey,
+      createDto.value,
+      user.admin?.campusId,
+      user.teacher?.teacherId,
+      createDto.priority,
+    );
   }
 
   /**
    * Returns all constraints for a user
    */
-  async getAllConstraints(userId: string): Promise<Constraint[]> {
+  async getAllConstraints(userId: string) {
     const user = await this.prisma.user.findFirst({
       where: { userId },
       include: {
@@ -281,7 +161,7 @@ export class ConstraintService implements OnModuleInit {
         ? { teacherId: user.teacher?.teacherId }
         : { campusId: user.admin?.campusId };
 
-    return this.prisma.constraint.findMany({
+    const constraints = await this.prisma.constraint.findMany({
       where: whereClause,
       include: {
         constraintType: true,
@@ -290,6 +170,8 @@ export class ConstraintService implements OnModuleInit {
         createdAt: 'desc',
       },
     });
+
+    return constraints.map((constraint) => this._mapToResponse(constraint));
   }
 
   /**
@@ -376,6 +258,43 @@ export class ConstraintService implements OnModuleInit {
       throw new ForbiddenException('You can only update your own constraints');
     }
 
+    // For teacher constraints, redirect to create (there'll only be one of each type)
+    if (user.teacher && constraint.teacherId === user.teacher.teacherId) {
+      // Find the constraint definition key for this constraint type
+      const constraintDefKey = Object.entries(CONSTRAINT_DEFINITIONS).find(
+        ([_, def]) => def.name === constraint.constraintType.name,
+      )?.[0] as ConstraintDefinitionKey;
+
+      if (!constraintDefKey) {
+        throw new BadRequestException(
+          `Constraint type ${constraint.constraintType.name} not found in definitions`,
+        );
+      }
+
+      // Use the new set-based system for teacher constraints
+      if (updateDto.value) {
+        return await this._setConstraint(
+          constraintDefKey,
+          updateDto.value,
+          undefined, // campusId not needed for teacher constraints
+          user.teacher.teacherId,
+          updateDto.priority,
+        );
+      } else {
+        // If no value provided, just update priority
+        return this.prisma.constraint.update({
+          where: { id: constraintId },
+          data: {
+            priority: updateDto.priority,
+          },
+          include: {
+            constraintType: true,
+          },
+        });
+      }
+    }
+
+    // For admin constraints, use the old update logic
     // Only admins can change isActive status
     if (updateDto.isActive !== undefined && user.role !== Role.ADMIN) {
       throw new ForbiddenException('Only admins can change constraint status');
@@ -390,54 +309,14 @@ export class ConstraintService implements OnModuleInit {
 
       if (constraintDef) {
         validatedValue = constraintDef.jsonSchema.parse(updateDto.value);
-
-        // Check for conflicts if updating time preferences
-        if (
-          constraint.constraintType.name === 'Teacher Time Preference' &&
-          user.teacher
-        ) {
-          const timeValue = validatedValue as {
-            timeslotCodes: string[];
-            preference: 'PREFER' | 'AVOID' | 'NEUTRAL';
-          };
-
-          const conflictCheck = await this.validateTeacherTimePreference(
-            user.teacher.teacherId,
-            timeValue.timeslotCodes,
-            timeValue.preference,
-          );
-
-          // Filter out conflicts with the current constraint
-          const relevantConflicts = conflictCheck.conflicts.filter(
-            (conflict) => {
-              if (conflict.conflictingConstraintId === constraintId) {
-                // This is the constraint being updated.
-                return false;
-              }
-              // This would need more sophisticated logic to check if the conflict
-              // is with a different constraint instance
-              return true;
-            },
-          );
-
-          if (relevantConflicts.length > 0) {
-            const conflictMessages = relevantConflicts.map(
-              (conflict) =>
-                `Timeslot ${conflict.timeslotCode}: existing preference is ${conflict.existingPreference}, new preference is ${conflict.newPreference}`,
-            );
-            throw new BadRequestException(
-              `Time preference conflicts detected: ${conflictMessages.join('; ')}`,
-            );
-          }
-        }
       }
     }
 
-    // Finally, update the constraint now that everything is validated.
+    // Update the admin constraint
     return this.prisma.constraint.update({
       where: { id: constraintId },
       data: {
-        value: validatedValue as Prisma.JsonObject,
+        value: validatedValue as unknown as Prisma.JsonObject,
         priority: updateDto.priority,
         isActive: updateDto.isActive,
       },
@@ -564,5 +443,368 @@ export class ConstraintService implements OnModuleInit {
       priority: constraint.priority,
       category: constraint.constraintType.category,
     }));
+  }
+
+  // Constraint setters for each constraint type.
+  // There should be a more elegant way to do this but whatever.
+
+  async _setConstraint(
+    constraintTypeKey: ConstraintDefinitionKey,
+    value: Record<string, unknown>,
+    campusId?: string,
+    teacherId?: string,
+    priority?: number,
+  ): Promise<Constraint> {
+    const constraintDefinition = CONSTRAINT_DEFINITIONS[constraintTypeKey];
+    if (!constraintDefinition) {
+      throw new BadRequestException(
+        `Constraint type ${constraintTypeKey} not found`,
+      );
+    }
+
+    // Validate the constraint value against the schema
+    const validatedValue = constraintDefinition.jsonSchema.parse(value);
+
+    // Route to appropriate setter based on constraint type
+    switch (constraintTypeKey) {
+      case 'TEACHER_TIME_PREFERENCE':
+        return this._setTimePreference(
+          teacherId!,
+          validatedValue as TimeslotConstraintValue,
+          priority,
+        );
+
+      case 'TEACHER_ROOM_PREFERENCE':
+        return this._setRoomPreference(
+          teacherId!,
+          validatedValue as RoomConstraintValue,
+          priority,
+        );
+
+      case 'TEACHER_SCHEDULE_COMPACTNESS':
+        return this._setScheduleCompactness(
+          teacherId!,
+          validatedValue as TeacherCompactnessConstraintValue,
+          priority,
+        );
+
+      case 'TEACHER_WORKLOAD_DISTRIBUTION':
+        return this._setWorkloadDistribution(
+          teacherId!,
+          validatedValue as WorkloadDistributionConstraintValue,
+          priority,
+        );
+
+      default:
+        throw new BadRequestException(
+          `Constraint type ${constraintTypeKey} not implemented yet`,
+        );
+    }
+  }
+
+  /**
+   * Sets time preference constraint for a teacher (prefer or avoid)
+   * Overwrites existing constraint of the same preference type
+   */
+  private async _setTimePreference(
+    teacherId: string,
+    value: TimeslotConstraintValue,
+    priority?: number,
+  ): Promise<Constraint> {
+    const constraintTypeId = this.constraintTypeMap.get(
+      'TEACHER_TIME_PREFERENCE',
+    );
+    if (!constraintTypeId) {
+      throw new BadRequestException(
+        'Time preference constraint type not properly seeded',
+      );
+    }
+    if (value.timeslotCodes.length === 0) {
+      throw new BadRequestException(
+        'No constraint created - empty timeslot list',
+      );
+    }
+
+    const existingConstraints = await this.prisma.constraint.findMany({
+      where: {
+        teacherId: teacherId,
+        constraintTypeId: constraintTypeId,
+        isActive: true,
+        value: {
+          path: ['preference'],
+          equals: value.preference,
+        },
+      },
+    });
+
+    const reverseConstraints = await this.prisma.constraint.findMany({
+      where: {
+        teacherId: teacherId,
+        constraintTypeId: constraintTypeId,
+        isActive: true,
+        NOT: {
+          value: {
+            path: ['preference'],
+            equals: value.preference,
+          },
+        },
+      },
+    });
+
+    return await this.prisma.$transaction(async (tx) => {
+      if (reverseConstraints.length > 0) {
+        for (const reverseConstraint of reverseConstraints) {
+          const constraintValue = reverseConstraint.value as {
+            timeslotCodes?: string[];
+            preference?: string;
+          };
+
+          if (
+            constraintValue.timeslotCodes &&
+            value.timeslotCodes.some((code) =>
+              constraintValue.timeslotCodes!.includes(code),
+            )
+          ) {
+            await tx.constraint.delete({
+              where: { id: reverseConstraint.id },
+            });
+          }
+        }
+      }
+
+      // Delete existing constraints of the same preference type
+      if (existingConstraints.length > 0) {
+        for (const existingConstraint of existingConstraints) {
+          await tx.constraint.delete({
+            where: { id: existingConstraint.id },
+          });
+        }
+      }
+
+      return tx.constraint.create({
+        data: {
+          constraintTypeId,
+          teacherId,
+          value: value as unknown as Prisma.JsonObject,
+          priority: priority ?? 5.0,
+        },
+        include: {
+          constraintType: true,
+        },
+      });
+    });
+  }
+
+  /**
+   * Sets room preference constraint for a teacher (prefer or avoid)
+   * Handles conflicts with opposite preference type
+   */
+  private async _setRoomPreference(
+    teacherId: string,
+    value: RoomConstraintValue,
+    priority?: number,
+  ): Promise<Constraint> {
+    const constraintTypeId = this.constraintTypeMap.get(
+      'TEACHER_ROOM_PREFERENCE',
+    );
+    if (!constraintTypeId) {
+      throw new BadRequestException(
+        'Room preference constraint type not properly seeded',
+      );
+    }
+
+    // Check if there are rooms to set
+    const hasRooms =
+      (value.roomIds && value.roomIds.length > 0) ??
+      (value.buildingIds && value.buildingIds.length > 0);
+
+    if (!hasRooms) {
+      throw new BadRequestException('No constraint created - empty room list');
+    }
+
+    const existingConstraints = await this.prisma.constraint.findMany({
+      where: {
+        teacherId: teacherId,
+        constraintTypeId: constraintTypeId,
+        isActive: true,
+        value: {
+          path: ['preference'],
+          equals: value.preference,
+        },
+      },
+    });
+
+    const reverseConstraints = await this.prisma.constraint.findMany({
+      where: {
+        teacherId: teacherId,
+        constraintTypeId: constraintTypeId,
+        isActive: true,
+        NOT: {
+          value: {
+            path: ['preference'],
+            equals: value.preference,
+          },
+        },
+      },
+    });
+
+    return await this.prisma.$transaction(async (tx) => {
+      if (reverseConstraints.length > 0) {
+        for (const reverseConstraint of reverseConstraints) {
+          const constraintValue = reverseConstraint.value as {
+            roomIds?: string[];
+            buildingIds?: string[];
+            preference?: string;
+          };
+
+          // Check for room ID conflicts
+          const hasRoomIdConflict =
+            value.roomIds &&
+            constraintValue.roomIds &&
+            value.roomIds.some((roomId) =>
+              constraintValue.roomIds!.includes(roomId),
+            );
+
+          // Check for building ID conflicts
+          const hasBuildingIdConflict =
+            value.buildingIds &&
+            constraintValue.buildingIds &&
+            value.buildingIds.some((buildingId) =>
+              constraintValue.buildingIds!.includes(buildingId),
+            );
+
+          if (hasRoomIdConflict || hasBuildingIdConflict) {
+            await tx.constraint.delete({
+              where: { id: reverseConstraint.id },
+            });
+          }
+        }
+      }
+
+      // Delete existing constraints of the same preference type
+      if (existingConstraints.length > 0) {
+        for (const existingConstraint of existingConstraints) {
+          await tx.constraint.delete({
+            where: { id: existingConstraint.id },
+          });
+        }
+      }
+
+      return tx.constraint.create({
+        data: {
+          constraintTypeId,
+          teacherId,
+          value: value as unknown as Prisma.JsonObject,
+          priority: priority ?? 5.0,
+        },
+        include: {
+          constraintType: true,
+        },
+      });
+    });
+  }
+
+  /**
+   * Sets schedule compactness constraint for a teacher
+   * Overwrites existing constraint of this type
+   */
+  private async _setScheduleCompactness(
+    teacherId: string,
+    value: TeacherCompactnessConstraintValue,
+    priority?: number,
+  ): Promise<Constraint> {
+    const constraintTypeId = this.constraintTypeMap.get(
+      'TEACHER_SCHEDULE_COMPACTNESS',
+    );
+    if (!constraintTypeId) {
+      throw new BadRequestException(
+        'Schedule compactness constraint type not properly seeded',
+      );
+    }
+
+    // Find existing constraint of this type
+    const existingConstraint = await this.prisma.constraint.findFirst({
+      where: {
+        teacherId,
+        constraintTypeId,
+        isActive: true,
+      },
+    });
+
+    // Delete existing constraint if found
+    if (existingConstraint) {
+      await this.prisma.constraint.delete({
+        where: { id: existingConstraint.id },
+      });
+    }
+
+    // Create new constraint (only if enabled)
+    if (!value.enabled) {
+      // If disabled, we just deleted the existing constraint and don't create a new one
+      throw new BadRequestException(
+        'No constraint created - compactness disabled',
+      );
+    }
+
+    return this.prisma.constraint.create({
+      data: {
+        constraintTypeId,
+        teacherId,
+        value: value as unknown as Prisma.JsonObject,
+        priority: priority ?? 5.0,
+      },
+      include: {
+        constraintType: true,
+      },
+    });
+  }
+
+  /**
+   * Sets workload distribution constraint for a teacher
+   * Overwrites existing constraint of this type
+   */
+  private async _setWorkloadDistribution(
+    teacherId: string,
+    value: WorkloadDistributionConstraintValue,
+    priority?: number,
+  ): Promise<Constraint> {
+    const constraintTypeId = this.constraintTypeMap.get(
+      'TEACHER_WORKLOAD_DISTRIBUTION',
+    );
+    if (!constraintTypeId) {
+      throw new BadRequestException(
+        'Workload distribution constraint type not properly seeded',
+      );
+    }
+
+    // Find existing constraint of this type
+    const existingConstraint = await this.prisma.constraint.findFirst({
+      where: {
+        teacherId,
+        constraintTypeId,
+        isActive: true,
+      },
+    });
+
+    // Delete existing constraint if found
+    if (existingConstraint) {
+      await this.prisma.constraint.delete({
+        where: { id: existingConstraint.id },
+      });
+    }
+
+    // Always create new constraint for workload distribution
+    // (no "enabled" flag in this constraint type)
+    return this.prisma.constraint.create({
+      data: {
+        constraintTypeId,
+        teacherId,
+        value: value as unknown as Prisma.JsonObject,
+        priority: priority ?? 5.0,
+      },
+      include: {
+        constraintType: true,
+      },
+    });
   }
 }

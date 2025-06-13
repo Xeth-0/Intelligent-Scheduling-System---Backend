@@ -31,8 +31,8 @@ EARLY_STOP_THRESHOLD = 150  # Generations of stagnation before early stopping
 MUTATION_BOOST_FACTOR = 3.0  # How much to increase mutation rate during stagnation
 
 # --- Diversity-Guided Mutation Parameters ---
-MIN_HEURISTIC_PROBABILITY = 0.3  # Minimum probability for heuristic mutation (exploration)
-MAX_HEURISTIC_PROBABILITY = 0.8  # Maximum probability for heuristic mutation (exploitation)
+MIN_HEURISTIC_PROBABILITY = 0.1  # Minimum probability for heuristic mutation (exploration)
+MAX_HEURISTIC_PROBABILITY = 0.9  # Maximum probability for heuristic mutation (exploitation)
 
 
 class GeneticScheduler:
@@ -93,7 +93,7 @@ class GeneticScheduler:
         self.is_mutation_boosted = False
 
         # Diversity-guided mutation tracking
-        self.heuristic_mutation_probability = 0.7  # Start with balanced approach
+        self.heuristic_mutation_probability = 0.9  # Start with balanced approach
         self.fitness_diversity_history = []
 
     def run(

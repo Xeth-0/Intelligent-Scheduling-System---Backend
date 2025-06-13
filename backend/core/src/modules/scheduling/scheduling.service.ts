@@ -662,7 +662,7 @@ export class SchedulingService implements ISchedulingService {
 
     const courses = await this.prismaService.course.findMany({
       include: {
-        teachers: true,
+        teacher: true,
         studentGroups: true,
       },
     });
@@ -733,7 +733,7 @@ export class SchedulingService implements ISchedulingService {
         description: course.description ?? 'No description available',
         ectsCredits: course.ectsCredits,
         department: course.departmentId,
-        teacherId: course.teachers[0]?.teacherId || '',
+        teacherId: course.teacher?.teacherId ?? '',
         studentGroupIds: course.studentGroups.map((sg) => sg.studentGroupId),
         sessionType: course.sessionType,
         sessionsPerWeek: course.sessionsPerWeek,

@@ -57,6 +57,7 @@ export interface ConsecutiveMovementConstraintValue {
 }
 
 export interface TeacherCompactnessConstraintValue {
+  enabled: boolean;
   maxGapsPerDay: number; // maximum gaps allowed per day
   maxActiveDays: number; // maximum teaching days per week
   maxConsecutiveSessions: number; // maximum back-to-back sessions
@@ -149,7 +150,7 @@ export const CONSTRAINT_DEFINITIONS = {
       timeslotCodes: z
         .array(z.enum(VALID_TIMESLOT_CODES))
         .min(1, 'At least one timeslot must be selected'),
-      preference: z.enum(['PREFER', 'AVOID', 'NEUTRAL']),
+      preference: z.enum(['PREFER', 'AVOID']),
     }),
   } satisfies ConstraintTypeDefinition<TimeslotConstraintValue>,
 
