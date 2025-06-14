@@ -24,6 +24,7 @@ import { plainToInstance } from 'class-transformer';
 import { SchedulingApiResponseDto } from './dtos/schedule.microservice.dto';
 import { GeneralScheduleResponse } from './dtos/schedule.dto';
 import { SearchSessionsBody } from './dtos/scheduleSearch.dto';
+import { ScheduleEvaluationResponse } from './dtos/schedule.dto';
 import { ISchedulingService } from '../__interfaces__/scheduling.service.interface';
 import { ConstraintService } from '../constraints/constraints.service';
 import { TimeslotService } from '../timeslots/timeslots.service';
@@ -394,6 +395,31 @@ export class SchedulingService implements ISchedulingService {
       );
     }
 
+    // handle teacherID (can sometimes be userID)
+    if (body.teacherId) {
+      const teacher = await this.prismaService.teacher.findFirst({
+        where: {
+          teacherId: body.teacherId,
+        },
+      });
+      if (!teacher) {
+        // check if the given ID is a userID instead
+        const user = await this.prismaService.user.findFirst({
+          where: {
+            userId: body.teacherId,
+          },
+          include: {
+            teacher: true,
+          },
+        });
+        if (user && user.teacher) {
+          body.teacherId = user.teacher.teacherId;
+        } else {
+          throw new BadRequestException('Invalid teacher ID');
+        }
+      }
+    }
+
     try {
       const sessions = await this._fetchSessions(schedule.scheduleId, {
         where: {
@@ -631,6 +657,168 @@ export class SchedulingService implements ISchedulingService {
         );
       }
       throw e;
+    }
+  }
+
+  /**
+   * Evaluates an existing schedule by calling the Python fitness evaluation service
+   * @param userId - ID of the user requesting the evaluation
+   * @param scheduleId - ID of the schedule to evaluate
+   * @returns Promise with the fitness evaluation report
+   */
+  async evaluateSchedule(
+    userId: string,
+    scheduleId: string,
+  ): Promise<ScheduleEvaluationResponse> {
+    const { schedule } = await this._findSchedule(scheduleId, userId);
+
+    // Get all sessions for this schedule
+    const sessions = await this._fetchSessions(scheduleId);
+
+    if (sessions.length === 0) {
+      throw new NotFoundException('No sessions found for this schedule');
+    }
+
+    // Get additional data needed for evaluation
+    const teachers = await this.prismaService.teacher.findMany({
+      include: {
+        user: true,
+      },
+    });
+
+    const studentGroups = await this.prismaService.studentGroup.findMany({
+      include: {
+        students: true,
+      },
+    });
+
+    const rooms = await this.prismaService.classroom.findMany({
+      include: {
+        building: true,
+      },
+    });
+
+    const courses = await this.prismaService.course.findMany({
+      include: {
+        teacher: true,
+        studentGroups: true,
+      },
+    });
+
+    // Get constraints and timeslots for evaluation
+    const constraints =
+      await this.constraintService.getConstraintsForScheduling(
+        schedule.campusId,
+      );
+    const timeslots = await this.timeslotService.getAllTimeslots();
+
+    // Convert sessions to the format expected by Python service
+    const timeslotMap = new Map(
+      timeslots.map((slot) => [slot.timeslotId, slot]),
+    );
+
+    const scheduleItems = sessions.map((session) => {
+      const timeslot = timeslotMap.get(session.timeslotId);
+      if (!timeslot) {
+        throw new InternalServerErrorException(
+          `Timeslot not found for session: ${session.timeslotId}`,
+        );
+      }
+
+      return {
+        courseId: session.courseId,
+        courseName: session.course.name,
+        teacherId: session.teacherId,
+        classroomId: session.classroomId,
+        studentGroupIds: [session.studentGroupId], // Convert single ID to array
+        day: session.day,
+        timeslot: timeslot.code,
+        sessionType: session.sessionType,
+      };
+    });
+
+    // Prepare evaluation payload
+    const payload = {
+      schedule: scheduleItems,
+      teachers: teachers.map((teacher) => ({
+        teacherId: teacher.teacherId,
+        name: `${teacher.user.firstName} ${teacher.user.lastName}`,
+        email: teacher.user.email,
+        phone: teacher.user.phone,
+        department: teacher.departmentId,
+        needsWheelchairAccessibleRoom:
+          teacher.user.needWheelchairAccessibleRoom,
+      })),
+      studentGroups: studentGroups.map((studentGroup) => ({
+        studentGroupId: studentGroup.studentGroupId,
+        name: studentGroup.name,
+        size: studentGroup.students.length,
+        department: studentGroup.departmentId,
+        accessibilityRequirement: studentGroup.accessibilityRequirement,
+      })),
+      rooms: rooms.map((room) => ({
+        classroomId: room.classroomId,
+        name: room.name,
+        capacity: room.capacity,
+        type: room.type,
+        buildingId: room.buildingId,
+        floor: room.building?.floor ?? 0,
+        isWheelchairAccessible: room.isWheelchairAccessible,
+      })),
+      courses: courses.map((course) => ({
+        courseId: course.courseId,
+        name: course.name,
+        description: course.description ?? 'No description available',
+        ectsCredits: course.ectsCredits,
+        department: course.departmentId,
+        teacherId: course.teacher?.teacherId ?? '',
+        studentGroupIds: course.studentGroups.map((sg) => sg.studentGroupId),
+        sessionType: course.sessionType,
+        sessionsPerWeek: course.sessionsPerWeek,
+      })),
+      constraints: constraints,
+      timeslots: timeslots.map((slot) => ({
+        timeslotId: slot.timeslotId,
+        code: slot.code,
+        label: slot.label,
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+        order: slot.order,
+      })),
+    };
+
+    // Call the evaluation endpoint
+    const route = this.configService.get<string>(
+      'services.scheduling_microservice.url',
+    );
+
+    try {
+      const response = await axios.post(
+        `${route}/api/scheduler/evaluate`,
+        payload,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+
+      if (response.status !== 200) {
+        throw new Error('Failed to evaluate schedule');
+      }
+
+      return {
+        scheduleId: schedule.scheduleId,
+        scheduleName: schedule.scheduleName,
+        evaluation: response.data,
+      };
+    } catch (e: unknown) {
+      if (axios.isAxiosError(e)) {
+        throw new InternalServerErrorException(
+          `Error evaluating schedule: ${e.message}`,
+        );
+      }
+      throw new InternalServerErrorException('Failed to evaluate schedule');
     }
   }
 }

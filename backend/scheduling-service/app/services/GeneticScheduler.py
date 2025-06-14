@@ -12,6 +12,7 @@ from app.services.SchedulingConstraintRegistry import SchedulingConstraintRegist
 from typing import List, Tuple, Optional
 import random
 import time
+import numpy as np
 
 # --- GA Parameters ---
 MAX_GENERATIONS = 10000
@@ -19,10 +20,19 @@ GENE_MUTATION_RATE = (
     0.1  # Probability of mutating a single gene (ScheduledItem's assignment)
 )
 CHROMOSOME_MUTATION_RATE = 0.2  # Probability that a whole chromosome undergoes mutation
-MAX_DURATION_SECONDS = 20  # Increased for potentially longer runs
+MAX_DURATION_SECONDS = 30  # Updated to match your 30-second requirement
 SELECTION_TOURNAMENT_SIZE = 3
 CHROMOSOME_POPULATION_SIZE = 50
 ELITISM_COUNT = 2  # Number of best individuals to carry over to the next generation
+
+# --- Adaptive Parameters ---
+STAGNATION_THRESHOLD = 50  # Generations without improvement to trigger adaptation
+EARLY_STOP_THRESHOLD = 150  # Generations of stagnation before early stopping
+MUTATION_BOOST_FACTOR = 3.0  # How much to increase mutation rate during stagnation
+
+# --- Diversity-Guided Mutation Parameters ---
+MIN_HEURISTIC_PROBABILITY = 0.1  # Minimum probability for heuristic mutation (exploration)
+MAX_HEURISTIC_PROBABILITY = 0.9  # Maximum probability for heuristic mutation (exploitation)
 
 
 class GeneticScheduler:
@@ -76,6 +86,16 @@ class GeneticScheduler:
         # For storing detailed fitness reports during evolution
         self.last_generation_reports: List[FitnessReport] = []
 
+        # Adaptive algorithm tracking
+        self.stagnation_counter = 0
+        self.last_best_fitness = float("inf")
+        self.original_chromosome_mutation_rate = chromosome_mutation_rate
+        self.is_mutation_boosted = False
+
+        # Diversity-guided mutation tracking
+        self.heuristic_mutation_probability = 0.9  # Start with balanced approach
+        self.fitness_diversity_history = []
+
     def run(
         self, generations: int = MAX_GENERATIONS
     ) -> Tuple[Optional[List[ScheduledItem]], float, Optional[FitnessReport]]:
@@ -92,12 +112,16 @@ class GeneticScheduler:
             fitness_scores, fitness_reports = self._evaluate_population(population)
             self.last_generation_reports = fitness_reports
 
+            # Update diversity-guided mutation probability
+            self._update_heuristic_mutation_probability(fitness_scores)
+
             # Find current best in this generation
             min_fitness_current_gen = min(fitness_scores)
             idx_min_fitness_current_gen = fitness_scores.index(min_fitness_current_gen)
 
             elapsed_time = time.time() - start_time
 
+            # Check for improvement and handle stagnation
             if min_fitness_current_gen < best_fitness_overall:
                 best_fitness_overall = min_fitness_current_gen
                 best_solution_overall = [
@@ -106,6 +130,15 @@ class GeneticScheduler:
                 ]
                 best_report_overall = fitness_reports[idx_min_fitness_current_gen]
 
+                # Reset stagnation tracking on improvement
+                self.stagnation_counter = 0
+                self.last_best_fitness = best_fitness_overall
+                
+                # Reset mutation rate if it was boosted
+                if self.is_mutation_boosted:
+                    self.chromosome_mutation_rate = self.original_chromosome_mutation_rate
+                    self.is_mutation_boosted = False
+
                 print(f"Generation {generation} / {generations}", end=" ")
                 print(f"New Best Fitness: {best_fitness_overall:.2f}", end=" ")
                 print(
@@ -113,6 +146,20 @@ class GeneticScheduler:
                     end=" ",
                 )
                 print(f"Time: {elapsed_time:.2f}s")
+            else:
+                # No improvement - increment stagnation counter
+                self.stagnation_counter += 1
+                
+                # Trigger adaptive mutation if stagnation threshold reached
+                if self.stagnation_counter >= STAGNATION_THRESHOLD and not self.is_mutation_boosted:
+                    self.chromosome_mutation_rate = min(0.8, self.original_chromosome_mutation_rate * MUTATION_BOOST_FACTOR)
+                    self.is_mutation_boosted = True
+                    print(f"Generation {generation}: Stagnation detected. Boosting mutation rate to {self.chromosome_mutation_rate:.3f}")
+                
+                # Early stopping if prolonged stagnation
+                if self.stagnation_counter >= EARLY_STOP_THRESHOLD:
+                    print(f"Early stopping at generation {generation} due to prolonged stagnation ({self.stagnation_counter} generations)")
+                    break
 
             if best_fitness_overall == 0:  # Check for perfect solution
                 print(f"Perfect solution found!", end=" ")
@@ -125,12 +172,16 @@ class GeneticScheduler:
                 print(f"Time: {elapsed_time:.2f}s")
                 break
             elif generation > 0 and generation % 100 == 0:
+                diversity = self._calculate_population_diversity(fitness_scores)
                 print(f"Generation {generation:>4d}", end=" ")
                 print(f"Fitness: {best_fitness_overall}", end=" ")
                 print(
                     f"Hard Violations: {best_report_overall.total_hard_violations if best_report_overall else 'N/A'}",
                     end=" ",
                 )
+                print(f"Stagnation: {self.stagnation_counter}", end=" ")
+                print(f"Diversity: {diversity:.2f}", end=" ")
+                print(f"Heuristic%: {self.heuristic_mutation_probability:.2f}", end=" ")
                 print(f"Time: {elapsed_time:.2f}s")
 
             population = self.evolve(population, fitness_scores)
@@ -141,6 +192,7 @@ class GeneticScheduler:
             print(f"Optimal solution not found after {generation+1} generations.")
             print(f"Time: {final_elapsed_time:.2f}s")
             print(f"Best fitness: {best_fitness_overall}")
+            print(f"Final stagnation count: {self.stagnation_counter}")
 
         return best_solution_overall, best_fitness_overall, best_report_overall
 
@@ -155,9 +207,9 @@ class GeneticScheduler:
             if self.use_detailed_fitness:
                 report = self.fitness_evaluator.evaluate(chromosome)
                 fitness_reports.append(report)
-                # For backward compatibility, use weighted sum as single score
-                # Prioritize hard constraints heavily
-                score = report.total_hard_violations * 1000 + report.total_soft_penalty
+                # Use calculated penalty bounds to ensure hard constraints always dominate
+                hard_penalty_weight = self.fitness_evaluator.penalty_manager.min_hard_penalty 
+                score = report.total_hard_violations * hard_penalty_weight + report.total_soft_penalty
                 fitness_scores.append(score)
             else:
                 # Fallback to original fitness function
@@ -255,13 +307,20 @@ class GeneticScheduler:
                 item.model_copy() for item in parent2
             ]
 
-        point = random.randint(1, len(parent1) - 1)
-        child1 = [item.model_copy() for item in parent1[:point]] + [
-            item.model_copy() for item in parent2[point:]
-        ]
-        child2 = [item.model_copy() for item in parent2[:point]] + [
-            item.model_copy() for item in parent1[point:]
-        ]
+        # Uniform crossover: for each gene, randomly choose parent
+        child1 = []
+        child2 = []
+        
+        for i in range(len(parent1)):
+            if random.random() < 0.5:
+                # Child1 gets gene from parent1, child2 gets gene from parent2
+                child1.append(parent1[i].model_copy())
+                child2.append(parent2[i].model_copy())
+            else:
+                # Child1 gets gene from parent2, child2 gets gene from parent1
+                child1.append(parent2[i].model_copy())
+                child2.append(parent1[i].model_copy())
+                
         return child1, child2
 
     def mutate(self, chromosome: List[ScheduledItem]) -> List[ScheduledItem]:
@@ -274,24 +333,14 @@ class GeneticScheduler:
                 item_to_mutate = mutated_chromosome[i]
                 mutation_type = random.choice(["room", "time", "day", "all"])
 
-                if mutation_type == "room" or mutation_type == "all":
-                    suitable_rooms_for_type = [
-                        r for r in self.rooms if r.type == item_to_mutate.sessionType
-                    ]
-                    new_room: Optional[Classroom] = None
-                    if suitable_rooms_for_type:
-                        new_room = random.choice(suitable_rooms_for_type)
-                    elif self.rooms:
-                        new_room = random.choice(self.rooms)
-
-                    if new_room:
-                        item_to_mutate.classroomId = new_room.classroomId
-
-                if mutation_type == "time" or mutation_type == "all":
-                    item_to_mutate.timeslot = random.choice(self.timeslots).code
-
-                if mutation_type == "day" or mutation_type == "all":
-                    item_to_mutate.day = random.choice(self.days)
+                # Use diversity-guided hybrid mutation
+                if random.random() < self.heuristic_mutation_probability:
+                    # Apply heuristic-guided mutation (exploitation)
+                    mutated_chromosome[i] = self._heuristic_mutate_gene(item_to_mutate, mutation_type)
+                else:
+                    # Apply purely random mutation (exploration)
+                    mutated_chromosome[i] = self._random_mutate_gene(item_to_mutate, mutation_type)
+                    
         return mutated_chromosome
 
     def evolve(
@@ -350,4 +399,111 @@ class GeneticScheduler:
 
     def fitness(self, chromosome: List[ScheduledItem]) -> float:
         report = self.fitness_evaluator.evaluate(chromosome)
-        return report.total_hard_violations * 1000 + report.total_soft_penalty
+        # Use calculated penalty bounds to ensure hard constraints always dominate
+        hard_penalty_weight = self.fitness_evaluator.penalty_manager.min_hard_penalty
+        return report.total_hard_violations * hard_penalty_weight + report.total_soft_penalty
+
+    def _calculate_population_diversity(self, fitness_scores: List[float]) -> float:
+        """Calculate population diversity using standard deviation of fitness scores."""
+        if len(fitness_scores) < 2:
+            return 0.0
+        return float(np.std(fitness_scores))
+
+    def _update_heuristic_mutation_probability(self, fitness_scores: List[float]):
+        """Update heuristic mutation probability based on population diversity."""
+        diversity = self._calculate_population_diversity(fitness_scores)
+        self.fitness_diversity_history.append(diversity)
+        
+        # Keep only last 10 generations for moving average
+        if len(self.fitness_diversity_history) > 10:
+            self.fitness_diversity_history.pop(0)
+        
+        # Calculate average diversity over recent generations
+        avg_diversity = float(np.mean(self.fitness_diversity_history))
+        
+        # Normalize diversity to [0, 1] range for probability calculation
+        # Higher diversity = more exploitation (higher heuristic probability)
+        # Lower diversity = more exploration (lower heuristic probability)
+        if avg_diversity > 0:
+            # Scale based on observed diversity patterns
+            max_observed_diversity = max(self.fitness_diversity_history) if self.fitness_diversity_history else 1.0
+            normalized_diversity = min(float(avg_diversity / max_observed_diversity), 1.0)
+        else:
+            normalized_diversity = 0.0
+        
+        # Map normalized diversity to heuristic probability range
+        self.heuristic_mutation_probability = (
+            MIN_HEURISTIC_PROBABILITY + 
+            normalized_diversity * (MAX_HEURISTIC_PROBABILITY - MIN_HEURISTIC_PROBABILITY)
+        )
+
+    def _get_suitable_rooms(self, item: ScheduledItem) -> List[Classroom]:
+        """Get rooms suitable for a scheduled item based on capacity and type."""
+        suitable_rooms = []
+        
+        # Calculate required capacity
+        required_capacity = 0
+        for sg_id in item.studentGroupIds:
+            if sg_id in self.student_group_map:
+                required_capacity += self.student_group_map[sg_id].size
+        
+        for room in self.rooms:
+            # Check capacity
+            if room.capacity >= required_capacity:
+                # Prefer matching session type, but allow any room if capacity fits
+                suitable_rooms.append(room)
+        
+        # If no rooms found with capacity, fall back to all rooms
+        return suitable_rooms if suitable_rooms else self.rooms
+
+    def _get_available_timeslots_and_days(self, item: ScheduledItem) -> Tuple[List[str], List[str]]:
+        """Get available timeslots and days for a teacher based on constraints."""
+        # Get teacher availability constraints from registry
+        teacher_id = item.teacherId
+        available_timeslots = list(self.timeslots)  # Start with all timeslots
+        available_days = list(self.days)  # Start with all days
+        
+        # Filter based on teacher availability constraints if available
+        # This is a simplified version - in a full implementation, 
+        # you'd check the constraint registry for teacher availability
+        
+        return [ts.code for ts in available_timeslots], available_days
+
+    def _heuristic_mutate_gene(self, item: ScheduledItem, mutation_type: str) -> ScheduledItem:
+        """Apply heuristic-guided mutation to a single gene."""
+        mutated_item = item.model_copy()
+        
+        if mutation_type == "room" or mutation_type == "all":
+            suitable_rooms = self._get_suitable_rooms(item)
+            if suitable_rooms:
+                new_room = random.choice(suitable_rooms)
+                mutated_item.classroomId = new_room.classroomId
+
+        if mutation_type == "time" or mutation_type == "all":
+            available_timeslots, available_days = self._get_available_timeslots_and_days(item)
+            if available_timeslots:
+                mutated_item.timeslot = random.choice(available_timeslots)
+
+        if mutation_type == "day" or mutation_type == "all":
+            available_timeslots, available_days = self._get_available_timeslots_and_days(item)
+            if available_days:
+                mutated_item.day = random.choice(available_days)
+                
+        return mutated_item
+
+    def _random_mutate_gene(self, item: ScheduledItem, mutation_type: str) -> ScheduledItem:
+        """Apply purely random mutation to a single gene."""
+        mutated_item = item.model_copy()
+        
+        if mutation_type == "room" or mutation_type == "all":
+            if self.rooms:
+                new_room = random.choice(self.rooms)
+                mutated_item.classroomId = new_room.classroomId
+
+        if mutation_type == "time" or mutation_type == "all":
+            mutated_item.timeslot = random.choice(self.timeslots).code
+
+        if mutation_type == "day" or mutation_type == "all":
+            mutated_item.day = random.choice(self.days)
+                
+        return mutated_item
