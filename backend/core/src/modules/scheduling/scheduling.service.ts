@@ -393,6 +393,31 @@ export class SchedulingService implements ISchedulingService {
       );
     }
 
+    // handle teacherID (can sometimes be userID)
+    if (body.teacherId) {
+      const teacher = await this.prismaService.teacher.findFirst({
+        where: {
+          teacherId: body.teacherId,
+        },
+      });
+      if (!teacher) {
+        // check if the given ID is a userID instead
+        const user = await this.prismaService.user.findFirst({
+          where: {
+            userId: body.teacherId,
+          },
+          include: {
+            teacher: true,
+          },
+        });
+        if (user && user.teacher) {
+          body.teacherId = user.teacher.teacherId;
+        } else {
+          throw new BadRequestException('Invalid teacher ID');
+        }
+      }
+    }
+
     try {
       const sessions = await this._fetchSessions(schedule.scheduleId, {
         where: {
