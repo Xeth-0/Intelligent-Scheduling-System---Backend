@@ -46,6 +46,18 @@ enum TaskSeverity {
   ERROR
 }
 
+model Timeslot {
+  // yes this is basically an enum with more data, but it's a good idea to have it as a separate model
+  timeslotId String @id @default(cuid())
+  code       String @unique // e.g. "0900_1000"
+  label      String // e.g. "09:00-10:00"
+  startTime  String // e.g. "09:00"
+  endTime    String // e.g. "10:00"
+  order      Int    @unique // e.g. 2
+
+  sessions ScheduledSession[]
+}
+
 // ========== Building ==========
 model Building {
   buildingId String      @id @default(uuid())
@@ -68,6 +80,7 @@ model Campus {
   admins           Admin[]
   // buildings        Building[]
   Task             Task[]
+  Constraint       Constraint[]
 }
 
 // ========== User ==========
@@ -94,40 +107,44 @@ model Teacher {
   userId        String             @unique
   department    Department         @relation(fields: [departmentId], references: [deptId], onDelete: Restrict)
   departmentId  String
-  courses       Course[]           @relation("CourseTeachers")
+  courses       Course[]           
   scheduleItems ScheduledSession[]
-  preferences   Preference[]
+  Constraint    Constraint[]
 }
 
 // ========== Student ==========
 model Student {
-  studentId      String        @id @default(uuid())
-  user           User          @relation(fields: [userId], references: [userId], onDelete: Cascade)
-  userId         String        @unique
-  studentGroup   StudentGroup? @relation(fields: [studentGroupId], references: [studentGroupId], onDelete: Restrict)
+  studentId      String  @id @default(uuid())
+  userId         String  @unique
   studentGroupId String?
+
+  user         User          @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  studentGroup StudentGroup? @relation(fields: [studentGroupId], references: [studentGroupId], onDelete: Restrict)
 }
 
 // ========== Admin ==========
 model Admin {
   adminId   String     @id @default(uuid())
-  user      User       @relation(fields: [userId], references: [userId], onDelete: Cascade)
   userId    String     @unique
-  schedules Schedule[] // Schedules that this admin has created
-  campus    Campus     @relation(fields: [campusId], references: [campusId], onDelete: Cascade)
   campusId  String
+  schedules Schedule[] // Schedules that this admin has created
   Task      Task[]
+
+  campus Campus @relation(fields: [campusId], references: [campusId], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [userId], onDelete: Cascade)
 }
 
 // ========== Department ==========
 model Department {
   deptId        String         @id @default(uuid())
   name          String
-  campus        Campus         @relation(fields: [campusId], references: [campusId], onDelete: Cascade)
   campusId      String
   teachers      Teacher[]
   studentGroups StudentGroup[]
   courses       Course[]
+
+  campus Campus @relation(fields: [campusId], references: [campusId], onDelete: Cascade)
+  // Constraint Constraint[]
 }
 
 // ========== Course ==========
@@ -136,13 +153,16 @@ model Course {
   name            String
   code            String
   description     String?
-  department      Department?        @relation(fields: [departmentId], references: [deptId], onDelete: SetNull)
   departmentId    String?
-  teachers        Teacher[]          @relation("CourseTeachers")
+  ectsCredits     Int                @default(0)
+  teacherId       String?
+  teacher         Teacher?            @relation(fields: [teacherId], references: [teacherId], onDelete: Cascade)
   scheduleItems   ScheduledSession[]
   studentGroups   StudentGroup[]
   sessionType     SessionType        @default(LECTURE)
   sessionsPerWeek Int
+
+  department Department? @relation(fields: [departmentId], references: [deptId], onDelete: SetNull)
 }
 
 // ========== StudentGroup ==========
@@ -151,11 +171,12 @@ model StudentGroup {
   name                     String
   size                     Int
   accessibilityRequirement Boolean            @default(false)
-  department               Department         @relation(fields: [departmentId], references: [deptId], onDelete: Cascade)
   departmentId             String
+  courses                  Course[]
   students                 Student[]
   scheduleItems            ScheduledSession[]
-  courses                  Course[]
+
+  department Department @relation(fields: [departmentId], references: [deptId], onDelete: Cascade)
 
   @@unique([departmentId, name])
 }
@@ -166,85 +187,62 @@ model Classroom {
   name                   String
   capacity               Int
   type                   ClassroomType
-  campus                 Campus             @relation(fields: [campusId], references: [campusId], onDelete: Cascade)
   campusId               String
-  building               Building?          @relation(fields: [buildingId], references: [buildingId], onDelete: SetNull)
   buildingId             String?
   isWheelchairAccessible Boolean            @default(false)
   openingTime            String?
   closingTime            String?
   scheduleItems          ScheduledSession[]
   floor                  Int
+
+  campus   Campus    @relation(fields: [campusId], references: [campusId], onDelete: Cascade)
+  building Building? @relation(fields: [buildingId], references: [buildingId], onDelete: SetNull)
 }
 
 // ========== ScheduledSession ==========
 model ScheduledSession {
-  scheduledSessionId String        @id @default(uuid())
-  startTime          String
-  endTime            String
-  isFinalized        Boolean       @default(false)
+  scheduledSessionId String       @id @default(uuid())
+  isFinalized        Boolean      @default(false)
   sessionType        SessionType?
-  timeSlot           Int?
+  timeslotId         String
   day                DayOfWeek
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
-  course             Course        @relation(fields: [courseId], references: [courseId], onDelete: Cascade)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
   courseId           String
-  teacher            Teacher       @relation(fields: [teacherId], references: [teacherId], onDelete: Cascade)
   teacherId          String
-  classroom          Classroom?    @relation(fields: [classroomId], references: [classroomId], onDelete: SetNull)
   classroomId        String?
-  studentGroup       StudentGroup? @relation(fields: [studentGroupId], references: [studentGroupId], onDelete: SetNull)
   studentGroupId     String?
-  schedule           Schedule      @relation(fields: [scheduleId], references: [scheduleId], onDelete: Cascade)
   scheduleId         String
 
+  course       Course        @relation(fields: [courseId], references: [courseId], onDelete: Cascade)
+  teacher      Teacher       @relation(fields: [teacherId], references: [teacherId], onDelete: Cascade)
+  schedule     Schedule      @relation(fields: [scheduleId], references: [scheduleId], onDelete: Cascade)
+  classroom    Classroom?    @relation(fields: [classroomId], references: [classroomId], onDelete: SetNull)
+  studentGroup StudentGroup? @relation(fields: [studentGroupId], references: [studentGroupId], onDelete: SetNull)
+  timeslot     Timeslot      @relation(fields: [timeslotId], references: [timeslotId])
+
+  @@unique([scheduleId, timeslotId, day, classroomId])
+  @@unique([scheduleId, timeslotId, day, teacherId])
+  @@unique([scheduleId, timeslotId, day, studentGroupId])
   @@map("ScheduleItem")
 }
 
 // ========== Schedule ==========
 model Schedule {
   scheduleId         String             @id @default(uuid())
+  scheduleName       String             @default("Unnamed Schedule")
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
   fitnessScore       Float?
   scheduleItems      ScheduledSession[]
-  campus             Campus?            @relation(fields: [campusId], references: [campusId])
   campusId           String
-  generatedBy        Admin              @relation(fields: [generatedByAdminId], references: [adminId])
   generatedByAdminId String
   active             Boolean            @default(false)
 
+  generatedBy Admin   @relation(fields: [generatedByAdminId], references: [adminId])
+  campus      Campus? @relation(fields: [campusId], references: [campusId])
+
   @@index([campusId, active])
-}
-
-// ========== PreferenceType ==========
-model PreferenceType {
-  preferenceTypeId String          @id @default(uuid())
-  key              String          @unique
-  description      String?
-  possibleValues   PossibleValue[]
-  preferences      Preference[]
-}
-
-// ========== PossibleValue ==========
-model PossibleValue {
-  possibleValueId  String         @id @default(uuid())
-  value            String
-  preferenceType   PreferenceType @relation(fields: [preferenceTypeId], references: [preferenceTypeId], onDelete: Cascade)
-  preferenceTypeId String
-  preferences      Preference[]
-}
-
-// ========== Preference ==========
-model Preference {
-  preferenceId     String         @id @default(uuid())
-  teacher          Teacher        @relation(fields: [teacherId], references: [teacherId], onDelete: Cascade)
-  teacherId        String
-  preferenceType   PreferenceType @relation(fields: [preferenceTypeId], references: [preferenceTypeId], onDelete: Cascade)
-  preferenceTypeId String
-  value            PossibleValue  @relation(fields: [possibleValueId], references: [possibleValueId], onDelete: Cascade)
-  possibleValueId  String
 }
 
 // ========== RefreshToken ==========
@@ -281,4 +279,53 @@ model TaskError {
   message   String
   severity  TaskSeverity
   createdAt DateTime @default(now())
+}
+
+// ============ Preferenes ==============
+enum ConstraintCategory {
+  CAMPUS_PREFERENCE // Campus-wide admin policies
+  TEACHER_PREFERENCE // Individual teacher preferences  
+  STUDENT_GROUP_PREFERENCE // Admin-set student group policies
+
+  @@map("ConstraintScope")
+}
+
+enum ConstraintValueType {
+  TIME_SLOT
+  DAY_OF_WEEK
+  ROOM
+  NUMERIC_SCALE
+  BOOLEAN
+  COURSE_CRITERIA
+  SCHEDULE_STRUCTURE
+}
+
+model ConstraintType {
+  id          String              @id @default(uuid())
+  name        String
+  description String?
+  category    ConstraintCategory
+  valueType   ConstraintValueType
+  jsonSchema  Json // json schema for the constraint validation
+  isActive    Boolean             @default(true)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  constraints Constraint[]
+}
+
+model Constraint {
+  id               String   @id @default(uuid())
+  constraintTypeId String
+  value            Json
+  priority         Float    @default(5.0) // 1.0 to 10.0 for importance of the constraint
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  teacherId        String?
+  campusId         String?
+
+  constraintType ConstraintType @relation(fields: [constraintTypeId], references: [id], onDelete: Cascade)
+  teacher        Teacher?       @relation(fields: [teacherId], references: [teacherId], onDelete: SetNull)
+  campus         Campus?        @relation(fields: [campusId], references: [campusId], onDelete: SetNull)
 }

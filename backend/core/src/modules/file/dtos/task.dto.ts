@@ -1,4 +1,4 @@
-import { Task, TaskStatus, TaskSeverity } from '@prisma/client';
+import { type TaskStatus, type TaskSeverity } from '@prisma/client';
 
 export class TaskDto {
   taskId!: string;

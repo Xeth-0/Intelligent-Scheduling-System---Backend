@@ -22,4 +22,10 @@ export class UserResponseDto {
 
   @ApiProperty()
   updatedAt!: Date;
+
+  @ApiProperty()
+  needWheelchairAccessibleRoom!: boolean;
+
+  @ApiProperty()
+  phoneNumber!: string;
 }

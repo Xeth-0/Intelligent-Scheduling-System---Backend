@@ -1,0 +1,61 @@
+# syntax=docker/dockerfile:1.4
+
+# ---- Builder Stage ----
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Define build-time arguments. These are passed from docker-compose.yml
+ARG DATABASE_URL
+ARG SENTRY_AUTH_TOKEN
+ARG SENTRY_DSN
+
+# Make ARGs available as environment variables for subsequent commands
+ENV DATABASE_URL=${DATABASE_URL}
+ENV SENTRY_AUTH_TOKEN=${SENTRY_AUTH_TOKEN}
+ENV SENTRY_DSN=${SENTRY_DSN}
+
+# Copy package files and prisma schema
+COPY package*.json ./
+COPY prisma/schema.prisma ./prisma/schema.prisma
+COPY prisma/seed.ts ./prisma/seed.ts
+
+# Install all dependencies (including dev dependencies for building)
+RUN npm ci
+
+# Copy the rest of the application source code
+COPY . .
+
+# Generate prisma client and build the application
+RUN npx prisma generate && npm run build
+
+# ---- Runner Stage ----
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY prisma/schema.prisma ./prisma/
+COPY prisma/seed.ts ./prisma/seed.ts
+
+RUN npm ci --omit=dev
+RUN npm install -g ts-node
+
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+
+# Copy startup script directly from context (not from builder)
+COPY start.sh ./start.sh
+RUN chmod +x ./start.sh
+
+ENV NODE_ENV=production
+
+# Expose the port the app runs on
+EXPOSE 3001
+
+# Expose the port prisma studio runs on
+EXPOSE 5555
+
+CMD ["sh", "./start.sh"]

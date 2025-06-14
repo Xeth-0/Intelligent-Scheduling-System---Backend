@@ -12,6 +12,10 @@ import {
   ClassSerializerInterceptor,
   UseGuards,
   ForbiddenException,
+  DefaultValuePipe,
+  ParseIntPipe,
+  Query,
+  BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { Role } from '@prisma/client';
@@ -49,7 +53,7 @@ export class UsersController {
     @GetUser('sub') userId: string,
   ): Promise<ApiResponse<UserResponseDto>> {
     const user = await this.usersService.findUserById(userId);
-    return new ApiResponse({ success: true, data: user });
+    return ApiResponse.success(200, user, 'Profile fetched successfully');
   }
 
   @Post()
@@ -64,16 +68,30 @@ export class UsersController {
         'Admins can only create admin and teacher accounts',
       );
     }
+    if (createUserDto.role === Role.TEACHER) {
+      if (!createUserDto.departmentId) {
+        throw new BadRequestException('Department ID is required');
+      }
+    }
     const user = await this.usersService.createUser(createUserDto);
-    return new ApiResponse({ success: true, data: user });
+    return ApiResponse.success(201, user, 'User created successfully');
   }
 
   @Get()
   @Roles(Role.ADMIN)
   @GetAllUsersDocs()
-  async findAll(): Promise<ApiResponse<UserResponseDto[]>> {
-    const users = await this.usersService.findAllUsers();
-    return new ApiResponse({ success: true, data: users });
+  async findAll(
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('size', new DefaultValuePipe(10), ParseIntPipe) size: number,
+  ): Promise<ApiResponse<UserResponseDto[]>> {
+    const paginatedItems = await this.usersService.findAllUsers(page, size);
+
+    return ApiResponse.success(
+      200,
+      paginatedItems.data,
+      'Users fetched successfully',
+      paginatedItems.pagination,
+    );
   }
 
   @Get(':id')
@@ -83,7 +101,7 @@ export class UsersController {
     @Param('id') id: string,
   ): Promise<ApiResponse<UserResponseDto>> {
     const user = await this.usersService.findUserById(id);
-    return new ApiResponse({ success: true, data: user });
+    return ApiResponse.success(200, user, 'User fetched successfully');
   }
 
   @Put(':id')
@@ -94,18 +112,17 @@ export class UsersController {
     @Body() updateUserDto: UpdateUserDto,
   ): Promise<ApiResponse<UserResponseDto>> {
     const user = await this.usersService.updateUser(id, updateUserDto);
-    return new ApiResponse({ success: true, data: user });
+    return ApiResponse.success(200, user, 'User updated successfully');
   }
 
   @Delete(':id')
   @Roles(Role.ADMIN)
   @DeleteUserDocs()
-  async remove(@Param('id') id: string): Promise<ApiResponse<void>> {
-    await this.usersService.deleteUser(id);
-    return new ApiResponse({
-      success: true,
-      data: undefined,
-      message: 'User deleted successfully',
-    });
+  async remove(
+    @Param('id') id: string,
+    @GetUser('sub') userId: string,
+  ): Promise<ApiResponse<void>> {
+    await this.usersService.deleteUser(userId, id);
+    return ApiResponse.success(200, undefined, 'User deleted successfully');
   }
 }

@@ -1,5 +1,5 @@
-import { ClassroomType, SessionType } from '@prisma/client';
-import { TaskError } from './task.dto';
+import { type ClassroomType, type SessionType } from '@prisma/client';
+import { type TaskError } from './task.dto';
 
 export class ValidationResultDto<T> {
   success!: boolean;

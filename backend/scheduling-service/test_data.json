@@ -1,0 +1,1219 @@
+{
+  "timeslots": [
+    {
+      "timeslotId": "cmbtay2b40000vilsaoagp9yz",
+      "code": "0800_0900",
+      "label": "08:00-09:00",
+      "startTime": "08:00",
+      "endTime": "09:00",
+      "order": 1
+    },
+    {
+      "timeslotId": "cmbtay2b40002vils34lr34j2",
+      "code": "0900_1000",
+      "label": "09:00-10:00",
+      "startTime": "09:00",
+      "endTime": "10:00",
+      "order": 2
+    },
+    {
+      "timeslotId": "cmbtay2b40001vilsp1ud386z",
+      "code": "1000_1100",
+      "label": "10:00-11:00",
+      "startTime": "10:00",
+      "endTime": "11:00",
+      "order": 3
+    },
+    {
+      "timeslotId": "cmbtay2b50003vilsuhmzgalw",
+      "code": "1100_1200",
+      "label": "11:00-12:00",
+      "startTime": "11:00",
+      "endTime": "12:00",
+      "order": 4
+    },
+    {
+      "timeslotId": "cmbtay2de0008vilsqie80twu",
+      "code": "1200_1300",
+      "label": "12:00-13:00",
+      "startTime": "12:00",
+      "endTime": "13:00",
+      "order": 5
+    },
+    {
+      "timeslotId": "cmbtay2di0009vilstpt8700q",
+      "code": "1300_1400",
+      "label": "13:00-14:00",
+      "startTime": "13:00",
+      "endTime": "14:00",
+      "order": 6
+    },
+    {
+      "timeslotId": "cmbtay2b50004vilsph7hgqt9",
+      "code": "1400_1500",
+      "label": "14:00-15:00",
+      "startTime": "14:00",
+      "endTime": "15:00",
+      "order": 7
+    },
+    {
+      "timeslotId": "cmbtay2b90005vilshilwz9gq",
+      "code": "1500_1600",
+      "label": "15:00-16:00",
+      "startTime": "15:00",
+      "endTime": "16:00",
+      "order": 8
+    },
+    {
+      "timeslotId": "cmbtay2b90006vils12sf6f9c",
+      "code": "1600_1700",
+      "label": "16:00-17:00",
+      "startTime": "16:00",
+      "endTime": "17:00",
+      "order": 9
+    },
+    {
+      "timeslotId": "cmbtay2b90007vilsoq2mnd1s",
+      "code": "1700_1800",
+      "label": "17:00-18:00",
+      "startTime": "17:00",
+      "endTime": "18:00",
+      "order": 10
+    }
+  ],
+  "rooms": [
+    {
+      "classroomId": "classroom-001",
+      "name": "NB111",
+      "capacity": 300,
+      "type": "LECTURE",
+      "isWheelchairAccessible": true,
+      "openingTime": "08:00",
+      "closingTime": "18:00",
+      "floor": 2,
+      "buildingName": "NB Building"
+    },
+    {
+      "classroomId": "classroom-002",
+      "name": "NB112",
+      "capacity": 100,
+      "type": "LECTURE",
+      "isWheelchairAccessible": true,
+      "openingTime": "08:00",
+      "closingTime": "18:00",
+      "floor": 2,
+      "buildingName": "NB Building"
+    },
+    {
+      "classroomId": "classroom-003",
+      "name": "NB113",
+      "capacity": 50,
+      "type": "LECTURE",
+      "isWheelchairAccessible": false,
+      "openingTime": "08:00",
+      "closingTime": "18:00",
+      "floor": 2,
+      "buildingName": "NB Building"
+    },
+    {
+      "classroomId": "classroom-004",
+      "name": "NB114",
+      "capacity": 200,
+      "type": "LAB",
+      "isWheelchairAccessible": true,
+      "openingTime": "08:00",
+      "closingTime": "18:00",
+      "floor": 2,
+      "buildingName": "NB Building"
+    },
+    {
+      "classroomId": "classroom-005",
+      "name": "NB115",
+      "capacity": 50,
+      "type": "LAB",
+      "isWheelchairAccessible": false,
+      "openingTime": "08:00",
+      "closingTime": "18:00",
+      "floor": 2,
+      "buildingName": "NB Building"
+    }
+  ],
+  "teachers": [
+    {
+      "teacherId": "teacher-1",
+      "name": "Abrham Gebremedhin",
+      "firstName": "Abrham",
+      "lastName": "Gebremedhin",
+      "email": "teacher1@email.email",
+      "phone": "01234567890",
+      "needsWheelchairAccessible": true,
+      "departmentName": "Computer Science"
+    },
+    {
+      "teacherId": "teacher-004",
+      "name": "Amanuel Tadesse",
+      "firstName": "Amanuel",
+      "lastName": "Tadesse",
+      "email": "amanuel@gmail.com",
+      "phone": "1234567890",
+      "needsWheelchairAccessible": false,
+      "departmentName": "Computer Science"
+    },
+    {
+      "teacherId": "teacher-005",
+      "name": "Bereket Haile",
+      "firstName": "Bereket",
+      "lastName": "Haile",
+      "email": "teacher5@gmail.com",
+      "phone": "1234567890",
+      "needsWheelchairAccessible": false,
+      "departmentName": "Computer Science"
+    },
+    {
+      "teacherId": "teacher-006",
+      "name": "Dawit Solomon",
+      "firstName": "Dawit",
+      "lastName": "Solomon",
+      "email": "teacher6@gmail.com",
+      "phone": "1234567890",
+      "needsWheelchairAccessible": false,
+      "departmentName": "Computer Science"
+    },
+    {
+      "teacherId": "teacher-007",
+      "name": "Eyob Kifle",
+      "firstName": "Eyob",
+      "lastName": "Kifle",
+      "email": "teacher7@gmail.com",
+      "phone": "1234567890",
+      "needsWheelchairAccessible": false,
+      "departmentName": "Computer Science"
+    },
+    {
+      "teacherId": "teacher-008",
+      "name": "Fitsum Tesfaye",
+      "firstName": "Fitsum",
+      "lastName": "Tesfaye",
+      "email": "teacher8@gmail.com",
+      "phone": "1234567890",
+      "needsWheelchairAccessible": false,
+      "departmentName": "Computer Science"
+    },
+    {
+      "teacherId": "teacher-009",
+      "name": "Goitom Tsegay",
+      "firstName": "Goitom",
+      "lastName": "Tsegay",
+      "email": "teacher9@gmail.com",
+      "phone": "1234567890",
+      "needsWheelchairAccessible": false,
+      "departmentName": "Computer Science"
+    },
+    {
+      "teacherId": "teacher-002",
+      "name": "Natinael Wondimu",
+      "firstName": "Natinael",
+      "lastName": "Wondimu",
+      "email": "natinael@gmail.com",
+      "phone": "1234567890",
+      "needsWheelchairAccessible": true,
+      "departmentName": "Computer Science"
+    },
+    {
+      "teacherId": "teacher-003",
+      "name": "Nebiat Tekle",
+      "firstName": "Nebiat",
+      "lastName": "Tekle",
+      "email": "nebiat@gmail.com",
+      "phone": "1234567890",
+      "needsWheelchairAccessible": false,
+      "departmentName": "Computer Science"
+    }
+  ],
+  "studentGroups": [
+    {
+      "studentGroupId": "sg-y3-se-s1",
+      "name": "3rd Year Software Engineering Section 1",
+      "size": 52,
+      "accessibilityRequirement": false,
+      "departmentName": "Computer Science"
+    },
+    {
+      "studentGroupId": "sg-y3-se-s2",
+      "name": "3rd Year Software Engineering Section 2",
+      "size": 45,
+      "accessibilityRequirement": true,
+      "departmentName": "Computer Science"
+    },
+    {
+      "studentGroupId": "sg-y3-se-s3",
+      "name": "3rd Year Software Engineering Section 3",
+      "size": 60,
+      "accessibilityRequirement": false,
+      "departmentName": "Computer Science"
+    },
+    {
+      "studentGroupId": "sg-y3-se-s4",
+      "name": "3rd Year Software Engineering Section 4",
+      "size": 40,
+      "accessibilityRequirement": false,
+      "departmentName": "Computer Science"
+    },
+    {
+      "studentGroupId": "sg-y4-ai",
+      "name": "4th Year Artificial Intelligence",
+      "size": 70,
+      "accessibilityRequirement": false,
+      "departmentName": "Computer Science"
+    },
+    {
+      "studentGroupId": "sg-y4-cy",
+      "name": "4th Year Cybersecurity",
+      "size": 35,
+      "accessibilityRequirement": true,
+      "departmentName": "Computer Science"
+    },
+    {
+      "studentGroupId": "sg-y4-it",
+      "name": "4th Year Information Technology",
+      "size": 61,
+      "accessibilityRequirement": false,
+      "departmentName": "Computer Science"
+    },
+    {
+      "studentGroupId": "sg-y4-se-s1",
+      "name": "4th Year Software Engineering Section 1",
+      "size": 33,
+      "accessibilityRequirement": false,
+      "departmentName": "Computer Science"
+    },
+    {
+      "studentGroupId": "sg-y4-se-s2",
+      "name": "4th Year Software Engineering Section 2",
+      "size": 48,
+      "accessibilityRequirement": true,
+      "departmentName": "Computer Science"
+    },
+    {
+      "studentGroupId": "sg-y5-s1",
+      "name": "5th Year Section 1",
+      "size": 28,
+      "accessibilityRequirement": false,
+      "departmentName": "Computer Science"
+    },
+    {
+      "studentGroupId": "sg-y5-s2",
+      "name": "5th Year Section 2",
+      "size": 39,
+      "accessibilityRequirement": true,
+      "departmentName": "Computer Science"
+    },
+    {
+      "studentGroupId": "sg-y1-001",
+      "name": "Year 1",
+      "size": 50,
+      "accessibilityRequirement": false,
+      "departmentName": "Computer Science"
+    },
+    {
+      "studentGroupId": "sg-y2-001",
+      "name": "Year 2",
+      "size": 50,
+      "accessibilityRequirement": true,
+      "departmentName": "Computer Science"
+    }
+  ],
+  "courses": [
+    {
+      "courseId": "course-002-L-G1",
+      "name": "Computer Architecture and Organization",
+      "code": "CS302-L-G1",
+      "description": "Computer Architecture and Organization",
+      "ectsCredits": 6,
+      "sessionType": "LECTURE",
+      "sessionsPerWeek": 2,
+      "teacherId": "teacher-1",
+      "teacherName": "Abrham Gebremedhin",
+      "teacherEmail": "teacher1@email.email",
+      "studentGroups": [
+        {
+          "studentGroupId": "sg-y3-se-s1",
+          "name": "3rd Year Software Engineering Section 1"
+        },
+        {
+          "studentGroupId": "sg-y3-se-s2",
+          "name": "3rd Year Software Engineering Section 2"
+        }
+      ]
+    },
+    {
+      "courseId": "course-002-L-G2",
+      "name": "Computer Architecture and Organization",
+      "code": "CS302-L-G2",
+      "description": "Computer Architecture and Organization",
+      "ectsCredits": 6,
+      "sessionType": "LECTURE",
+      "sessionsPerWeek": 2,
+      "teacherId": "teacher-1",
+      "teacherName": "Abrham Gebremedhin",
+      "teacherEmail": "teacher1@email.email",
+      "studentGroups": [
+        {
+          "studentGroupId": "sg-y3-se-s3",
+          "name": "3rd Year Software Engineering Section 3"
+        },
+        {
+          "studentGroupId": "sg-y3-se-s4",
+          "name": "3rd Year Software Engineering Section 4"
+        }
+      ]
+    },
+    {
+      "courseId": "course-003-L-G1",
+      "name": "Web Design and Development",
+      "code": "CS303-L-G1",
+      "description": "Web Design and Development",
+      "ectsCredits": 5,
+      "sessionType": "LECTURE",
+      "sessionsPerWeek": 2,
+      "teacherId": null,
+      "teacherName": null,
+      "teacherEmail": null,
+      "studentGroups": [
+        {
+          "studentGroupId": "sg-y3-se-s1",
+          "name": "3rd Year Software Engineering Section 1"
+        },
+        {
+          "studentGroupId": "sg-y3-se-s2",
+          "name": "3rd Year Software Engineering Section 2"
+        }
+      ]
+    },
+    {
+      "courseId": "course-003-L-G2",
+      "name": "Web Design and Development",
+      "code": "CS303-L-G2",
+      "description": "Web Design and Development",
+      "ectsCredits": 5,
+      "sessionType": "LECTURE",
+      "sessionsPerWeek": 2,
+      "teacherId": "teacher-002",
+      "teacherName": "Natinael Wondimu",
+      "teacherEmail": "natinael@gmail.com",
+      "studentGroups": [
+        {
+          "studentGroupId": "sg-y3-se-s3",
+          "name": "3rd Year Software Engineering Section 3"
+        },
+        {
+          "studentGroupId": "sg-y3-se-s4",
+          "name": "3rd Year Software Engineering Section 4"
+        }
+      ]
+    },
+    {
+      "courseId": "course-003-P-G1",
+      "name": "Web Design and Development",
+      "code": "CS303-P-G1",
+      "description": "Web Design and Development",
+      "ectsCredits": 5,
+      "sessionType": "LAB",
+      "sessionsPerWeek": 1,
+      "teacherId": "teacher-002",
+      "teacherName": "Natinael Wondimu",
+      "teacherEmail": "natinael@gmail.com",
+      "studentGroups": [
+        {
+          "studentGroupId": "sg-y3-se-s1",
+          "name": "3rd Year Software Engineering Section 1"
+        },
+        {
+          "studentGroupId": "sg-y3-se-s2",
+          "name": "3rd Year Software Engineering Section 2"
+        }
+      ]
+    },
+    {
+      "courseId": "course-003-P-G2",
+      "name": "Web Design and Development",
+      "code": "CS303-P-G2",
+      "description": "Web Design and Development",
+      "ectsCredits": 5,
+      "sessionType": "LAB",
+      "sessionsPerWeek": 1,
+      "teacherId": "teacher-002",
+      "teacherName": "Natinael Wondimu",
+      "teacherEmail": "natinael@gmail.com",
+      "studentGroups": [
+        {
+          "studentGroupId": "sg-y3-se-s3",
+          "name": "3rd Year Software Engineering Section 3"
+        },
+        {
+          "studentGroupId": "sg-y3-se-s4",
+          "name": "3rd Year Software Engineering Section 4"
+        }
+      ]
+    },
+    {
+      "courseId": "course-004-L-G1",
+      "name": "Human Computer Interaction",
+      "code": "CS304-L-G1",
+      "description": "Human Computer Interaction",
+      "ectsCredits": 4,
+      "sessionType": "LECTURE",
+      "sessionsPerWeek": 2,
+      "teacherId": "teacher-1",
+      "teacherName": "Abrham Gebremedhin",
+      "teacherEmail": "teacher1@email.email",
+      "studentGroups": [
+        {
+          "studentGroupId": "sg-y3-se-s1",
+          "name": "3rd Year Software Engineering Section 1"
+        },
+        {
+          "studentGroupId": "sg-y3-se-s2",
+          "name": "3rd Year Software Engineering Section 2"
+        }
+      ]
+    },
+    {
+      "courseId": "course-004-L-G2",
+      "name": "Human Computer Interaction",
+      "code": "CS304-L-G2",
+      "description": "Human Computer Interaction",
+      "ectsCredits": 4,
+      "sessionType": "LECTURE",
+      "sessionsPerWeek": 2,
+      "teacherId": "teacher-1",
+      "teacherName": "Abrham Gebremedhin",
+      "teacherEmail": "teacher1@email.email",
+      "studentGroups": [
+        {
+          "studentGroupId": "sg-y3-se-s3",
+          "name": "3rd Year Software Engineering Section 3"
+        },
+        {
+          "studentGroupId": "sg-y3-se-s4",
+          "name": "3rd Year Software Engineering Section 4"
+        }
+      ]
+    },
+    {
+      "courseId": "course-001-L-G1",
+      "name": "Fundamental of Electrical Circuits and Electronics",
+      "code": "ECE301-L-G1",
+      "description": "Fundamental of Electrical Circuits and Electronics",
+      "ectsCredits": 5,
+      "sessionType": "LECTURE",
+      "sessionsPerWeek": 2,
+      "teacherId": "teacher-1",
+      "teacherName": "Abrham Gebremedhin",
+      "teacherEmail": "teacher1@email.email",
+      "studentGroups": [
+        {
+          "studentGroupId": "sg-y3-se-s1",
+          "name": "3rd Year Software Engineering Section 1"
+        },
+        {
+          "studentGroupId": "sg-y3-se-s2",
+          "name": "3rd Year Software Engineering Section 2"
+        }
+      ]
+    },
+    {
+      "courseId": "course-001-L-G2",
+      "name": "Fundamental of Electrical Circuits and Electronics",
+      "code": "ECE301-L-G2",
+      "description": "Fundamental of Electrical Circuits and Electronics",
+      "ectsCredits": 5,
+      "sessionType": "LECTURE",
+      "sessionsPerWeek": 2,
+      "teacherId": "teacher-1",
+      "teacherName": "Abrham Gebremedhin",
+      "teacherEmail": "teacher1@email.email",
+      "studentGroups": [
+        {
+          "studentGroupId": "sg-y3-se-s3",
+          "name": "3rd Year Software Engineering Section 3"
+        },
+        {
+          "studentGroupId": "sg-y3-se-s4",
+          "name": "3rd Year Software Engineering Section 4"
+        }
+      ]
+    },
+    {
+      "courseId": "course-001-P-G1",
+      "name": "Fundamental of Electrical Circuits and Electronics",
+      "code": "ECE301-P-G1",
+      "description": "Fundamental of Electrical Circuits and Electronics",
+      "ectsCredits": 5,
+      "sessionType": "LAB",
+      "sessionsPerWeek": 1,
+      "teacherId": "teacher-1",
+      "teacherName": "Abrham Gebremedhin",
+      "teacherEmail": "teacher1@email.email",
+      "studentGroups": [
+        {
+          "studentGroupId": "sg-y3-se-s1",
+          "name": "3rd Year Software Engineering Section 1"
+        },
+        {
+          "studentGroupId": "sg-y3-se-s2",
+          "name": "3rd Year Software Engineering Section 2"
+        }
+      ]
+    },
+    {
+      "courseId": "course-001-P-G2",
+      "name": "Fundamental of Electrical Circuits and Electronics",
+      "code": "ECE301-P-G2",
+      "description": "Fundamental of Electrical Circuits and Electronics",
+      "ectsCredits": 5,
+      "sessionType": "LAB",
+      "sessionsPerWeek": 1,
+      "teacherId": "teacher-1",
+      "teacherName": "Abrham Gebremedhin",
+      "teacherEmail": "teacher1@email.email",
+      "studentGroups": [
+        {
+          "studentGroupId": "sg-y3-se-s3",
+          "name": "3rd Year Software Engineering Section 3"
+        },
+        {
+          "studentGroupId": "sg-y3-se-s4",
+          "name": "3rd Year Software Engineering Section 4"
+        }
+      ]
+    },
+    {
+      "courseId": "course-008-L-G1",
+      "name": "History of Ethiopia and the Horn",
+      "code": "HIS401-L-G1",
+      "description": "History of Ethiopia and the Horn",
+      "ectsCredits": 3,
+      "sessionType": "LECTURE",
+      "sessionsPerWeek": 2,
+      "teacherId": "teacher-004",
+      "teacherName": "Amanuel Tadesse",
+      "teacherEmail": "amanuel@gmail.com",
+      "studentGroups": [
+        {
+          "studentGroupId": "sg-y4-se-s1",
+          "name": "4th Year Software Engineering Section 1"
+        },
+        {
+          "studentGroupId": "sg-y4-se-s2",
+          "name": "4th Year Software Engineering Section 2"
+        }
+      ]
+    },
+    {
+      "courseId": "course-008-L-G2",
+      "name": "History of Ethiopia and the Horn",
+      "code": "HIS401-L-G2",
+      "description": "History of Ethiopia and the Horn",
+      "ectsCredits": 3,
+      "sessionType": "LECTURE",
+      "sessionsPerWeek": 2,
+      "teacherId": "teacher-004",
+      "teacherName": "Amanuel Tadesse",
+      "teacherEmail": "amanuel@gmail.com",
+      "studentGroups": [
+        {
+          "studentGroupId": "sg-y4-ai",
+          "name": "4th Year Artificial Intelligence"
+        }
+      ]
+    },
+    {
+      "courseId": "course-008-L-G3",
+      "name": "History of Ethiopia and the Horn",
+      "code": "HIS401-L-G3",
+      "description": "History of Ethiopia and the Horn",
+      "ectsCredits": 3,
+      "sessionType": "LECTURE",
+      "sessionsPerWeek": 2,
+      "teacherId": "teacher-004",
+      "teacherName": "Amanuel Tadesse",
+      "teacherEmail": "amanuel@gmail.com",
+      "studentGroups": [
+        {
+          "studentGroupId": "sg-y4-cy",
+          "name": "4th Year Cybersecurity"
+        }
+      ]
+    },
+    {
+      "courseId": "course-008-L-G4",
+      "name": "History of Ethiopia and the Horn",
+      "code": "HIS401-L-G4",
+      "description": "History of Ethiopia and the Horn",
+      "ectsCredits": 3,
+      "sessionType": "LECTURE",
+      "sessionsPerWeek": 2,
+      "teacherId": "teacher-004",
+      "teacherName": "Amanuel Tadesse",
+      "teacherEmail": "amanuel@gmail.com",
+      "studentGroups": [
+        {
+          "studentGroupId": "sg-y4-it",
+          "name": "4th Year Information Technology"
+        }
+      ]
+    },
+    {
+      "courseId": "course-009-L-G1",
+      "name": "Machine Learning and Big Data",
+      "code": "ML401-L-G1",
+      "description": "Machine Learning and Big Data",
+      "ectsCredits": 7,
+      "sessionType": "LECTURE",
+      "sessionsPerWeek": 2,
+      "teacherId": "teacher-005",
+      "teacherName": "Bereket Haile",
+      "teacherEmail": "teacher5@gmail.com",
+      "studentGroups": [
+        {
+          "studentGroupId": "sg-y4-cy",
+          "name": "4th Year Cybersecurity"
+        },
+        {
+          "studentGroupId": "sg-y4-se-s1",
+          "name": "4th Year Software Engineering Section 1"
+        },
+        {
+          "studentGroupId": "sg-y4-se-s2",
+          "name": "4th Year Software Engineering Section 2"
+        }
+      ]
+    },
+    {
+      "courseId": "course-009-P-G1",
+      "name": "Machine Learning and Big Data",
+      "code": "ML401-P-G1",
+      "description": "Machine Learning and Big Data",
+      "ectsCredits": 7,
+      "sessionType": "LAB",
+      "sessionsPerWeek": 1,
+      "teacherId": "teacher-005",
+      "teacherName": "Bereket Haile",
+      "teacherEmail": "teacher5@gmail.com",
+      "studentGroups": [
+        {
+          "studentGroupId": "sg-y4-cy",
+          "name": "4th Year Cybersecurity"
+        },
+        {
+          "studentGroupId": "sg-y4-se-s1",
+          "name": "4th Year Software Engineering Section 1"
+        },
+        {
+          "studentGroupId": "sg-y4-se-s2",
+          "name": "4th Year Software Engineering Section 2"
+        }
+      ]
+    },
+    {
+      "courseId": "course-005-L-G1",
+      "name": "Fundamentals of Software Engineering",
+      "code": "SE301-L-G1",
+      "description": "Fundamentals of Software Engineering",
+      "ectsCredits": 6,
+      "sessionType": "LECTURE",
+      "sessionsPerWeek": 2,
+      "teacherId": "teacher-003",
+      "teacherName": "Nebiat Tekle",
+      "teacherEmail": "nebiat@gmail.com",
+      "studentGroups": [
+        {
+          "studentGroupId": "sg-y3-se-s1",
+          "name": "3rd Year Software Engineering Section 1"
+        },
+        {
+          "studentGroupId": "sg-y3-se-s2",
+          "name": "3rd Year Software Engineering Section 2"
+        }
+      ]
+    },
+    {
+      "courseId": "course-005-L-G2",
+      "name": "Fundamentals of Software Engineering",
+      "code": "SE301-L-G2",
+      "description": "Fundamentals of Software Engineering",
+      "ectsCredits": 6,
+      "sessionType": "LECTURE",
+      "sessionsPerWeek": 2,
+      "teacherId": "teacher-003",
+      "teacherName": "Nebiat Tekle",
+      "teacherEmail": "nebiat@gmail.com",
+      "studentGroups": [
+        {
+          "studentGroupId": "sg-y3-se-s3",
+          "name": "3rd Year Software Engineering Section 3"
+        },
+        {
+          "studentGroupId": "sg-y3-se-s4",
+          "name": "3rd Year Software Engineering Section 4"
+        }
+      ]
+    },
+    {
+      "courseId": "course-005-P-G1",
+      "name": "Fundamentals of Software Engineering",
+      "code": "SE301-P-G1",
+      "description": "Fundamentals of Software Engineering",
+      "ectsCredits": 6,
+      "sessionType": "LAB",
+      "sessionsPerWeek": 1,
+      "teacherId": "teacher-003",
+      "teacherName": "Nebiat Tekle",
+      "teacherEmail": "nebiat@gmail.com",
+      "studentGroups": [
+        {
+          "studentGroupId": "sg-y3-se-s1",
+          "name": "3rd Year Software Engineering Section 1"
+        },
+        {
+          "studentGroupId": "sg-y3-se-s2",
+          "name": "3rd Year Software Engineering Section 2"
+        }
+      ]
+    },
+    {
+      "courseId": "course-005-P-G2",
+      "name": "Fundamentals of Software Engineering",
+      "code": "SE301-P-G2",
+      "description": "Fundamentals of Software Engineering",
+      "ectsCredits": 6,
+      "sessionType": "LAB",
+      "sessionsPerWeek": 1,
+      "teacherId": "teacher-003",
+      "teacherName": "Nebiat Tekle",
+      "teacherEmail": "nebiat@gmail.com",
+      "studentGroups": [
+        {
+          "studentGroupId": "sg-y3-se-s3",
+          "name": "3rd Year Software Engineering Section 3"
+        },
+        {
+          "studentGroupId": "sg-y3-se-s4",
+          "name": "3rd Year Software Engineering Section 4"
+        }
+      ]
+    },
+    {
+      "courseId": "course-006-L-G1",
+      "name": "Software Project Management",
+      "code": "SE401-L-G1",
+      "description": "Software Project Management",
+      "ectsCredits": 5,
+      "sessionType": "LECTURE",
+      "sessionsPerWeek": 2,
+      "teacherId": "teacher-1",
+      "teacherName": "Abrham Gebremedhin",
+      "teacherEmail": "teacher1@email.email",
+      "studentGroups": [
+        {
+          "studentGroupId": "sg-y4-se-s1",
+          "name": "4th Year Software Engineering Section 1"
+        },
+        {
+          "studentGroupId": "sg-y4-se-s2",
+          "name": "4th Year Software Engineering Section 2"
+        }
+      ]
+    },
+    {
+      "courseId": "course-006-L-G2",
+      "name": "Software Project Management",
+      "code": "SE401-L-G2",
+      "description": "Software Project Management",
+      "ectsCredits": 5,
+      "sessionType": "LECTURE",
+      "sessionsPerWeek": 2,
+      "teacherId": "teacher-1",
+      "teacherName": "Abrham Gebremedhin",
+      "teacherEmail": "teacher1@email.email",
+      "studentGroups": [
+        {
+          "studentGroupId": "sg-y4-ai",
+          "name": "4th Year Artificial Intelligence"
+        }
+      ]
+    },
+    {
+      "courseId": "course-006-L-G3",
+      "name": "Software Project Management",
+      "code": "SE401-L-G3",
+      "description": "Software Project Management",
+      "ectsCredits": 5,
+      "sessionType": "LECTURE",
+      "sessionsPerWeek": 2,
+      "teacherId": "teacher-1",
+      "teacherName": "Abrham Gebremedhin",
+      "teacherEmail": "teacher1@email.email",
+      "studentGroups": [
+        {
+          "studentGroupId": "sg-y4-cy",
+          "name": "4th Year Cybersecurity"
+        },
+        {
+          "studentGroupId": "sg-y4-it",
+          "name": "4th Year Information Technology"
+        }
+      ]
+    },
+    {
+      "courseId": "course-007-L-G1",
+      "name": "Enterprise Application Development",
+      "code": "SE402-L-G1",
+      "description": "Enterprise Application Development",
+      "ectsCredits": 7,
+      "sessionType": "LECTURE",
+      "sessionsPerWeek": 2,
+      "teacherId": "teacher-002",
+      "teacherName": "Natinael Wondimu",
+      "teacherEmail": "natinael@gmail.com",
+      "studentGroups": [
+        {
+          "studentGroupId": "sg-y4-se-s1",
+          "name": "4th Year Software Engineering Section 1"
+        },
+        {
+          "studentGroupId": "sg-y4-se-s2",
+          "name": "4th Year Software Engineering Section 2"
+        }
+      ]
+    },
+    {
+      "courseId": "course-007-P-G1",
+      "name": "Enterprise Application Development",
+      "code": "SE402-P-G1",
+      "description": "Enterprise Application Development",
+      "ectsCredits": 7,
+      "sessionType": "LAB",
+      "sessionsPerWeek": 1,
+      "teacherId": "teacher-002",
+      "teacherName": "Natinael Wondimu",
+      "teacherEmail": "natinael@gmail.com",
+      "studentGroups": [
+        {
+          "studentGroupId": "sg-y4-se-s1",
+          "name": "4th Year Software Engineering Section 1"
+        },
+        {
+          "studentGroupId": "sg-y4-se-s2",
+          "name": "4th Year Software Engineering Section 2"
+        }
+      ]
+    }
+  ],
+  "constraints": [
+    {
+      "constraintTypeId": "CAMPUS_ECTS_PRIORITY",
+      "name": "ECTS Course Priority",
+      "description": "Prioritize high-ECTS courses for earlier time slots",
+      "value": {
+        "enabled": true,
+        "threshold": 6
+      },
+      "priority": 8.0,
+      "teacherId": null,
+      "campusId": "campus-001"
+    },
+    {
+      "constraintTypeId": "CAMPUS_ROOM_UTILIZATION",
+      "name": "Efficient Room Utilization",
+      "description": "Penalize assigning oversized rooms to small classes",
+      "value": {
+        "enabled": true
+      },
+      "priority": 6.0,
+      "teacherId": null,
+      "campusId": "campus-001"
+    },
+    {
+      "constraintTypeId": "CAMPUS_TEACHER_MAX_SESSIONS",
+      "name": "Teacher Maximum Sessions Per Day",
+      "description": "Campus-wide limit on teacher daily teaching load",
+      "value": {
+        "enabled": true,
+        "defaultMaxSessionsPerDay": 4
+      },
+      "priority": 9.0,
+      "teacherId": null,
+      "campusId": "campus-001"
+    },
+    {
+      "constraintTypeId": "CAMPUS_CONSECUTIVE_MOVEMENT",
+      "name": "Minimize Consecutive Room Movement",
+      "description": "Reduce movement between rooms for consecutive sessions",
+      "value": {
+        "enabled": true,
+        "studentPriority": 5,
+        "teacherPriority": 7
+      },
+      "priority": 7.0,
+      "teacherId": null,
+      "campusId": "campus-001"
+    },
+    {
+      "constraintTypeId": "TEACHER_ROOM_PREFERENCE",
+      "name": "Teacher Room Preference",
+      "description": "A preference for a teacher to teach in a specific room",
+      "value": {
+        "preference": "PREFER",
+        "buildingIds": [
+          "building-001"
+        ]
+      },
+      "priority": 2.298669111960766,
+      "teacherId": "teacher-002",
+      "campusId": null
+    },
+    {
+      "constraintTypeId": "TEACHER_SCHEDULE_COMPACTNESS",
+      "name": "Teacher Schedule Compactness",
+      "description": "A preference for a teacher to have a compact schedule",
+      "value": {
+        "enabled": true,
+        "maxActiveDays": 5,
+        "maxGapsPerDay": 2,
+        "maxConsecutiveSessions": 3
+      },
+      "priority": 7.632452305839927,
+      "teacherId": "teacher-002",
+      "campusId": null
+    },
+    {
+      "constraintTypeId": "TEACHER_TIME_PREFERENCE",
+      "name": "Teacher Time Preference",
+      "description": "A preference for a teacher to teach at specific timeslots",
+      "value": {
+        "days": [
+          "THURSDAY"
+        ],
+        "preference": "PREFER",
+        "timeslotCodes": [
+          "1500_1600",
+          "1100_1200",
+          "1400_1500"
+        ]
+      },
+      "priority": 8.610891618994431,
+      "teacherId": "teacher-1",
+      "campusId": null
+    },
+    {
+      "constraintTypeId": "TEACHER_SCHEDULE_COMPACTNESS",
+      "name": "Teacher Schedule Compactness",
+      "description": "A preference for a teacher to have a compact schedule",
+      "value": {
+        "enabled": true,
+        "maxActiveDays": 3,
+        "maxGapsPerDay": 1,
+        "maxConsecutiveSessions": 3
+      },
+      "priority": 5.548640755766737,
+      "teacherId": "teacher-1",
+      "campusId": null
+    },
+    {
+      "constraintTypeId": "TEACHER_ROOM_PREFERENCE",
+      "name": "Teacher Room Preference",
+      "description": "A preference for a teacher to teach in a specific room",
+      "value": {
+        "roomIds": [
+          "classroom-003",
+          "classroom-004"
+        ],
+        "preference": "AVOID"
+      },
+      "priority": 3.859894234710122,
+      "teacherId": "teacher-1",
+      "campusId": null
+    },
+    {
+      "constraintTypeId": "TEACHER_TIME_PREFERENCE",
+      "name": "Teacher Time Preference",
+      "description": "A preference for a teacher to teach at specific timeslots",
+      "value": {
+        "days": [
+          "MONDAY",
+          "TUESDAY"
+        ],
+        "preference": "AVOID",
+        "timeslotCodes": [
+          "1400_1500",
+          "1300_1400",
+          "1500_1600"
+        ]
+      },
+      "priority": 5.265055870346069,
+      "teacherId": "teacher-006",
+      "campusId": null
+    },
+    {
+      "constraintTypeId": "TEACHER_ROOM_PREFERENCE",
+      "name": "Teacher Room Preference",
+      "description": "A preference for a teacher to teach in a specific room",
+      "value": {
+        "preference": "PREFER",
+        "buildingIds": [
+          "building-001"
+        ]
+      },
+      "priority": 5.189222449696403,
+      "teacherId": "teacher-006",
+      "campusId": null
+    },
+    {
+      "constraintTypeId": "TEACHER_TIME_PREFERENCE",
+      "name": "Teacher Time Preference",
+      "description": "A preference for a teacher to teach at specific timeslots",
+      "value": {
+        "days": [
+          "FRIDAY",
+          "THURSDAY",
+          "WEDNESDAY"
+        ],
+        "preference": "AVOID",
+        "timeslotCodes": [
+          "0800_0900",
+          "0900_1000"
+        ]
+      },
+      "priority": 3.085957107192605,
+      "teacherId": "teacher-009",
+      "campusId": null
+    },
+    {
+      "constraintTypeId": "TEACHER_SCHEDULE_COMPACTNESS",
+      "name": "Teacher Schedule Compactness",
+      "description": "A preference for a teacher to have a compact schedule",
+      "value": {
+        "enabled": true,
+        "maxActiveDays": 3,
+        "maxGapsPerDay": 0,
+        "maxConsecutiveSessions": 2
+      },
+      "priority": 7.088743107621884,
+      "teacherId": "teacher-009",
+      "campusId": null
+    },
+    {
+      "constraintTypeId": "TEACHER_ROOM_PREFERENCE",
+      "name": "Teacher Room Preference",
+      "description": "A preference for a teacher to teach in a specific room",
+      "value": {
+        "roomIds": [
+          "classroom-002",
+          "classroom-001"
+        ],
+        "preference": "AVOID"
+      },
+      "priority": 5.332847902294182,
+      "teacherId": "teacher-009",
+      "campusId": null
+    },
+    {
+      "constraintTypeId": "TEACHER_TIME_PREFERENCE",
+      "name": "Teacher Time Preference",
+      "description": "A preference for a teacher to teach at specific timeslots",
+      "value": {
+        "days": [
+          "TUESDAY",
+          "WEDNESDAY"
+        ],
+        "preference": "AVOID",
+        "timeslotCodes": [
+          "1100_1200",
+          "0900_1000",
+          "1600_1700"
+        ]
+      },
+      "priority": 7.768701029769112,
+      "teacherId": "teacher-008",
+      "campusId": null
+    },
+    {
+      "constraintTypeId": "TEACHER_SCHEDULE_COMPACTNESS",
+      "name": "Teacher Schedule Compactness",
+      "description": "A preference for a teacher to have a compact schedule",
+      "value": {
+        "enabled": true,
+        "maxActiveDays": 3,
+        "maxGapsPerDay": 1,
+        "maxConsecutiveSessions": 2
+      },
+      "priority": 4.721952481843223,
+      "teacherId": "teacher-008",
+      "campusId": null
+    },
+    {
+      "constraintTypeId": "TEACHER_TIME_PREFERENCE",
+      "name": "Teacher Time Preference",
+      "description": "A preference for a teacher to teach at specific timeslots",
+      "value": {
+        "days": [
+          "MONDAY",
+          "TUESDAY",
+          "FRIDAY"
+        ],
+        "preference": "NEUTRAL",
+        "timeslotCodes": [
+          "1400_1500",
+          "0800_0900"
+        ]
+      },
+      "priority": 5.086946016028731,
+      "teacherId": "teacher-003",
+      "campusId": null
+    },
+    {
+      "constraintTypeId": "TEACHER_SCHEDULE_COMPACTNESS",
+      "name": "Teacher Schedule Compactness",
+      "description": "A preference for a teacher to have a compact schedule",
+      "value": {
+        "enabled": true,
+        "maxActiveDays": 3,
+        "maxGapsPerDay": 0,
+        "maxConsecutiveSessions": 3
+      },
+      "priority": 4.41663321504444,
+      "teacherId": "teacher-003",
+      "campusId": null
+    },
+    {
+      "constraintTypeId": "TEACHER_ROOM_PREFERENCE",
+      "name": "Teacher Room Preference",
+      "description": "A preference for a teacher to teach in a specific room",
+      "value": {
+        "roomIds": [
+          "classroom-001"
+        ],
+        "preference": "AVOID"
+      },
+      "priority": 4.054223439622009,
+      "teacherId": "teacher-005",
+      "campusId": null
+    },
+    {
+      "constraintTypeId": "TEACHER_SCHEDULE_COMPACTNESS",
+      "name": "Teacher Schedule Compactness",
+      "description": "A preference for a teacher to have a compact schedule",
+      "value": {
+        "enabled": true,
+        "maxActiveDays": 5,
+        "maxGapsPerDay": 2,
+        "maxConsecutiveSessions": 2
+      },
+      "priority": 6.834317871583477,
+      "teacherId": "teacher-005",
+      "campusId": null
+    }
+  ]
+}

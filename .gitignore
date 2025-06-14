@@ -16,5 +16,5 @@
 !.cursor/launch.json
 !.cursor/extensions.json
 
-**/.env.*
-!**/.env.*.example
+**/*.env
+!**/*.env.example

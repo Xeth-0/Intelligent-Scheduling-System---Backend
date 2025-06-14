@@ -8,22 +8,25 @@ import {
   Get,
   Query,
   Body,
+  BadRequestException,
 } from '@nestjs/common';
 import { Role, User } from '@prisma/client';
-import {
-  ApiTags,
-  ApiBearerAuth,
-  ApiOperation,
-  ApiParam,
-  ApiResponse,
-} from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
 import { Roles } from '@/common/decorators/auth/roles.decorator';
 import { JwtAuthGuard, RolesGuard } from '@/common/guards';
 import { SchedulingService } from './scheduling.service';
 import { GetUser } from '@/common/decorators/auth/get-user.decorator';
 import { SearchSessionsBody } from './dtos/scheduleSearch.dto';
-
+import { ApiResponse } from '@/common/response/api-response.dto';
+import {
+  GenerateScheduleDocs,
+  GetScheduleByIdDocs,
+  GetAllSchedulesDocs,
+  ActivateScheduleDocs,
+  SearchSessionsDocs,
+} from '@/common/decorators/swagger/scheduling.swagger.docs';
+import {  ApiParam } from '@nestjs/swagger';
 @Controller('schedules')
 @ApiBearerAuth()
 @ApiTags('Scheduling')
@@ -32,59 +35,97 @@ import { SearchSessionsBody } from './dtos/scheduleSearch.dto';
 export class SchedulingController {
   constructor(private readonly schedulingService: SchedulingService) {}
 
-  @Post('/generate')
+  @Post('/generate/:scheduleName?')
   @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Generate a new schedule' })
-  @ApiResponse({ status: 201, description: 'Schedule generated successfully' })
-  async generateSchedule(@GetUser() admin: User) {
-    return await this.schedulingService.generateSchedule(admin.userId);
+  @ApiParam({
+    name: 'scheduleName',
+    required: false,
+    description: 'Schedule name',
+  })
+  async generateSchedule(
+    @GetUser() admin: User,
+    @Param('scheduleName') scheduleName?: string,
+  ) {
+    const finalScheduleName =
+      scheduleName ?? 'Unnamed Schedule - ' + new Date().toISOString();
+    const resp = await this.schedulingService.generateSchedule(
+      admin.userId,
+      finalScheduleName,
+    );
+    return ApiResponse.success(201, resp, 'Schedule generated successfully');
+  }
+
+  @Get('/active')
+  @Roles(Role.ADMIN, Role.TEACHER, Role.STUDENT)
+  async getActiveSchedule(@GetUser() user: User) {
+    const resp = await this.schedulingService.getActiveSchedule(user.userId);
+    return ApiResponse.success(
+      200,
+      resp,
+      'Active schedule retrieved successfully',
+    );
   }
 
   @Get('/id/:scheduleId')
   @Roles(Role.ADMIN, Role.TEACHER, Role.STUDENT)
-  @ApiOperation({ summary: 'Get a schedule by ID' })
-  @ApiParam({ name: 'scheduleId', required: true, description: 'Schedule ID' })
-  @ApiResponse({ status: 200, description: 'Schedule retrieved successfully' })
+  @GetScheduleByIdDocs()
   async getScheduleById(
     @GetUser() user: User,
-    @Query('scheduleId') scheduleId: string,
+    @Query('scheduleId') scheduleId: string | undefined,
   ) {
-    return await this.schedulingService.getScheduleById(
+    if (!scheduleId) {
+      throw new BadRequestException('Schedule ID is required');
+    }
+    const resp = await this.schedulingService.getScheduleById(
       user.userId,
       scheduleId,
     );
+    return ApiResponse.success(200, resp, 'Schedule retrieved successfully');
   }
 
   @Get()
   @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Get all schedules for a campus' })
-  @ApiResponse({ status: 200, description: 'Schedules retrieved successfully' })
+  @GetAllSchedulesDocs()
   async getAllSchedules(@GetUser() admin: User) {
-    return await this.schedulingService.getAllSchedules(admin.userId);
+    const resp = await this.schedulingService.getAllSchedules(admin.userId);
+    return ApiResponse.success(200, resp, 'Schedules retrieved successfully');
   }
 
   @Post('/activate/id/:scheduleId')
   @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Activate a schedule' })
-  @ApiParam({ name: 'scheduleId', required: true, description: 'Schedule ID' })
-  @ApiResponse({ status: 200, description: 'Schedule activated successfully' })
+  @ActivateScheduleDocs()
   async activateSchedule(
     @GetUser() admin: User,
     @Param('scheduleId') scheduleId: string,
   ) {
-    return await this.schedulingService.activateSchedule(
+    const resp = await this.schedulingService.activateSchedule(
       admin.userId,
       scheduleId,
     );
+    return ApiResponse.success(200, resp, 'Schedule activated successfully');
   }
 
   @Post('/sessions/id/search')
-  @ApiOperation({ summary: 'Search for sessions by ID' })
-  @ApiResponse({ status: 200, description: 'Sessions retrieved successfully' })
+  @SearchSessionsDocs()
   async searchSessions(
     @GetUser() user: User,
     @Body() body: SearchSessionsBody,
   ) {
-    return await this.schedulingService.searchSessions(user.userId, body);
+    const resp = await this.schedulingService.searchSessions(user.userId, body);
+    console.log(`filtered schedule response`, resp);
+    return ApiResponse.success(200, resp, 'Sessions retrieved successfully');
+  }
+
+  @Get('/evaluate/id/:scheduleId')
+  @Roles(Role.ADMIN, Role.TEACHER, Role.STUDENT)
+  async evaluateSchedule(
+    @GetUser() user: User,
+    @Param('scheduleId') scheduleId: string,
+  ) {
+    const resp = await this.schedulingService.evaluateSchedule(
+      user.userId,
+      scheduleId,
+    );
+    return ApiResponse.success(200, resp, 'Schedule evaluated successfully');
   }
 }

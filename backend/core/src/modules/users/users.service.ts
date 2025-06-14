@@ -1,3 +1,4 @@
+import * as bcrypt from 'bcrypt';
 import {
   BadRequestException,
   ConflictException,
@@ -6,11 +7,14 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { IUsersService } from '../.interfaces/user.service.interface';
 import { Prisma, Role, User } from '@prisma/client';
+import { PrismaService } from '@/prisma/prisma.service';
+import { IUsersService } from '@/modules/__interfaces__/user.service.interface';
 import { CreateUserDto, UpdateUserDto, UserResponseDto } from './dtos';
-import * as bcrypt from 'bcrypt';
-import { PrismaService } from '../../prisma/prisma.service';
+import {
+  PaginatedResponse,
+  PaginationData,
+} from '@/common/response/api-response.dto';
 
 @Injectable()
 export class UsersService implements IUsersService {
@@ -25,49 +29,58 @@ export class UsersService implements IUsersService {
       lastName: user.lastName,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
+      needWheelchairAccessibleRoom: user.needWheelchairAccessibleRoom,
+      phoneNumber: user.phone ?? '',
     };
   }
 
   async createUser(createUserDto: CreateUserDto): Promise<UserResponseDto> {
-    const { password, ...rest } = createUserDto;
-    console.log('createUserDto: ', createUserDto);
     // Validate required fields
-    if (!rest.role) {
-      throw new ConflictException('Role is required');
+    const { password, departmentId, ...rest } = createUserDto;
+    if (!createUserDto.role) {
+      throw new ConflictException(
+        'Error creating a new user: Role is required',
+      );
+    }
+    if (!password) {
+      throw new BadRequestException('Password is required');
     }
 
-    try {
-      let passwordHash: string;
-      if (password) {
-        passwordHash = await bcrypt.hash(password, 10);
-      } else {
-        throw new BadRequestException('Password is required');
-      }
+    const passwordHash = await bcrypt.hash(password, 10);
 
-      const user = await this.prismaService.user.create({
+    const user = await this.prismaService.$transaction(async (tx) => {
+      const user = await tx.user.create({
         data: {
           ...rest,
           passwordHash,
         },
       });
 
-      console.log('user created: ', user);
-      return this.mapToResponse(user);
-    } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (error.code === 'P2002') {
-          throw new ConflictException(`User with this email already exists`);
-        } else if (error.code === 'P2025') {
-          throw new NotFoundException(error.meta?.cause || 'User not found');
-        } else {
-          throw new InternalServerErrorException(
-            'An unexpected error occurred',
+      if (createUserDto.role === Role.TEACHER) {
+        if (!departmentId) {
+          throw new BadRequestException(
+            'Error creating a new Teacher: Department ID is required',
           );
         }
-      } else {
-        throw error;
+        const department = await tx.department.findUnique({
+          where: { deptId: departmentId },
+        });
+        if (!department) {
+          throw new NotFoundException(
+            'Error creating a new Teacher: Department not found',
+          );
+        }
+        await tx.teacher.create({
+          data: {
+            userId: user.userId,
+            departmentId: department.deptId,
+          },
+        });
       }
-    }
+      return user;
+    });
+
+    return this.mapToResponse(user);
   }
 
   async isFirstUser(): Promise<boolean> {
@@ -75,28 +88,31 @@ export class UsersService implements IUsersService {
     return count === 0;
   }
 
-  // private handlePrismaError(
-  //   error: Prisma.PrismaClientKnownRequestError,
-  //   entity: string,
-  // ): never {
-  //   // Rethrow HttpExceptions (like BadRequest/Forbidden)
-  //   if (error instanceof HttpException) {
-  //     throw error;
-  //   }
+  async findAllUsers(
+    page = 1,
+    size = 10,
+  ): Promise<PaginatedResponse<UserResponseDto>> {
+    // pagination logic
+    const skip = (page - 1) * size;
+    const [users, totalItems] = await Promise.all([
+      this.prismaService.user.findMany({
+        skip: skip,
+        take: size,
+        orderBy: [{ firstName: 'asc' }],
+      }),
+      this.prismaService.user.count(),
+    ]);
 
-  //   if (error.code === 'P2002') {
-  //     throw new ConflictException(`${entity} with this email already exists`);
-  //   }
-  //   if (error.code === 'P2025') {
-  //     throw new NotFoundException(error.meta?.cause || `${entity} not found`);
-  //   }
+    const userDtos = users.map((user) => this.mapToResponse(user));
+    const totalPages = Math.ceil(totalItems / size);
+    const paginationData: PaginationData = {
+      totalItems: totalItems,
+      currentPage: page,
+      totalPages: totalPages,
+      itemsPerPage: size,
+    };
 
-  //   throw new InternalServerErrorException('An unexpected error occurred');
-  // }
-
-  async findAllUsers(): Promise<UserResponseDto[]> {
-    const users = await this.prismaService.user.findMany();
-    return users.map((user) => this.mapToResponse(user));
+    return new PaginatedResponse<UserResponseDto>(userDtos, paginationData);
   }
 
   async findUserById(id: string): Promise<UserResponseDto> {
@@ -129,7 +145,7 @@ export class UsersService implements IUsersService {
         if (error.code === 'P2002') {
           throw new ConflictException(`User with this email already exists`);
         } else if (error.code === 'P2025') {
-          throw new NotFoundException(error.meta?.cause || 'User not found');
+          throw new NotFoundException(error.meta?.cause ?? 'User not found');
         } else {
           throw new InternalServerErrorException(
             'An unexpected error occurred',
@@ -141,34 +157,45 @@ export class UsersService implements IUsersService {
     }
   }
 
-  async deleteUser(id: string): Promise<void> {
-    try {
-      // Check if the user exists
-      const user = await this.findUserById(id);
-      if (!user) throw new NotFoundException('User not found');
+  async deleteUser(adminId: string, userId: string): Promise<void> {
+    const admin = await this.prismaService.admin.findFirst({
+      where: {
+        userId: adminId,
+      },
+    });
+    if (!admin) throw new NotFoundException('Admin not found');
 
-      // Check if the user is an admin
-      if (user.role === Role.ADMIN) {
-        throw new ForbiddenException('Admins cannot be deleted');
+    const user = await this.findUserById(userId);
+    if (!user) throw new NotFoundException('User not found');
+    if (user.role === Role.ADMIN) {
+      const adminToDelete = await this.prismaService.admin.findFirst({
+        where: {
+          userId: userId,
+        },
+      });
+
+      if (!adminToDelete) throw new NotFoundException('Admin not found');
+      if (admin.campusId !== adminToDelete.campusId) {
+        throw new ForbiddenException('Cannot delete admin from another campus');
       }
+      const campusAdmins = await this.prismaService.admin.findMany({
+        where: {
+          userId: {
+            not: adminId,
+          },
+          campusId: admin.campusId,
+        },
+      });
 
-      // Delete the user
-      await this.prismaService.user.delete({ where: { userId: id } });
-    } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (error.code === 'P2002') {
-          throw new ConflictException(`User with this email already exists`);
-        } else if (error.code === 'P2025') {
-          throw new NotFoundException(error.meta?.cause || 'User not found');
-        } else {
-          throw new InternalServerErrorException(
-            'An unexpected error occurred',
-          );
-        }
-      } else {
-        throw error;
+      if (campusAdmins.length === 0) {
+        throw new ForbiddenException(
+          'Cannot delete last admin for this campus',
+        );
       }
     }
+
+    // Delete the user
+    await this.prismaService.user.delete({ where: { userId: userId } });
   }
 
   async findByEmail(email: string) {

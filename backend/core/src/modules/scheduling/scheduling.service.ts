@@ -15,18 +15,26 @@ import {
   Teacher,
   StudentGroup,
   ScheduledSession,
+  Timeslot,
+  Role,
+  Schedule,
 } from '@prisma/client';
 import axios from 'axios';
 import { plainToInstance } from 'class-transformer';
 import { SchedulingApiResponseDto } from './dtos/schedule.microservice.dto';
 import { GeneralScheduleResponse } from './dtos/schedule.dto';
 import { SearchSessionsBody } from './dtos/scheduleSearch.dto';
-
+import { ScheduleEvaluationResponse } from './dtos/schedule.dto';
+import { ISchedulingService } from '../__interfaces__/scheduling.service.interface';
+import { ConstraintService } from '../constraints/constraints.service';
+import { TimeslotService } from '../timeslots/timeslots.service';
 @Injectable()
-export class SchedulingService {
+export class SchedulingService implements ISchedulingService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly configService: ConfigService,
+    private readonly timeslotService: TimeslotService,
+    private readonly constraintService: ConstraintService,
   ) {}
 
   /**
@@ -36,6 +44,7 @@ export class SchedulingService {
     session: ScheduledSession & {
       course: Course;
       teacher: Teacher;
+      timeslot: Timeslot;
       classroom: Classroom | null;
       studentGroup: StudentGroup | null;
     },
@@ -55,27 +64,115 @@ export class SchedulingService {
       classroomName: session.classroom?.name ?? 'None',
       classGroupIds: session.studentGroupId,
       sessionType: session.sessionType,
-      timeslot: session.startTime + '-' + session.endTime,
+      timeslot: session.timeslot.startTime + '-' + session.timeslot.endTime,
       day: session.day,
     };
   }
 
-  private async _findSchedule(scheduleId: string, adminId: string) {
+  private _mapScheduleToResponse(
+    schedule: Schedule,
+    sessions?: (ScheduledSession & {
+      course: Course;
+      teacher: Teacher;
+      timeslot: Timeslot;
+      classroom: Classroom | null;
+      studentGroup: StudentGroup | null;
+    })[],
+  ) {
+    if (sessions) {
+      return plainToInstance(GeneralScheduleResponse, {
+        scheduleId: schedule.scheduleId,
+        scheduleName: schedule.scheduleName,
+        isActive: schedule.active,
+        createdAt: schedule.createdAt,
+        sessions: sessions.map((session) =>
+          this._mapSessionToResponse(session),
+        ),
+      });
+    }
+    return plainToInstance(GeneralScheduleResponse, {
+      scheduleId: schedule.scheduleId,
+      scheduleName: schedule.scheduleName,
+      createdAt: schedule.createdAt,
+      isActive: schedule.active,
+    });
+  }
+
+  /**
+   * Finds a schedule by its ID and checks if the user has permission to access it
+   * @param scheduleId - ID of the schedule to find
+   * @param userId - ID of the user finding the schedule
+   * @returns Promise with the schedule and admin details and the admin if the user is an admin
+   */
+  private async _findSchedule(scheduleId: string, userId: string) {
     const admin = await this.prismaService.admin.findFirst({
       where: {
-        userId: adminId,
+        userId: userId,
       },
     });
     if (!admin) {
-      throw new UnauthorizedException('Admin not found');
+      console.log(`user is not an admin. User: ${userId}`);
+      console.log('looking for the user in the database');
+      const user = await this.prismaService.user.findFirst({
+        where: {
+          userId: userId,
+        },
+        include: {
+          student: {
+            include: {
+              studentGroup: {
+                include: {
+                  department: true,
+                },
+              },
+            },
+          },
+          teacher: {
+            include: {
+              department: true,
+            },
+          },
+        },
+      });
+
+      let campusId: string | undefined = undefined;
+      if (!user) {
+        throw new UnauthorizedException('User not found');
+      } else if (user.student) {
+        console.log('user is a student');
+        campusId = user.student.studentGroup?.department.campusId;
+      } else if (user.teacher) {
+        console.log('user is a teacher');
+        campusId = user.teacher.department.campusId;
+      } else {
+        throw new UnauthorizedException('User not found');
+      }
+
+      if (!campusId) {
+        throw new UnauthorizedException('User not found');
+      }
+
+      console.log(`fetching active schedule for campus: ${campusId}`);
+      const schedule = await this.prismaService.schedule.findFirst({
+        where: {
+          campusId: campusId,
+          active: true,
+        },
+      });
+      console.log(`schedule: `, schedule);
+      if (!schedule) {
+        throw new NotFoundException('No active schedule found');
+      }
+      return { admin: null, schedule };
     }
 
-    const schedule = await this.prismaService.schedule.findUnique({
+    const schedule = await this.prismaService.schedule.findFirst({
       where: {
         scheduleId: scheduleId,
       },
     });
     if (!schedule) {
+      console.error('Schedule not found');
       throw new NotFoundException('Schedule not found');
     }
     if (schedule.campusId !== admin.campusId) {
@@ -84,6 +181,58 @@ export class SchedulingService {
       );
     }
     return { admin, schedule };
+  }
+
+  async getActiveSchedule(userId: string) {
+    const user = await this.prismaService.user.findFirst({
+      where: {
+        userId: userId,
+      },
+      include: {
+        admin: true,
+        teacher: {
+          include: {
+            department: true,
+          },
+        },
+        student: {
+          include: {
+            studentGroup: {
+              include: {
+                department: true,
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+    let campusId: string | undefined = undefined;
+
+    if (user.role === Role.STUDENT) {
+      campusId = user.student?.studentGroup?.department.campusId;
+    } else if (user.role === Role.TEACHER) {
+      campusId = user.teacher?.department.campusId;
+    } else if (user.role === Role.ADMIN) {
+      campusId = user.admin?.campusId;
+    }
+    if (!campusId) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const schedule = await this.prismaService.schedule.findFirst({
+      where: {
+        campusId: campusId,
+        active: true,
+      },
+    });
+    if (!schedule) {
+      throw new NotFoundException('No active schedule found');
+    }
+
+    return await this.getScheduleById(userId, schedule.scheduleId);
   }
 
   /**
@@ -96,6 +245,8 @@ export class SchedulingService {
     const { admin, schedule } = await this._findSchedule(scheduleId, userId);
     if (schedule.active) {
       throw new BadRequestException('Schedule is already active');
+    } else if (!admin) {
+      throw new ForbiddenException('User is not an admin');
     }
 
     try {
@@ -137,13 +288,15 @@ export class SchedulingService {
    * @returns Promise with the schedule details
    */
   async getScheduleById(userId: string, scheduleId: string) {
-    const { schedule } = await this._findSchedule(scheduleId, userId);
-    const sessions = await this._fetchSessions(scheduleId);
+    try {
+      console.log(`fetching the schedule by the given Id. User: ${userId}`);
+      const { schedule } = await this._findSchedule(scheduleId, userId);
+      const sessions = await this._fetchSessions(scheduleId);
 
-    return plainToInstance(GeneralScheduleResponse, {
-      scheduleId: schedule.scheduleId,
-      sessions: sessions.map((session) => this._mapSessionToResponse(session)),
-    });
+      return this._mapScheduleToResponse(schedule, sessions);
+    } catch (e) {
+      throw e;
+    }
   }
 
   /**
@@ -163,35 +316,18 @@ export class SchedulingService {
     const defaultIncludes: Prisma.ScheduledSessionInclude = {
       course: true,
       teacher: {
-        select: {
-          teacherId: true,
-          user: {
-            select: {
-              firstName: true,
-              lastName: true,
-            },
-          },
+        include: {
+          user: true,
         },
       },
       classroom: {
-        select: {
-          classroomId: true,
-          name: true,
-          isWheelchairAccessible: true,
-          building: {
-            select: {
-              name: true,
-            },
-          },
-          campus: {
-            select: {
-              name: true,
-              campusId: true,
-            },
-          },
+        include: {
+          campus: true,
+          building: true,
         },
       },
       studentGroup: true,
+      timeslot: true,
     };
 
     const schedule = await this.prismaService.schedule.findUnique({
@@ -228,28 +364,19 @@ export class SchedulingService {
       },
     });
     if (!admin) {
-      throw new UnauthorizedException('Admin not found');
+      throw new ForbiddenException('User is not an admin');
     }
 
     const schedules = await this.prismaService.schedule.findMany({
       where: {
         campusId: admin.campusId,
       },
+      orderBy: {
+        createdAt: 'desc',
+      },
     });
 
-    const response = await Promise.all(
-      schedules.map(async (schedule) => {
-        const sessions = await this._fetchSessions(schedule.scheduleId);
-
-        return plainToInstance(GeneralScheduleResponse, {
-          scheduleId: schedule.scheduleId,
-          sessions: sessions.map((session) =>
-            this._mapSessionToResponse(session),
-          ),
-        });
-      }),
-    );
-    return response;
+    return schedules.map((schedule) => this._mapScheduleToResponse(schedule));
   }
 
   async searchSessions(userId: string, body: SearchSessionsBody) {
@@ -266,6 +393,31 @@ export class SchedulingService {
       throw new ForbiddenException(
         'You do not have permission to access this schedule',
       );
+    }
+
+    // handle teacherID (can sometimes be userID)
+    if (body.teacherId) {
+      const teacher = await this.prismaService.teacher.findFirst({
+        where: {
+          teacherId: body.teacherId,
+        },
+      });
+      if (!teacher) {
+        // check if the given ID is a userID instead
+        const user = await this.prismaService.user.findFirst({
+          where: {
+            userId: body.teacherId,
+          },
+          include: {
+            teacher: true,
+          },
+        });
+        if (user && user.teacher) {
+          body.teacherId = user.teacher.teacherId;
+        } else {
+          throw new BadRequestException('Invalid teacher ID');
+        }
+      }
     }
 
     try {
@@ -301,16 +453,7 @@ export class SchedulingService {
         },
       });
 
-      return {
-        success: true,
-        data: plainToInstance(GeneralScheduleResponse, {
-          scheduleId: schedule.scheduleId,
-          sessions: sessions.map((session) =>
-            this._mapSessionToResponse(session),
-          ),
-        }),
-        message: 'Sessions retrieved successfully',
-      };
+      return this._mapScheduleToResponse(schedule, sessions);
     } catch (error) {
       throw error;
     }
@@ -319,25 +462,43 @@ export class SchedulingService {
   /**
    * Generates a new schedule based on available courses, teachers,
    * student groups, and rooms from the database.
+   * The newly generated schedule is automatically activated,
+   * deactivating any previously active schedules for the campus.
    * @param userId - ID of the admin user generating the schedule
    * @returns Promise with the generated schedule details
    */
-  async generateSchedule(userId: string) {
+  async generateSchedule(userId: string, scheduleName: string) {
     const admin = await this.prismaService.admin.findFirst({
       where: {
         userId: userId,
       },
     });
     if (!admin) {
-      throw new UnauthorizedException('Admin not found');
+      throw new ForbiddenException('User is not an admin');
+    }
+
+    // Check if the given name is unique for that campus
+    const existingSchedule = await this.prismaService.schedule.findFirst({
+      where: {
+        scheduleName: scheduleName,
+        campusId: admin.campusId,
+      },
+    });
+    if (existingSchedule) {
+      throw new BadRequestException('Schedule name must be unique');
     }
 
     // Prepare the data for the generate schedule endpoint
     // first teacher in the list takes that course for now
     // ! Schema needs updating to disallow multiple teachers per course
     const courses = await this.prismaService.course.findMany({
+      where: {
+        teacherId: {
+          not: null,
+        },
+      },
       include: {
-        teachers: true,
+        teacher: true,
         studentGroups: true,
       },
     });
@@ -360,14 +521,21 @@ export class SchedulingService {
       },
     });
 
+    // Get constraints and timeslots for the campus
+    const constraints =
+      await this.constraintService.getConstraintsForScheduling(admin.campusId);
+
+    console.log('constraints', constraints);
+    const timeslots = await this.timeslotService.getAllTimeslots();
+
     const payload = {
       courses: courses.map((course) => ({
         courseId: course.courseId,
         name: course.name,
-        description: course.description ?? 'some fucking description',
-        ectsCredits: 0,
+        description: course.description ?? 'No description available',
+        ectsCredits: course.ectsCredits,
         department: course.departmentId,
-        teacherId: course.teachers[0].teacherId,
+        teacherId: course.teacherId,
         studentGroupIds: course.studentGroups.map(
           (studentGroup) => studentGroup.studentGroupId,
         ),
@@ -402,6 +570,19 @@ export class SchedulingService {
         floor: room.building?.floor ?? 0,
         isWheelchairAccessible: room.isWheelchairAccessible,
       })),
+
+      // Include constraints for the genetic algorithm
+      constraints: constraints,
+
+      // Include standardized timeslots
+      timeslots: timeslots.map((slot: Timeslot) => ({
+        timeslotId: slot.timeslotId,
+        code: slot.code,
+        label: slot.label,
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+        order: slot.order,
+      })),
     };
 
     // Call the generate schedule endpoint
@@ -429,27 +610,45 @@ export class SchedulingService {
       );
 
       const schedule = mappedSchedulingData.data.best_schedule;
+
+      const timeslotMap = new Map(timeslots.map((slot) => [slot.code, slot]));
+
+      const scheduleItemsData = await Promise.all(
+        schedule.map((scheduledSession) => {
+          const timeslotCode = scheduledSession.timeslot;
+          const timeslot = timeslotMap.get(timeslotCode);
+          if (!timeslot) {
+            throw new InternalServerErrorException(
+              `Error generating schedule: Timeslot not found for code: ${timeslotCode}`,
+            );
+          }
+
+          return {
+            courseId: scheduledSession.courseId,
+            teacherId: scheduledSession.teacherId,
+            studentGroupId: scheduledSession.studentGroupIds[0],
+            sessionType: scheduledSession.sessionType,
+            classroomId: scheduledSession.classroomId,
+            timeslotId: timeslot.timeslotId,
+            day: scheduledSession.day,
+          };
+        }),
+      );
+
       const newSchedule = await this.prismaService.schedule.create({
         data: {
           generatedByAdminId: admin.adminId,
           campusId: admin.campusId,
+          scheduleName: scheduleName,
           scheduleItems: {
             createMany: {
-              data: schedule.map((scheduledSession) => ({
-                courseId: scheduledSession.courseId,
-                teacherId: scheduledSession.teacherId,
-                studentGroupId: scheduledSession.studentGroupIds[0],
-                sessionType: scheduledSession.sessionType,
-                classroomId: scheduledSession.classroomId,
-                startTime: scheduledSession.timeslot.split('-')[0],
-                endTime: scheduledSession.timeslot.split('-')[1],
-                day: scheduledSession.day,
-              })),
+              data: scheduleItemsData,
             },
           },
         },
       });
 
+      await this.activateSchedule(userId, newSchedule.scheduleId);
       return this.getScheduleById(userId, newSchedule.scheduleId);
     } catch (e: unknown) {
       if (e instanceof Prisma.PrismaClientKnownRequestError) {
@@ -458,6 +657,168 @@ export class SchedulingService {
         );
       }
       throw e;
+    }
+  }
+
+  /**
+   * Evaluates an existing schedule by calling the Python fitness evaluation service
+   * @param userId - ID of the user requesting the evaluation
+   * @param scheduleId - ID of the schedule to evaluate
+   * @returns Promise with the fitness evaluation report
+   */
+  async evaluateSchedule(
+    userId: string,
+    scheduleId: string,
+  ): Promise<ScheduleEvaluationResponse> {
+    const { schedule } = await this._findSchedule(scheduleId, userId);
+
+    // Get all sessions for this schedule
+    const sessions = await this._fetchSessions(scheduleId);
+
+    if (sessions.length === 0) {
+      throw new NotFoundException('No sessions found for this schedule');
+    }
+
+    // Get additional data needed for evaluation
+    const teachers = await this.prismaService.teacher.findMany({
+      include: {
+        user: true,
+      },
+    });
+
+    const studentGroups = await this.prismaService.studentGroup.findMany({
+      include: {
+        students: true,
+      },
+    });
+
+    const rooms = await this.prismaService.classroom.findMany({
+      include: {
+        building: true,
+      },
+    });
+
+    const courses = await this.prismaService.course.findMany({
+      include: {
+        teacher: true,
+        studentGroups: true,
+      },
+    });
+
+    // Get constraints and timeslots for evaluation
+    const constraints =
+      await this.constraintService.getConstraintsForScheduling(
+        schedule.campusId,
+      );
+    const timeslots = await this.timeslotService.getAllTimeslots();
+
+    // Convert sessions to the format expected by Python service
+    const timeslotMap = new Map(
+      timeslots.map((slot) => [slot.timeslotId, slot]),
+    );
+
+    const scheduleItems = sessions.map((session) => {
+      const timeslot = timeslotMap.get(session.timeslotId);
+      if (!timeslot) {
+        throw new InternalServerErrorException(
+          `Timeslot not found for session: ${session.timeslotId}`,
+        );
+      }
+
+      return {
+        courseId: session.courseId,
+        courseName: session.course.name,
+        teacherId: session.teacherId,
+        classroomId: session.classroomId,
+        studentGroupIds: [session.studentGroupId], // Convert single ID to array
+        day: session.day,
+        timeslot: timeslot.code,
+        sessionType: session.sessionType,
+      };
+    });
+
+    // Prepare evaluation payload
+    const payload = {
+      schedule: scheduleItems,
+      teachers: teachers.map((teacher) => ({
+        teacherId: teacher.teacherId,
+        name: `${teacher.user.firstName} ${teacher.user.lastName}`,
+        email: teacher.user.email,
+        phone: teacher.user.phone,
+        department: teacher.departmentId,
+        needsWheelchairAccessibleRoom:
+          teacher.user.needWheelchairAccessibleRoom,
+      })),
+      studentGroups: studentGroups.map((studentGroup) => ({
+        studentGroupId: studentGroup.studentGroupId,
+        name: studentGroup.name,
+        size: studentGroup.students.length,
+        department: studentGroup.departmentId,
+        accessibilityRequirement: studentGroup.accessibilityRequirement,
+      })),
+      rooms: rooms.map((room) => ({
+        classroomId: room.classroomId,
+        name: room.name,
+        capacity: room.capacity,
+        type: room.type,
+        buildingId: room.buildingId,
+        floor: room.building?.floor ?? 0,
+        isWheelchairAccessible: room.isWheelchairAccessible,
+      })),
+      courses: courses.map((course) => ({
+        courseId: course.courseId,
+        name: course.name,
+        description: course.description ?? 'No description available',
+        ectsCredits: course.ectsCredits,
+        department: course.departmentId,
+        teacherId: course.teacher?.teacherId ?? '',
+        studentGroupIds: course.studentGroups.map((sg) => sg.studentGroupId),
+        sessionType: course.sessionType,
+        sessionsPerWeek: course.sessionsPerWeek,
+      })),
+      constraints: constraints,
+      timeslots: timeslots.map((slot) => ({
+        timeslotId: slot.timeslotId,
+        code: slot.code,
+        label: slot.label,
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+        order: slot.order,
+      })),
+    };
+
+    // Call the evaluation endpoint
+    const route = this.configService.get<string>(
+      'services.scheduling_microservice.url',
+    );
+
+    try {
+      const response = await axios.post(
+        `${route}/api/scheduler/evaluate`,
+        payload,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+
+      if (response.status !== 200) {
+        throw new Error('Failed to evaluate schedule');
+      }
+
+      return {
+        scheduleId: schedule.scheduleId,
+        scheduleName: schedule.scheduleName,
+        evaluation: response.data,
+      };
+    } catch (e: unknown) {
+      if (axios.isAxiosError(e)) {
+        throw new InternalServerErrorException(
+          `Error evaluating schedule: ${e.message}`,
+        );
+      }
+      throw new InternalServerErrorException('Failed to evaluate schedule');
     }
   }
 }
