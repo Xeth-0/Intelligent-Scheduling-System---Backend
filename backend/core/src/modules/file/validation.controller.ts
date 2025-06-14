@@ -1,4 +1,4 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Delete, Get, Param } from '@nestjs/common';
 import { Ctx, EventPattern, Payload, RmqContext } from '@nestjs/microservices';
 import { ValidationService } from './validation.service';
 import { RabbitDto, ValidatedDataType } from './dtos/validation-result.dto';
@@ -38,10 +38,24 @@ export class ValidationController {
     @Param('taskId') taskId: string,
   ): Promise<ApiResponse<TaskDetailDto>> {
     const response = await this.validationService.getTaskById(taskId);
+
+    console.log(response);
     return new ApiResponse<TaskDetailDto>({
       success: true,
       message: 'Task detail',
       data: response,
+    });
+  }
+
+  @Delete(':taskId')
+  async deleteTask(
+    @Param('taskId') taskId: string,
+  ): Promise<ApiResponse<TaskDto>> {
+    const task = await this.validationService.deleteTaskById(taskId);
+    return new ApiResponse<TaskDto>({
+      success: true,
+      message: 'Task deleted',
+      data: task,
     });
   }
 }

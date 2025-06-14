@@ -6,46 +6,105 @@ import os
 import pika
 import json
 from io import StringIO
+from pydantic import BaseModel
+from typing import List, Optional, Literal
+
+
+"""
+    row!: number;
+  column!: string;
+  message!: string;
+  taskId!: string;
+  severity!: TaskSeverity;
+  createdAt!: Date;
+"""
+
+
+class ErrorType(BaseModel):
+    row: int
+    column: Optional[str] = None
+    message: str
+    taskId: str
+    severity: Literal["ERROR", "WARNING"] = "ERROR"
 
 
 # 2: Function to read CSV file
-def read_csv(file, delimiter=",", encoding="utf-8"):
+def read_csv(file, taskId, delimiter=",", encoding="utf-8"):
     try:
         df = pd.read_csv(file, delimiter=delimiter, encoding=encoding)
         return df, []
     except Exception as e:
-        return None, [f"Failed to read CSV: {str(e)}"]
+        err = ErrorType(
+            row=0,
+            column=None,
+            message=f"Failed to read CSV: {str(e)}",
+            taskId=taskId,
+            severity="ERROR",
+        )
+        return None, [err]
 
 
 # 3: Function to check headers
-def check_headers(df, expected_columns):
+def check_headers(
+    df,
+    taskId,
+    expected_columns,
+):
     actual_columns = df.columns.tolist()
     missing = [col for col in expected_columns if col not in actual_columns]
     extra = [col for col in actual_columns if col not in expected_columns]
     errors = []
     if missing:
-        errors.append(f"Missing columns: {', '.join(missing)}")
+        err = ErrorType(
+            row=0,
+            column=None,
+            message=f"Missing columns: {', '.join(missing)}",
+            taskId=taskId,
+            severity="ERROR",
+        )
+        errors.append(err)
     if extra:
-        errors.append(f"Extra columns: {', '.join(extra)}")
+        err = ErrorType(
+            row=0,
+            column=None,
+            message=f"Extra columns: {', '.join(extra)}",
+            taskId=taskId,
+            severity="ERROR",
+        )
+        errors.append(err)
     return errors
 
 
-def check_data_types(df, type_checks):
+def check_data_types(df, taskId, type_checks):
     errors = []
     for col, expected_type in type_checks.items():
         if col not in df.columns:
             continue
         if expected_type == "numeric":
             if not pd.api.types.is_numeric_dtype(df[col]):
-                errors.append(f"Column '{col}' must be numeric")
+                err = ErrorType(
+                    row=0,
+                    column=None,
+                    message=f"Column '{col}' must be numeric",
+                    taskId=taskId,
+                    severity="ERROR",
+                )
+                errors.append(err)
         elif expected_type == "string":
             if not pd.api.types.is_string_dtype(df[col]):
-                errors.append(f"Column '{col}' must be a string")
+                err = ErrorType(
+                    row=0,
+                    column=None,
+                    message=f"Column '{col}' must be a string",
+                    taskId=taskId,
+                    severity="ERROR",
+                )
+                errors.append(err)
     return errors
 
 
 # 4: Function to check for empty values
-def check_empty(df, required_columns):
+def check_empty(df, taskId, required_columns):
     errors = []
     for col in required_columns:
         if col not in df.columns:
@@ -53,7 +112,14 @@ def check_empty(df, required_columns):
         # missing = df[df[col].isnull()]
         missing = df[df[col].isnull() | (df[col].astype(str).str.strip() == "")]
         for idx in missing.index:
-            errors.append(f"Missing value in row {idx+1}, column '{col}'")
+            err = ErrorType(
+                row=idx + 1,
+                column=col,
+                message="Missing value",
+                taskId=taskId,
+                severity="ERROR",
+            )
+            errors.append(err)
     return errors
 
 
@@ -67,7 +133,7 @@ def validate_email(email):
 
 
 # 6: Function to check format-specific validations
-# def check_formats(df, format_checks):
+# def check_formats(df,taskId, format_checks):
 #     errors = []
 #     for col, format_type in format_checks.items():
 #         if col not in df.columns:
@@ -88,7 +154,7 @@ def valid_string(value):
     return isinstance(value, str)
 
 
-def check_formats(df, format_checks):
+def check_formats(df, taskId, format_checks):
     errors = []
     for col, format_type in format_checks.items():
         if col not in df.columns:
@@ -96,7 +162,15 @@ def check_formats(df, format_checks):
         if format_type == "email":
             invalid = df[~df[col].apply(validate_email)]
             for idx, row in invalid.iterrows():
-                errors.append(f"Invalid email format in row {idx+1}: '{row[col]}'")
+                err = ErrorType(
+                    row=idx + 1,
+                    column=col,
+                    message=f"Invalid email format",
+                    taskId=taskId,
+                    severity="ERROR",
+                )
+                errors.append(err)
+
         elif format_type == "uuid":
 
             def validate_uuid(value):
@@ -108,28 +182,45 @@ def check_formats(df, format_checks):
 
             invalid = df[~df[col].apply(validate_uuid)]
             for idx, row in invalid.iterrows():
-                errors.append(
-                    f"Invalid UUID in row {idx+1}, column '{col}': '{row[col]}'"
+                err = ErrorType(
+                    row=idx + 1,
+                    column=col,
+                    message=f"Invalid UUID {row[col]}",
+                    taskId=taskId,
+                    severity="ERROR",
                 )
+                errors.append(err)
+
         elif format_type == "boolean":
             valid_bools = [True, False, 1, 0, "True", "False", "1", "0"]
             invalid = df[~df[col].isin(valid_bools)]
             for idx, row in invalid.iterrows():
-                errors.append(
-                    f"Invalid boolean in row {idx+1}, column '{col}': '{row[col]}'"
+                err = ErrorType(
+                    row=idx + 1,
+                    column=col,
+                    message=f"Invalid boolean: '{row[col]}'",
+                    taskId=taskId,
+                    severity="ERROR",
                 )
+                errors.append(err)
+
         elif str(format_type).lower() == "string":
 
             invalid = df[~df[col].apply(valid_string)]
             for idx, row in invalid.iterrows():
-                errors.append(
-                    f"Invalid string in row {idx+1}, column '{col}': '{row[col]}'"
+                err = ErrorType(
+                    row=idx + 1,
+                    column=col,
+                    message=f"Invalid string: '{row[col]}'",
+                    taskId=taskId,
+                    severity="ERROR",
                 )
+                errors.append(err)
     return errors
 
 
 # 7: Function to check unique constraints
-def check_unique(df, unique_columns):
+def check_unique(df, taskId, unique_columns):
     errors = []
     for col in unique_columns:
         if col not in df.columns:
@@ -139,65 +230,107 @@ def check_unique(df, unique_columns):
             dup_values = duplicates[col].unique()
             for val in dup_values:
                 rows = duplicates[duplicates[col] == val].index.tolist()
-                errors.append(
-                    f"Duplicate value '{val}' in column '{col}' at rows {', '.join(map(str, [r+1 for r in rows]))}"
+                err = ErrorType(
+                    row=rows[0] + 1,
+                    column=col,
+                    message=f"Duplicate value '{val}' at rows {', '.join(map(str, [r+1 for r in rows]))}",
+                    taskId=taskId,
+                    severity="ERROR",
                 )
+                errors.append(err)
+
     return errors
 
 
 # 8: Function to check value ranges
-def check_value_ranges(df, value_ranges):
+def check_value_ranges(df, taskId, value_ranges):
     errors = []
     for col, allowed_values in value_ranges.items():
         if col not in df.columns:
             continue
         invalid = df[~df[col].isin(allowed_values)]
         for idx, row in invalid.iterrows():
-            errors.append(f"Invalid value '{row[col]}' in row {idx+1}, column '{col}'")
+            err = ErrorType(
+                row=idx + 1,
+                column=col,
+                message=f"Invalid value '{row[col]}'",
+                taskId=taskId,
+                severity="ERROR",
+            )
+            errors.append(err)
+
     return errors
 
 
 # 9: Function to check string lengths
-def check_lengths(df, length_checks):
+def check_lengths(df, taskId, length_checks):
     errors = []
     for col, max_length in length_checks.items():
         if col not in df.columns:
             continue
         too_long = df[df[col].str.len() > max_length]
         for idx, row in too_long.iterrows():
-            errors.append(
-                f"Value too long in row {idx+1}, column '{col}': '{row[col]}' (max {max_length} chars)"
+            err = ErrorType(
+                row=idx + 1,
+                column=col,
+                message=f"Value too long: '{row[col]}' (max {max_length} chars)",
+                taskId=taskId,
+                severity="ERROR",
             )
+            errors.append(err)
+
     return errors
 
 
 # 10: Function to check numerical constraints
-def check_numerical_constraints(df, numerical_checks):
+def check_numerical_constraints(df, taskId, numerical_checks):
     errors = []
     for col, constraint in numerical_checks.items():
         if col not in df.columns:
             continue
         # First, ensure the column is numeric
         if not pd.api.types.is_numeric_dtype(df[col]):
-            errors.append(f"Column '{col}' must be numeric")
+            err = ErrorType(
+                row=0,
+                column=col,
+                message=f"Column '{col}' must be numeric",
+                taskId=taskId,
+                severity="ERROR",
+            )
+            errors.append(err)
+
             continue
         # Then, apply the constraint
         if constraint == "positive_integer":
             invalid = df[df[col] <= 0]  # Changed to <= 0 to exclude zero
             for idx, row in invalid.iterrows():
-                errors.append(
-                    f"Invalid value in row {idx+1}, column '{col}': '{row[col]}' (must be a non negative integer)"
+                err = ErrorType(
+                    row=idx + 1,
+                    column=col,
+                    message=f"Invalid value: '{row[col]}' (must be a non negative integer)",
+                    taskId=taskId,
+                    severity="ERROR",
                 )
+                errors.append(err)
+
     return errors
 
 
 # 11: Function to check for duplicate rows
-def check_duplicate_rows(df):
+def check_duplicate_rows(df, taskId):
     duplicates = df[df.duplicated(keep=False)]
     if not duplicates.empty:
         errors = []
         for idx in duplicates.index:
-            errors.append(f"Duplicate row at {idx+1}")
+            err = ErrorType(
+                row=idx + 1,
+                column="All",
+                message=f"Duplicate row at {idx+1}",
+                taskId=taskId,
+                severity="ERROR",
+            )
+            errors.append(err)
+
         return errors
     return []
 
@@ -219,11 +352,12 @@ def parse(df) -> list[dict]:
 
 
 # 12: Pipeline function to validate CSV
-def validate_csv_file(file_path, category, campus_id):
+def validate_csv_file(file_path, taskId, category, campus_id):
     config = CONFIGS[category]
     file = StringIO(file_path)
     df, read_errors = read_csv(
         file,
+        taskId,
         delimiter=config.get("delimiter", ","),
         encoding=config.get("encoding", "utf-8"),
     )
@@ -233,27 +367,34 @@ def validate_csv_file(file_path, category, campus_id):
     errors = read_errors
 
     # Check headers first
-    header_errors = check_headers(df, config["expected_columns"])
+    header_errors = check_headers(df, taskId, config["expected_columns"])
     errors.extend(header_errors)
 
     # Proceed with other checks only if headers are correct
     if not header_errors:
-        errors.extend(check_empty(df, config.get("required_columns", [])))
-        errors.extend(check_formats(df, config.get("format_checks", {})))
-        errors.extend(check_data_types(df, config.get("type_checks", {})))
-        errors.extend(check_unique(df, config.get("unique_columns", [])))
-        errors.extend(check_value_ranges(df, config.get("value_ranges", {})))
-        errors.extend(check_lengths(df, config.get("length_checks", {})))
+        errors.extend(check_empty(df, taskId, config.get("required_columns", [])))
+        errors.extend(check_formats(df, taskId, config.get("format_checks", {})))
+        errors.extend(check_data_types(df, taskId, config.get("type_checks", {})))
+        errors.extend(check_unique(df, taskId, config.get("unique_columns", [])))
+        errors.extend(check_value_ranges(df, taskId, config.get("value_ranges", {})))
+        errors.extend(check_lengths(df, taskId, config.get("length_checks", {})))
         errors.extend(
-            check_numerical_constraints(df, config.get("numerical_checks", {}))
+            check_numerical_constraints(df, taskId, config.get("numerical_checks", {}))
         )
-        errors.extend(check_duplicate_rows(df))
+        errors.extend(check_duplicate_rows(df, taskId))
         errors.extend(edit_ids(df, ID_COLUMNS, campus_id))
     success = len(errors) == 0
     data = []
     if success:
         data = parse(df)
-    return {"success": success, "errors": errors, "data": data, "type": category}
+    return {
+        "success": success,
+        "errors": [error.dict() for error in errors],
+        "data": data,
+        "type": category,
+    }
+
+    # return {"success": success, "errors": errors, "data": data, "type": category}
 
 
 # edit required fields (id fields, foreign or otherwise, need to be edited by adding campusId to make them unique.)
@@ -495,7 +636,7 @@ def on_message(ch, method, properties, body):
         if not task_id or not file_data_encoded or not category:
             raise ValueError("Invalid message format")
         file_data = base64.b64decode(file_data_encoded).decode("utf-8")
-        result = validate_csv_file(file_data, category, campus_id)
+        result = validate_csv_file(file_data, task_id, category, campus_id)
 
         publish_result(task_id, result, admin_id, campus_id)
 

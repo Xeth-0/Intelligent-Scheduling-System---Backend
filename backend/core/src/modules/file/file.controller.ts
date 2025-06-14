@@ -41,7 +41,7 @@ export class FileController {
     @Body() body: UploadFileDto,
     @GetUser() user: User,
   ): Promise<ApiResponse<string>> {
-    const { category } = body;
+    const { category, description } = body;
     const { userId } = user;
     const result = await this.prismaService.admin.findFirst({
       where: {
@@ -61,6 +61,8 @@ export class FileController {
       category,
       result.adminId,
       result?.campusId,
+      undefined,
+      description,
     );
     const response = new ApiResponse<string>({
       success: true,

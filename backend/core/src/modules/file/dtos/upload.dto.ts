@@ -5,4 +5,8 @@ export class UploadFileDto {
   @ApiProperty()
   @IsString()
   category!: string;
+
+  @ApiProperty()
+  @IsString()
+  description!: string;
 }

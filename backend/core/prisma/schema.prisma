@@ -41,6 +41,11 @@ enum TaskStatus {
   FAILED
 }
 
+enum TaskSeverity {
+  WARNING
+  ERROR
+}
+
 // ========== Building ==========
 model Building {
   buildingId String      @id @default(uuid())
@@ -252,15 +257,17 @@ model RefreshToken {
 }
 
 model Task {
-  taskId     String     @id @default(uuid())
-  admin      Admin      @relation(fields: [adminId], references: [adminId], onDelete: Cascade)
-  adminId    String
-  campus     Campus?    @relation(fields: [campusId], references: [campusId], onDelete: SetNull)
-  campusId   String?
-  status     TaskStatus
-  errorCount Int        @default(0)
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
+  taskId      String     @id @default(uuid())
+  admin       Admin      @relation(fields: [adminId], references: [adminId], onDelete: Cascade)
+  adminId     String
+  campus      Campus?    @relation(fields: [campusId], references: [campusId], onDelete: SetNull)
+  campusId    String?
+  fileName    String
+  description String?
+  status      TaskStatus
+  errorCount  Int        @default(0)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 
   errors TaskError[]
 }
@@ -269,6 +276,9 @@ model TaskError {
   id        String   @id @default(uuid())
   task      Task     @relation(fields: [taskId], references: [taskId], onDelete: Cascade)
   taskId    String
+  row       Int
+  column    String?
   message   String
+  severity  TaskSeverity
   createdAt DateTime @default(now())
 }
