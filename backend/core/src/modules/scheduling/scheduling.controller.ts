@@ -108,6 +108,7 @@ export class SchedulingController {
     @Body() body: SearchSessionsBody,
   ) {
     const resp = await this.schedulingService.searchSessions(user.userId, body);
+    console.log(`filtered schedule response`, resp);
     return ApiResponse.success(200, resp, 'Sessions retrieved successfully');
   }
 
@@ -117,7 +118,10 @@ export class SchedulingController {
     @GetUser() user: User,
     @Param('scheduleId') scheduleId: string,
   ) {
-    const resp = await this.schedulingService.evaluateSchedule(user.userId, scheduleId);
+    const resp = await this.schedulingService.evaluateSchedule(
+      user.userId,
+      scheduleId,
+    );
     return ApiResponse.success(200, resp, 'Schedule evaluated successfully');
   }
 }
