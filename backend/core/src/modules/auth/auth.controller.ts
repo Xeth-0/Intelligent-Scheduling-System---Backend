@@ -42,14 +42,14 @@ export class AuthController {
     return ApiResponse.success(200, tokens, 'Login successful');
   }
 
-  @Post('register')
-  @RegisterDocs()
-  async register(
-    @Body() registerDto: RegisterDto,
-  ): Promise<ApiResponse<TokensDto>> {
-    const tokens = await this.authService.register(registerDto);
-    return ApiResponse.success(201, tokens, 'Registration successful');
-  }
+  // @Post('register')
+  // @RegisterDocs()
+  // async register(
+  //   @Body() registerDto: RegisterDto,
+  // ): Promise<ApiResponse<TokensDto>> {
+  //   const tokens = await this.authService.register(registerDto);
+  //   return ApiResponse.success(201, tokens, 'Registration successful');
+  // }
 
   @Post('refresh')
   @RefreshDocs()
