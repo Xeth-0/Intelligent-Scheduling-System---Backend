@@ -6,6 +6,7 @@ import {
   ValidateNested,
   IsBoolean,
   IsOptional,
+  IsDate,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { SessionType } from '@prisma/client';
@@ -94,6 +95,11 @@ export class GeneralScheduleResponse {
   @Type(() => ScheduledSessionDto)
   @IsOptional()
   sessions?: ScheduledSessionDto[];
+
+  @ApiProperty()
+  @IsDate()
+  @IsNotEmpty()
+  createdAt!: Date;
 }
 
 export class TeacherScheduleResponse {

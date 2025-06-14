@@ -83,6 +83,7 @@ export class SchedulingService implements ISchedulingService {
         scheduleId: schedule.scheduleId,
         scheduleName: schedule.scheduleName,
         isActive: schedule.active,
+        createdAt: schedule.createdAt,
         sessions: sessions.map((session) =>
           this._mapSessionToResponse(session),
         ),
@@ -91,6 +92,7 @@ export class SchedulingService implements ISchedulingService {
     return plainToInstance(GeneralScheduleResponse, {
       scheduleId: schedule.scheduleId,
       scheduleName: schedule.scheduleName,
+      createdAt: schedule.createdAt,
       isActive: schedule.active,
     });
   }
@@ -447,6 +449,17 @@ export class SchedulingService implements ISchedulingService {
     });
     if (!admin) {
       throw new ForbiddenException('User is not an admin');
+    }
+
+    // Check if the given name is unique for that campus
+    const existingSchedule = await this.prismaService.schedule.findFirst({
+      where: {
+        scheduleName: scheduleName,
+        campusId: admin.campusId,
+      },
+    });
+    if (existingSchedule) {
+      throw new BadRequestException('Schedule name must be unique');
     }
 
     // Prepare the data for the generate schedule endpoint
