@@ -3,6 +3,7 @@ import {
   ArgumentsHost,
   HttpException,
   HttpStatus,
+  BadRequestException,
 } from '@nestjs/common';
 import { BaseExceptionFilter } from '@nestjs/core';
 import { Request, Response } from 'express';
@@ -28,12 +29,37 @@ export class AllExceptionsFilter extends BaseExceptionFilter {
 
     console.error('Determined status:', status);
 
-    const message =
-      typeof exception === 'string'
-        ? exception
-        : ((exception as { message: string }).message ??
-          'Internal Server Error. Unknown error occurred');
 
+    // Added better handling for validation errors
+    let message: string;
+    if (exception instanceof BadRequestException) {
+      const response = exception.getResponse();
+      if (typeof response === 'object' && (response as any).message) {
+        const validatorMessages = (response as any).message;
+        if (Array.isArray(validatorMessages) && validatorMessages.length > 0) {
+          const firstError = validatorMessages[0];
+          if (typeof firstError === 'object' && firstError.constraints) {
+            const firstConstraintKey = Object.keys(firstError.constraints)[0];
+            message = firstError.constraints[firstConstraintKey];
+          } else {
+            message = firstError;
+          }
+        } else if (typeof validatorMessages === 'string') {
+          message = validatorMessages;
+        } else {
+          message = 'Validation failed';
+        }
+      } else {
+        message = 'Bad Request';
+      }
+    } else if (typeof exception === 'string') {
+      message = exception;
+    } else if (exception instanceof Error) {
+      message =
+        exception.message ?? 'Internal Server Error. Unknown error occurred';
+    } else {
+      message = 'Internal Server Error. Unknown error occurred';
+    }
     const apiResponse = ApiResponse.error(status, message);
 
     // Debugging logs

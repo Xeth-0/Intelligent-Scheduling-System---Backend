@@ -26,7 +26,7 @@ import {
   ActivateScheduleDocs,
   SearchSessionsDocs,
 } from '@/common/decorators/swagger/scheduling.swagger.docs';
-
+import {  ApiParam } from '@nestjs/swagger';
 @Controller('schedules')
 @ApiBearerAuth()
 @ApiTags('Scheduling')
@@ -37,7 +37,11 @@ export class SchedulingController {
 
   @Post('/generate/:scheduleName?')
   @Roles(Role.ADMIN)
-  @GenerateScheduleDocs()
+  @ApiParam({
+    name: 'scheduleName',
+    required: false,
+    description: 'Schedule name',
+  })
   async generateSchedule(
     @GetUser() admin: User,
     @Param('scheduleName') scheduleName?: string,
