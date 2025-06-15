@@ -1,122 +1,9 @@
-// import {
-//   Injectable,
-//   Inject,
-//   Get,
-//   Param,
-//   Logger,
-//   BadRequestException,
-//   InternalServerErrorException,
-// } from '@nestjs/common';
-// import { ClientProxy } from '@nestjs/microservices';
-// import { firstValueFrom } from 'rxjs';
-// import amqp from 'amqp-connection-manager';
-// import { ValidationQueuedDto } from './dtos/validation-queued.dto';
-// import { randomUUID, UUID } from 'crypto';
-// import { PrismaService } from '@/prisma/prisma.service';
-// import { Prisma, TaskStatus } from '@prisma/client';
-// @Injectable()
-// export class FileService {
-//   // Inject the RabbitMQ client
-//   constructor(
-//     @Inject('CSV_SERVICE') private readonly client: ClientProxy,
-//     private prismaService: PrismaService,
-//   ) {}
-//   private logger = new Logger(FileService.name);
-//   // Send CSV file to Python service for validation (non-blocking)
-//   async queueValidationTask(
-//     file: Express.Multer.File,
-//     category: string,
-//     adminId: string,
-//     campusId?: string,
-//     fileName?: string,
-//   ): Promise<ValidationQueuedDto> {
-//     try {
-//       if (!file?.buffer) {
-//         throw new BadRequestException('File buffer is missing or invalid');
-//       }
-//       // Convert file buffer to base64 for safe transmission
-//       const fileData = file.buffer.toString('base64');
-//       // Generate a unique task ID (for tracking purposes)
-//       const taskId = randomUUID();
-//       // Emit the CSV file to the RabbitMQ queue without waiting for a response
-
-//       this.logger.log('Queuing task:: ', taskId);
-//       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-//       const result = await firstValueFrom(
-//         this.client.emit('csv_validation_request', {
-//           taskId: taskId,
-//           fileData: fileData,
-//           category: category,
-//           adminId: adminId,
-//           campusId: campusId,
-//         }),
-//       );
-//       if (!result) {
-//         throw new InternalServerErrorException(
-//           'Failed to send file to validation service',
-//         );
-//       }
-//       this.logger.log('file queued: ', taskId);
-//       // save in db
-//       await this.prismaService.task.create({
-//         data: {
-//           taskId: taskId,
-//           adminId: adminId,
-//           campusId: campusId,
-//           fileName: fileName ?? file.originalname,
-//           status: TaskStatus.QUEUED,
-//           errorCount: 0,
-//         },
-//       });
-//       // Immediately return a response to the client
-//       return { message: 'File queued for validation', taskId: taskId };
-//     } catch (error) {
-//       const err = error as Error;
-//       this.logger.error('failed to queue', error);
-//       if (error instanceof Prisma.PrismaClientKnownRequestError) {
-//         switch (error.code) {
-//           case 'P2002':
-//             throw new InternalServerErrorException(
-//               'Duplicate entry for unique field - ',
-//               err.message,
-//             );
-//           case 'P2003':
-//             throw new InternalServerErrorException(
-//               'Foreign key constraint failed - referenced item not found - ',
-//               err.message,
-//             );
-//           case 'P2000':
-//             throw new InternalServerErrorException(
-//               'Field value too long - ',
-//               err.message,
-//             );
-//           case 'P2025':
-//             throw new InternalServerErrorException(
-//               'Entity not found - ',
-//               err.message,
-//             );
-//           default:
-//             throw new InternalServerErrorException(
-//               'Database Error - ',
-//               err.message,
-//             );
-//         }
-//       } else if (error instanceof InternalServerErrorException) {
-//         throw error;
-//       }
-//       throw new InternalServerErrorException(
-//         'An unexpected error occurred - ',
-//         err.message,
-//       );
-//     }
-//   }
-// }
-
 import {
   Injectable,
   Inject,
   BadRequestException,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { ValidationQueuedDto } from './dtos/validation-queued.dto';
@@ -124,6 +11,9 @@ import { randomUUID } from 'crypto';
 import { PrismaService } from '@/prisma/prisma.service';
 import { Prisma, TaskStatus } from '@prisma/client';
 import { Logger } from '@nestjs/common';
+import * as path from 'path';
+import * as fs from 'fs';
+import { fileConfig } from '@/config';
 
 @Injectable()
 export class FileService {
@@ -132,6 +22,7 @@ export class FileService {
     private prismaService: PrismaService,
   ) {}
   private logger = new Logger(FileService.name);
+  private readonly templatesDir = fileConfig.templates.path;
 
   async queueValidationTask(
     file: Express.Multer.File,
@@ -231,6 +122,56 @@ export class FileService {
       throw new InternalServerErrorException(
         `Unexpected error while queuing task: ${err.message}`,
       );
+    }
+  }
+
+  async downloadTemplate(category: string): Promise<{
+    buffer: Buffer;
+    filename: string;
+  }> {
+    try {
+      // Ensure templates directory exists
+      if (!fs.existsSync(this.templatesDir)) {
+        fs.mkdirSync(this.templatesDir, { recursive: true });
+      }
+
+      const templatePath = path.join(
+        this.templatesDir,
+        `${category.toLowerCase()}.csv`,
+      );
+
+      this.logger.log('template path: ', templatePath);
+      if (!fs.existsSync(templatePath)) {
+        throw new NotFoundException(
+          `Template for category '${category.toLowerCase()}' not found`,
+        );
+      }
+
+      // Create a read stream
+      const fileStream = fs.createReadStream(templatePath);
+      const chunks: Buffer[] = [];
+
+      // Read the file in chunks
+      for await (const chunk of fileStream) {
+        chunks.push(chunk);
+      }
+
+      // Combine chunks into a single buffer
+      const buffer = Buffer.concat(chunks);
+      return {
+        buffer,
+        filename: `${category}_template.csv`,
+      };
+    } catch (error: unknown) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      const err = error as Error;
+      this.logger.error(
+        `Failed to download template: ${err.message}`,
+        err.stack,
+      );
+      throw new InternalServerErrorException('Failed to download template');
     }
   }
 }

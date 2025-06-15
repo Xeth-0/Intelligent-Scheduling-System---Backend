@@ -563,7 +563,7 @@ SGCOURSE_CONFIG = {
     "expected_columns": ["studentGroupId", "courseId"],
     "required_columns": ["studentGroupId", "courseId"],
     # "format_checks": {"studentGroupId": "uuid", "courseId": "uuid"},
-    "unique_columns": ["studentGroupId", "courseId"],
+    # "unique_columns": ["studentGroupId", "courseId"],
 }
 
 

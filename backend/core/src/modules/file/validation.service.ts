@@ -6,6 +6,10 @@ import { Channel, ConsumeMessage, Message } from 'amqplib';
 import { PrismaService } from '@/prisma/prisma.service';
 import { TaskStatus } from '@prisma/client';
 import { TaskDetailDto, TaskDto } from './dtos/task.dto';
+import {
+  PaginatedResponse,
+  PaginationData,
+} from '@/common/response/api-response.dto';
 
 @Injectable()
 export class ValidationService {
@@ -84,12 +88,34 @@ export class ValidationService {
 
   // GET /status -> list of tasks
   // @GetUser() user: User
-  async getAllTasks(): Promise<TaskDto[]> {
+  async getAllTasks(
+    page: number,
+    size: number,
+  ): Promise<PaginatedResponse<TaskDto>> {
+    const skip = (page - 1) * size;
+
+    const [items, totalItems] = await Promise.all([
+      this.prismaService.task.findMany({
+        skip: skip,
+        take: size,
+        orderBy: [{ createdAt: 'desc' }],
+      }),
+      this.prismaService.task.count({}),
+    ]);
+
     const tasks = await this.prismaService.task.findMany();
     if (!tasks) {
       throw new NotFoundException('No Task Found');
     }
-    return tasks;
+    const totalPages = Math.ceil(totalItems / size);
+    const paginaltedData: PaginationData = {
+      totalItems: totalItems,
+      currentPage: page,
+      totalPages: totalPages,
+      itemsPerPage: size,
+    };
+
+    return new PaginatedResponse<TaskDto>(items, paginaltedData);
     // return await this.prismaService.task.findMany();
   }
 
