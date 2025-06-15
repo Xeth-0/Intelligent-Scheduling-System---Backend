@@ -91,8 +91,8 @@ export class FileController {
   @DownloadTemplateDocs()
   @Roles(Role.ADMIN)
   async downloadTemplate(
-    @Param('category') category: string,
     @Res() res: Response,
+    @Param('category') category: string,
   ): Promise<void> {
     const allowed = [
       'student',
