@@ -10,6 +10,20 @@ import { Request, Response } from 'express';
 import { ApiResponse } from '../response/api-response.dto';
 import { SentryExceptionCaptured } from '@sentry/nestjs';
 
+// Type definitions for validation error handling
+interface ValidationErrorResponse {
+  message: string | string[] | ValidationError[];
+  error?: string;
+  statusCode?: number;
+}
+
+interface ValidationError {
+  property?: string;
+  value?: unknown;
+  constraints?: Record<string, string>;
+  children?: ValidationError[];
+}
+
 @Catch()
 export class AllExceptionsFilter extends BaseExceptionFilter {
   @SentryExceptionCaptured()
@@ -29,25 +43,41 @@ export class AllExceptionsFilter extends BaseExceptionFilter {
 
     console.error('Determined status:', status);
 
-
     // Added better handling for validation errors
     let message: string;
     if (exception instanceof BadRequestException) {
-      const response = exception.getResponse();
-      if (typeof response === 'object' && (response as any).message) {
-        const validatorMessages = (response as any).message;
-        if (Array.isArray(validatorMessages) && validatorMessages.length > 0) {
-          const firstError = validatorMessages[0];
-          if (typeof firstError === 'object' && firstError.constraints) {
-            const firstConstraintKey = Object.keys(firstError.constraints)[0];
-            message = firstError.constraints[firstConstraintKey];
+      const exceptionResponse = exception.getResponse();
+      if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
+        const typedResponse = exceptionResponse as ValidationErrorResponse;
+        if (typedResponse.message) {
+          const validatorMessages = typedResponse.message;
+          if (
+            Array.isArray(validatorMessages) &&
+            validatorMessages.length > 0
+          ) {
+            const firstError = validatorMessages[0];
+            if (typeof firstError === 'object' && firstError !== null) {
+              if (
+                firstError.constraints &&
+                typeof firstError.constraints === 'object'
+              ) {
+                const firstConstraintKey = Object.keys(
+                  firstError.constraints,
+                )[0];
+                message = firstError.constraints[firstConstraintKey];
+              } else {
+                message = JSON.stringify(firstError);
+              }
+            } else {
+              message = String(firstError);
+            }
+          } else if (typeof validatorMessages === 'string') {
+            message = validatorMessages;
           } else {
-            message = firstError;
+            message = 'Validation failed';
           }
-        } else if (typeof validatorMessages === 'string') {
-          message = validatorMessages;
         } else {
-          message = 'Validation failed';
+          message = 'Bad Request';
         }
       } else {
         message = 'Bad Request';

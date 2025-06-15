@@ -38,32 +38,29 @@ export class AuthService implements IAuthService {
     return tokens;
   }
 
-  async register(registerDto: RegisterDto): Promise<TokensDto> {
-    const isFirstUser = await this.usersService.isFirstUser();
-    if (isFirstUser) {
-      // Force Role to be ADMIN for the first user.
-      console.log('First user, forcing role to ADMIN');
-      registerDto.role = Role.ADMIN;
-    } else {
-      // Force role to be STUDENT for public registration
-      console.log('Creating student account');
-      registerDto.role = Role.STUDENT;
-    }
+  // async register(registerDto: RegisterDto): Promise<TokensDto> {
+  //   const isFirstUser = await this.usersService.isFirstUser();
+  //   if (isFirstUser) {
+  //     // Force Role to be ADMIN for the first user.
+  //     console.log('First user, forcing role to ADMIN');
+  //     registerDto.role = Role.ADMIN;
+  //   } else {
+  //     // Force role to be STUDENT for public registration
+  //     console.log('Creating student account');
+  //     registerDto.role = Role.STUDENT;
+  //   }
 
-    const user = await this.usersService.createUser({
-      ...registerDto,
-      password: registerDto.password,
-    });
+  //   const user = await this.usersService.createUser(registerDto);
 
-    const tokens = await this.tokensService.generateTokens(
-      user.userId,
-      user.email,
-      user.role,
-    );
+  //   const tokens = await this.tokensService.generateTokens(
+  //     user.userId,
+  //     user.email,
+  //     user.role,
+  //   );
 
-    await this.tokensService.saveRefreshToken(user.userId, tokens.refreshToken);
-    return tokens;
-  }
+  //   await this.tokensService.saveRefreshToken(user.userId, tokens.refreshToken);
+  //   return tokens;
+  // }
 
   async refreshTokens(refreshToken: string): Promise<TokensDto> {
     try {

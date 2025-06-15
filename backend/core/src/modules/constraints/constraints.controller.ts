@@ -53,6 +53,8 @@ export class ConstraintController {
     @GetUser() user: User,
     @Body() createDto: CreateConstraintDto,
   ) {
+    console.log('creating constraints: ', createDto);
+
     const constraint = await this.constraintService.createConstraint(
       user.userId,
       createDto,

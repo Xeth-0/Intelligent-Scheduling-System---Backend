@@ -167,11 +167,14 @@ export interface ScheduleEvaluationResponse {
         evaluation_time: number;
       };
       violations: string[];
-      categories: Record<string, {
-        count: number;
-        total_penalty: number;
-        violations: string[];
-      }>;
+      categories: Record<
+        string,
+        {
+          count: number;
+          total_penalty: number;
+          violations: string[];
+        }
+      >;
       fitness_vector: number[];
     };
   };

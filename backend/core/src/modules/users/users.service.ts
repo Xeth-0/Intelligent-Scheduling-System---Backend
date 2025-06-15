@@ -6,6 +6,7 @@ import {
   Injectable,
   InternalServerErrorException,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { Prisma, Role, User } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
@@ -34,7 +35,20 @@ export class UsersService implements IUsersService {
     };
   }
 
-  async createUser(createUserDto: CreateUserDto): Promise<UserResponseDto> {
+  async createUser(
+    adminId: string,
+    createUserDto: CreateUserDto,
+  ): Promise<UserResponseDto> {
+    const admin = await this.prismaService.admin.findUnique({
+      where: {
+        userId: adminId,
+      },
+    });
+    if (!admin)
+      throw new UnauthorizedException(
+        'Creator is not an admin: Admin not found',
+      );
+
     // Validate required fields
     const { password, departmentId, ...rest } = createUserDto;
     if (!createUserDto.role) {
@@ -74,6 +88,19 @@ export class UsersService implements IUsersService {
           data: {
             userId: user.userId,
             departmentId: department.deptId,
+          },
+        });
+      } else if (createUserDto.role === Role.STUDENT) {
+        await tx.student.create({
+          data: {
+            userId: user.userId,
+          },
+        });
+      } else if (createUserDto.role === Role.ADMIN) {
+        await tx.admin.create({
+          data: {
+            userId: user.userId,
+            campusId: admin.campusId,
           },
         });
       }

@@ -18,7 +18,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
-import { Role } from '@prisma/client';
+import { Role, User } from '@prisma/client';
 import { UsersService } from '@/modules/users/users.service';
 import {
   CreateUserDto,
@@ -62,6 +62,7 @@ export class UsersController {
   @CreateUserDocs()
   async create(
     @Body() createUserDto: CreateUserDto,
+    @GetUser() admin: User,
   ): Promise<ApiResponse<UserResponseDto>> {
     if (createUserDto.role === Role.STUDENT) {
       throw new ForbiddenException(
@@ -73,7 +74,10 @@ export class UsersController {
         throw new BadRequestException('Department ID is required');
       }
     }
-    const user = await this.usersService.createUser(createUserDto);
+    const user = await this.usersService.createUser(
+      admin.userId,
+      createUserDto,
+    );
     return ApiResponse.success(201, user, 'User created successfully');
   }
 

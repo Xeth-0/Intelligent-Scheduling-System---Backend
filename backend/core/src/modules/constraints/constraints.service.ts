@@ -503,8 +503,8 @@ export class ConstraintService implements OnModuleInit {
   }
 
   /**
-   * Sets time preference constraint for a teacher (prefer or avoid)
-   * Overwrites existing constraint of the same preference type
+   * Sets unified time preference constraint for a teacher (prefer, avoid, neutral)
+   * Handles all preference types in a single atomic operation
    */
   private async _setTimePreference(
     teacherId: string,
@@ -519,60 +519,56 @@ export class ConstraintService implements OnModuleInit {
         'Time preference constraint type not properly seeded',
       );
     }
-    if (value.timeslotCodes.length === 0) {
-      throw new BadRequestException(
-        'No constraint created - empty timeslot list',
+
+    // Validate and detect conflicts
+    const allTimeslotDayPairs = new Set<string>();
+    const conflicts: string[] = [];
+
+    const validateAndCollectPairs = (
+      pref: { days: string[]; timeslotCodes: string[][] } | undefined,
+      prefType: string,
+    ) => {
+      if (!pref) return;
+
+      pref.days.forEach((day, dayIndex) => {
+        const timeslots = pref.timeslotCodes[dayIndex] || [];
+        timeslots.forEach((timeslot) => {
+          const pair = `${day}-${timeslot}`;
+          if (allTimeslotDayPairs.has(pair)) {
+            conflicts.push(`${prefType}: ${pair}`);
+            console.log(
+              `Conflict detected for ${pair} in ${prefType}, treating as neutral`,
+            );
+          } else {
+            allTimeslotDayPairs.add(pair);
+          }
+        });
+      });
+    };
+
+    // Check for conflicts across preference types
+    validateAndCollectPairs(value.preferences.PREFER, 'PREFER');
+    validateAndCollectPairs(value.preferences.AVOID, 'AVOID');
+    validateAndCollectPairs(value.preferences.NEUTRAL, 'NEUTRAL');
+
+    if (conflicts.length > 0) {
+      console.log(
+        'Time preference conflicts detected and will be treated as neutral:',
+        conflicts,
       );
     }
 
+    // Delete all existing time preference constraints for this teacher
     const existingConstraints = await this.prisma.constraint.findMany({
       where: {
         teacherId: teacherId,
         constraintTypeId: constraintTypeId,
         isActive: true,
-        value: {
-          path: ['preference'],
-          equals: value.preference,
-        },
-      },
-    });
-
-    const reverseConstraints = await this.prisma.constraint.findMany({
-      where: {
-        teacherId: teacherId,
-        constraintTypeId: constraintTypeId,
-        isActive: true,
-        NOT: {
-          value: {
-            path: ['preference'],
-            equals: value.preference,
-          },
-        },
       },
     });
 
     return await this.prisma.$transaction(async (tx) => {
-      if (reverseConstraints.length > 0) {
-        for (const reverseConstraint of reverseConstraints) {
-          const constraintValue = reverseConstraint.value as {
-            timeslotCodes?: string[];
-            preference?: string;
-          };
-
-          if (
-            constraintValue.timeslotCodes &&
-            value.timeslotCodes.some((code) =>
-              constraintValue.timeslotCodes!.includes(code),
-            )
-          ) {
-            await tx.constraint.delete({
-              where: { id: reverseConstraint.id },
-            });
-          }
-        }
-      }
-
-      // Delete existing constraints of the same preference type
+      // Delete existing constraints
       if (existingConstraints.length > 0) {
         for (const existingConstraint of existingConstraints) {
           await tx.constraint.delete({
@@ -581,6 +577,34 @@ export class ConstraintService implements OnModuleInit {
         }
       }
 
+      // Check if we have any non-empty preferences to create
+      const hasPreferPreferences =
+        value.preferences.PREFER?.days.length &&
+        value.preferences.PREFER.timeslotCodes.some(
+          (codes) => codes.length > 0,
+        );
+      const hasAvoidPreferences =
+        value.preferences.AVOID?.days.length &&
+        value.preferences.AVOID.timeslotCodes.some((codes) => codes.length > 0);
+      const hasPreferences = hasPreferPreferences || hasAvoidPreferences;
+
+      if (!hasPreferences) {
+        // No preferences to save, just return a placeholder constraint
+        return tx.constraint.create({
+          data: {
+            constraintTypeId,
+            teacherId,
+            value: { preferences: {} } as unknown as Prisma.JsonObject,
+            priority: priority ?? 5.0,
+            isActive: false, // Mark as inactive since it's empty
+          },
+          include: {
+            constraintType: true,
+          },
+        });
+      }
+
+      // Create the unified constraint with all preferences
       return tx.constraint.create({
         data: {
           constraintTypeId,
@@ -597,7 +621,7 @@ export class ConstraintService implements OnModuleInit {
 
   /**
    * Sets room preference constraint for a teacher (prefer or avoid)
-   * Handles conflicts with opposite preference type
+   * Handles conflicts with opposite preference type and empty room arrays
    */
   private async _setRoomPreference(
     teacherId: string,
@@ -615,13 +639,10 @@ export class ConstraintService implements OnModuleInit {
 
     // Check if there are rooms to set
     const hasRooms =
-      (value.roomIds && value.roomIds.length > 0) ??
+      (value.roomIds && value.roomIds.length > 0) ||
       (value.buildingIds && value.buildingIds.length > 0);
 
-    if (!hasRooms) {
-      throw new BadRequestException('No constraint created - empty room list');
-    }
-
+    // Find all existing constraints of this preference type to delete them
     const existingConstraints = await this.prisma.constraint.findMany({
       where: {
         teacherId: teacherId,
@@ -633,6 +654,38 @@ export class ConstraintService implements OnModuleInit {
         },
       },
     });
+
+    if (!hasRooms) {
+      // No rooms specified - delete existing constraints and return inactive placeholder
+      console.log(
+        `No rooms specified for ${value.preference} preference, clearing existing constraints`,
+      );
+
+      return await this.prisma.$transaction(async (tx) => {
+        // Delete existing constraints of this preference type
+        if (existingConstraints.length > 0) {
+          for (const existingConstraint of existingConstraints) {
+            await tx.constraint.delete({
+              where: { id: existingConstraint.id },
+            });
+          }
+        }
+
+        // Return inactive placeholder constraint
+        return tx.constraint.create({
+          data: {
+            constraintTypeId,
+            teacherId,
+            value: value as unknown as Prisma.JsonObject,
+            priority: priority ?? 5.0,
+            isActive: false, // Mark as inactive since it's empty
+          },
+          include: {
+            constraintType: true,
+          },
+        });
+      });
+    }
 
     const reverseConstraints = await this.prisma.constraint.findMany({
       where: {
@@ -736,14 +789,6 @@ export class ConstraintService implements OnModuleInit {
       await this.prisma.constraint.delete({
         where: { id: existingConstraint.id },
       });
-    }
-
-    // Create new constraint (only if enabled)
-    if (!value.enabled) {
-      // If disabled, we just deleted the existing constraint and don't create a new one
-      throw new BadRequestException(
-        'No constraint created - compactness disabled',
-      );
     }
 
     return this.prisma.constraint.create({

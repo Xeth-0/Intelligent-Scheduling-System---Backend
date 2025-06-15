@@ -21,9 +21,20 @@ export interface RoomConstraintValue {
 }
 
 export interface TimeslotConstraintValue {
-  days: DayOfWeek[];
-  timeslotCodes: string[]; // e.g., ["0900_1000", "1000_1100"]
-  preference: 'PREFER' | 'AVOID' | 'NEUTRAL';
+  preferences: {
+    PREFER?: {
+      days: DayOfWeek[];
+      timeslotCodes: string[][];
+    };
+    AVOID?: {
+      days: DayOfWeek[];
+      timeslotCodes: string[][];
+    };
+    NEUTRAL?: {
+      days: DayOfWeek[];
+      timeslotCodes: string[][];
+    };
+  };
 }
 
 export interface BooleanConstraintValue {
@@ -138,19 +149,72 @@ export const CONSTRAINT_DEFINITIONS = {
     category: ConstraintCategory.TEACHER_PREFERENCE,
     valueType: ConstraintValueType.TIME_SLOT,
     jsonSchema: z.object({
-      days: z.array(
-        z.enum([
-          DayOfWeek.MONDAY,
-          DayOfWeek.TUESDAY,
-          DayOfWeek.WEDNESDAY,
-          DayOfWeek.THURSDAY,
-          DayOfWeek.FRIDAY,
-        ]),
-      ),
-      timeslotCodes: z
-        .array(z.enum(VALID_TIMESLOT_CODES))
-        .min(1, 'At least one timeslot must be selected'),
-      preference: z.enum(['PREFER', 'AVOID']),
+      preferences: z
+        .object({
+          PREFER: z
+            .object({
+              days: z.array(
+                z.enum([
+                  DayOfWeek.MONDAY,
+                  DayOfWeek.TUESDAY,
+                  DayOfWeek.WEDNESDAY,
+                  DayOfWeek.THURSDAY,
+                  DayOfWeek.FRIDAY,
+                ]),
+              ),
+              timeslotCodes: z.array(z.array(z.enum(VALID_TIMESLOT_CODES))),
+            })
+            .optional(),
+          AVOID: z
+            .object({
+              days: z.array(
+                z.enum([
+                  DayOfWeek.MONDAY,
+                  DayOfWeek.TUESDAY,
+                  DayOfWeek.WEDNESDAY,
+                  DayOfWeek.THURSDAY,
+                  DayOfWeek.FRIDAY,
+                ]),
+              ),
+              timeslotCodes: z.array(z.array(z.enum(VALID_TIMESLOT_CODES))),
+            })
+            .optional(),
+          NEUTRAL: z
+            .object({
+              days: z.array(
+                z.enum([
+                  DayOfWeek.MONDAY,
+                  DayOfWeek.TUESDAY,
+                  DayOfWeek.WEDNESDAY,
+                  DayOfWeek.THURSDAY,
+                  DayOfWeek.FRIDAY,
+                ]),
+              ),
+              timeslotCodes: z.array(z.array(z.enum(VALID_TIMESLOT_CODES))),
+            })
+            .optional(),
+        })
+        .refine(
+          (data) => {
+            // Validate that days.length === timeslotCodes.length for each preference type
+            const validateLengths = (
+              pref: { days: string[]; timeslotCodes: string[][] } | undefined,
+            ) => {
+              if (!pref) return true;
+              return pref.days.length === pref.timeslotCodes.length;
+            };
+
+            return (
+              validateLengths(data.PREFER) &&
+              validateLengths(data.AVOID) &&
+              validateLengths(data.NEUTRAL)
+            );
+          },
+          {
+            message:
+              'Days and timeslotCodes arrays must have the same length for each preference type',
+          },
+        ),
     }),
   } satisfies ConstraintTypeDefinition<TimeslotConstraintValue>,
 
