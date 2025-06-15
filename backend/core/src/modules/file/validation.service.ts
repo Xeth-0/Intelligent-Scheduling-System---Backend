@@ -6,6 +6,10 @@ import { Channel, ConsumeMessage, Message } from 'amqplib';
 import { PrismaService } from '@/prisma/prisma.service';
 import { TaskStatus } from '@prisma/client';
 import { TaskDetailDto, TaskDto } from './dtos/task.dto';
+import {
+  PaginatedResponse,
+  PaginationData,
+} from '@/common/response/api-response.dto';
 
 @Injectable()
 export class ValidationService {
@@ -24,10 +28,15 @@ export class ValidationService {
       this.logger.log(`Processing validation result for ${data.result.type}`);
       if (data.result.success) {
         const { errors, erroneousItems, successfulRecords } =
-          await this.seedDatabase.seed(data.result.data, data.result.type);
+          await this.seedDatabase.seed(
+            data.result.data,
+            data.result.type,
+            data.taskId,
+          );
         this.logger.log(
           `Successfully processed validation result for ${data.result.type}, adminId: ${data.adminId}, campusId: ${data.campusId}, taskId: ${data.taskId}`,
         );
+        console.log('Errors: ', ...errors);
         const proms = [
           await this.prismaService.task.update({
             where: {
@@ -39,10 +48,7 @@ export class ValidationService {
             },
           }),
           await this.prismaService.taskError.createMany({
-            data: errors.map((error) => ({
-              taskId: data.taskId,
-              message: error,
-            })),
+            data: errors,
           }),
         ];
         await Promise.all(proms);
@@ -50,6 +56,7 @@ export class ValidationService {
         this.logger.error(
           `Validation failed with ${data.result.errors.length} errors`,
         );
+
         const errorProms = [
           await this.prismaService.task.update({
             where: {
@@ -61,13 +68,11 @@ export class ValidationService {
             },
           }),
           await this.prismaService.taskError.createMany({
-            data: data.result.errors.map((error) => ({
-              taskId: data.taskId,
-              message: error,
-            })),
+            data: data.result.errors,
           }),
         ];
         await Promise.all(errorProms);
+        console.log('Errors2: ', data.result.errors);
       }
       // const channel = context.getChannelRef();
       // const originalMsg = context.getMessage();
@@ -83,12 +88,34 @@ export class ValidationService {
 
   // GET /status -> list of tasks
   // @GetUser() user: User
-  async getAllTasks(): Promise<TaskDto[]> {
+  async getAllTasks(
+    page: number,
+    size: number,
+  ): Promise<PaginatedResponse<TaskDto>> {
+    const skip = (page - 1) * size;
+
+    const [items, totalItems] = await Promise.all([
+      this.prismaService.task.findMany({
+        skip: skip,
+        take: size,
+        orderBy: [{ createdAt: 'desc' }],
+      }),
+      this.prismaService.task.count({}),
+    ]);
+
     const tasks = await this.prismaService.task.findMany();
     if (!tasks) {
       throw new NotFoundException('No Task Found');
     }
-    return tasks;
+    const totalPages = Math.ceil(totalItems / size);
+    const paginaltedData: PaginationData = {
+      totalItems: totalItems,
+      currentPage: page,
+      totalPages: totalPages,
+      itemsPerPage: size,
+    };
+
+    return new PaginatedResponse<TaskDto>(items, paginaltedData);
     // return await this.prismaService.task.findMany();
   }
 
@@ -100,6 +127,11 @@ export class ValidationService {
         taskId,
       },
     });
+    // const errors = await this.prismaService.taskError.findMany({
+    //   where: {
+    //     taskId,
+    //   },
+    // });
     const errors = await this.prismaService.taskError.findMany({
       where: {
         taskId,
@@ -109,9 +141,31 @@ export class ValidationService {
       throw new NotFoundException('Task not found');
     }
     return {
-      taskId: task.taskId,
-      errors: errors.map((error) => error.message),
+      ...task,
+      errors: errors,
     };
+  }
+
+  async deleteTaskById(taskId: string): Promise<TaskDto> {
+    const task = await this.prismaService.task.findFirst({
+      where: {
+        taskId,
+      },
+    });
+    if (!task) {
+      throw new NotFoundException('Task not found');
+    }
+    await this.prismaService.taskError.deleteMany({
+      where: {
+        taskId,
+      },
+    });
+    await this.prismaService.task.delete({
+      where: {
+        taskId,
+      },
+    });
+    return task;
   }
 }
 

@@ -1,8 +1,9 @@
 import { type ClassroomType, type SessionType } from '@prisma/client';
+import { type TaskError } from './task.dto';
 
 export class ValidationResultDto<T> {
   success!: boolean;
-  errors!: Array<string>;
+  errors!: TaskError[];
   data!: T;
   type!: fileTypes;
 }

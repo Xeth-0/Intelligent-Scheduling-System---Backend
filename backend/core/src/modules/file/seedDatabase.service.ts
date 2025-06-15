@@ -11,35 +11,127 @@ import {
   ValidatedDataType,
 } from './dtos/validation-result.dto';
 import { PrismaService } from '@/prisma/prisma.service';
-import { Role } from '@prisma/client';
+import { Role, TaskSeverity } from '@prisma/client';
 
 import { Prisma } from '@prisma/client';
+import { TaskError } from './dtos/task.dto';
 
-function formatPrismaError(error: unknown, rowNumber: number): string {
-  if (error instanceof Prisma.PrismaClientKnownRequestError) {
-    switch (error.code) {
-      case 'P2002':
-        return `Row ${rowNumber}: Duplicate entry for unique field`;
-      case 'P2003':
-        return `Row ${rowNumber}: Foreign key constraint failed - referenced item not found`;
-      case 'P2000':
-        return `Row ${rowNumber}: Field value too long`;
-      case 'P2025':
-        return `Row ${rowNumber}: Entity not found`;
-      default:
-        return `Row ${rowNumber}: Database error - ${error.message}`;
+const extractColumnFromMeta = (
+  error: Prisma.PrismaClientKnownRequestError,
+): string => {
+  // Case 1: Prisma provides the exact column(s)
+  if (Array.isArray(error.meta?.target) && error.meta.target.length > 0) {
+    return error.meta.target[0] as string;
+  }
+
+  // Case 2: Constraint string contains column info
+  if (typeof error.meta?.constraint === 'string') {
+    // Try pattern like "Course_departmentId_fkey"
+    // const match = error.meta.constraint.match(/_(\w+)_fkey$/);
+    const regex = /_(\w+)_fkey$/;
+    const match = regex.exec(error.meta.constraint);
+    if (match) {
+      if (match) {
+        return match[1];
+      }
+      return match[1];
+    }
+
+    // Fallback for underscore-separated constraint names
+    const parts = error.meta.constraint.split('_');
+    if (parts.length >= 2) {
+      return parts.slice(1, -1).join('_'); // best guess
     }
   }
-  return `Row ${rowNumber}: Unexpected error - ${(error as Error).message}`;
+
+  return ''; // Unknown
+};
+
+const convertErrorToTaskError = (
+  error: Prisma.PrismaClientKnownRequestError,
+  rowNumber: number,
+  message: string,
+  severity: TaskSeverity,
+  taskId: string,
+): TaskError => {
+  const column = extractColumnFromMeta(error);
+  return {
+    row: rowNumber,
+    column,
+    message,
+    taskId,
+    createdAt: new Date(),
+    severity,
+  };
+};
+
+function formatPrismaError(
+  error: unknown,
+  rowNumber: number,
+  taskId: string,
+): TaskError {
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    console.log('error Meta: ', error.meta);
+    switch (error.code) {
+      case 'P2002':
+        return convertErrorToTaskError(
+          error,
+          rowNumber,
+          'Duplicate entry for unique field',
+          TaskSeverity.ERROR,
+          taskId,
+        );
+      case 'P2003':
+        return convertErrorToTaskError(
+          error,
+          rowNumber,
+          'Foreign key constraint failed - referenced item not found',
+          TaskSeverity.ERROR,
+          taskId,
+        );
+      case 'P2000':
+        return convertErrorToTaskError(
+          error,
+          rowNumber,
+          'Field value too long',
+          TaskSeverity.ERROR,
+          taskId,
+        );
+      case 'P2025':
+        return convertErrorToTaskError(
+          error,
+          rowNumber,
+          'Entity not found',
+          TaskSeverity.ERROR,
+          taskId,
+        );
+      default:
+        return convertErrorToTaskError(
+          error,
+          rowNumber,
+          `Database error - ${error.message}`,
+          TaskSeverity.ERROR,
+          taskId,
+        );
+    }
+  }
+  return {
+    row: rowNumber,
+    column: '',
+    message: 'Unknown database error',
+    taskId: '',
+    severity: 'ERROR',
+    createdAt: new Date(),
+  } as TaskError;
 }
 
 @Injectable()
 export class SeedDatabase {
   constructor(private readonly prismaService: PrismaService) {}
   private logger = new Logger(SeedDatabase.name);
-  async seed(data: ValidatedDataType[], tableName: fileTypes) {
+  async seed(data: ValidatedDataType[], tableName: fileTypes, taskid: string) {
     const results = {
-      errors: [] as string[],
+      errors: [] as TaskError[],
       erroneousItems: [] as ValidatedDataType[],
       successfulRecords: 0,
     };
@@ -49,7 +141,7 @@ export class SeedDatabase {
         await this.processItem(item, tableName);
         results.successfulRecords++;
       } catch (error) {
-        results.errors.push(formatPrismaError(error, idx + 1));
+        results.errors.push(formatPrismaError(error, idx + 1, taskid));
 
         results.erroneousItems.push(item);
         this.logger.error('Error processing item', item, error);
