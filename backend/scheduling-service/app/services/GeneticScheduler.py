@@ -49,6 +49,7 @@ class GeneticScheduler:
         gene_mutation_rate: float = GENE_MUTATION_RATE,
         chromosome_mutation_rate: float = CHROMOSOME_MUTATION_RATE,
         use_detailed_fitness: bool = True,
+        use_nsga2: bool = False,
     ):
         self.courses = courses
         self.teachers = teachers
@@ -60,6 +61,7 @@ class GeneticScheduler:
         self.gene_mutation_rate = gene_mutation_rate
         self.chromosome_mutation_rate = chromosome_mutation_rate
         self.use_detailed_fitness = use_detailed_fitness
+        self.use_nsga2 = use_nsga2  # Toggle for multi-objective NSGA-II
 
         # Initialize the constraint registry
         self.constraint_registry = SchedulingConstraintRegistry(constraints)
@@ -109,7 +111,7 @@ class GeneticScheduler:
 
         while generation < generations:
             # Evaluate population with detailed fitness
-            fitness_scores, fitness_reports = self._evaluate_population(population)
+            fitness_scores, fitness_reports, objective_vectors = self._evaluate_population(population)
             self.last_generation_reports = fitness_reports
 
             # Update diversity-guided mutation probability
@@ -184,7 +186,7 @@ class GeneticScheduler:
                 print(f"Heuristic%: {self.heuristic_mutation_probability:.2f}", end=" ")
                 print(f"Time: {elapsed_time:.2f}s")
 
-            population = self.evolve(population, fitness_scores)
+            population = self.evolve(population, fitness_scores, objective_vectors)
             generation += 1
 
         final_elapsed_time = time.time() - start_time
@@ -198,26 +200,36 @@ class GeneticScheduler:
 
     def _evaluate_population(
         self, population: List[List[ScheduledItem]]
-    ) -> Tuple[List[float], List[FitnessReport]]:
-        """Evaluate entire population and return both simple scores and detailed reports."""
-        fitness_scores = []
-        fitness_reports = []
+    ) -> Tuple[List[float], List[FitnessReport], List[Tuple[int, float]]]:
+        """Evaluate entire population.
+
+        Returns
+            fitness_scores: legacy scalar scores (still used for logging/compat).
+            fitness_reports: detailed reports per chromosome.
+            objective_vectors: tuples (hard_violations, soft_penalty) for NSGA-II.
+        """
+        fitness_scores: List[float] = []
+        fitness_reports: List[FitnessReport] = []
+        objective_vectors: List[Tuple[int, float]] = []
 
         for chromosome in population:
             if self.use_detailed_fitness:
                 report = self.fitness_evaluator.evaluate(chromosome)
                 fitness_reports.append(report)
-                # Use calculated penalty bounds to ensure hard constraints always dominate
-                hard_penalty_weight = self.fitness_evaluator.penalty_manager.min_hard_penalty 
+
+                hard_penalty_weight = self.fitness_evaluator.penalty_manager.min_hard_penalty
                 score = report.total_hard_violations * hard_penalty_weight + report.total_soft_penalty
                 fitness_scores.append(score)
-            else:
-                # Fallback to original fitness function
-                score = self.fitness(chromosome)  # Keep original method
-                fitness_scores.append(score)
-                fitness_reports.append(None)
 
-        return fitness_scores, fitness_reports
+                objective_vectors.append((report.total_hard_violations, report.total_soft_penalty))
+            else:
+                score = self.fitness(chromosome)
+                fitness_scores.append(score)
+
+                # Approximate objectives from scalar score (not exact but keeps list length consistent)
+                objective_vectors.append((int(score), float(score)))
+
+        return fitness_scores, fitness_reports, objective_vectors
 
     def get_best_solution_report(self, schedule: List[ScheduledItem]) -> FitnessReport:
         """Get detailed fitness report for any schedule (for external evaluation)."""
@@ -284,8 +296,46 @@ class GeneticScheduler:
         return chromosome
 
     def selection(
-        self, population: List[List[ScheduledItem]], fitness_scores: List[float]
+        self,
+        population: List[List[ScheduledItem]],
+        objective_vectors: List[Tuple[int, float]] | None = None,
+        fitness_scores: List[float] | None = None,
     ) -> List[List[ScheduledItem]]:
+        """Parent selection.
+
+        If `use_nsga2` is enabled, performs binary tournament using Pareto rank
+        and crowding distance per NSGA-II. Falls back to fitness-based tournament
+        otherwise (legacy behaviour).
+        """
+
+        if self.use_nsga2 and objective_vectors is not None:
+            # --- NSGA-II selection ---
+            fronts = self._fast_non_dominated_sort(objective_vectors)
+
+            # Pre-compute crowding distances per individual index
+            crowding: dict[int, float] = {}
+            rank: dict[int, int] = {}
+            for r, front in enumerate(fronts):
+                distances = self._calculate_crowding_distance(front, objective_vectors)
+                for idx in front:
+                    rank[idx] = r
+                    crowding[idx] = distances[idx]
+
+            def tournament_pick() -> List[ScheduledItem]:
+                a, b = random.sample(range(len(population)), 2)
+                if rank[a] < rank[b]:
+                    return population[a]
+                if rank[b] < rank[a]:
+                    return population[b]
+                # Same rank – pick by higher crowding distance
+                return population[a] if crowding[a] >= crowding[b] else population[b]
+
+            return [tournament_pick() for _ in range(len(population))]
+
+        # --- Legacy scalar fitness tournament ---
+        if fitness_scores is None:
+            raise ValueError("fitness_scores must be provided for legacy selection")
+
         selected_parents: List[List[ScheduledItem]] = []
         for _ in range(len(population)):
             tournament_indices = random.sample(
@@ -297,54 +347,77 @@ class GeneticScheduler:
             selected_parents.append(population[winner_population_idx])
         return selected_parents
 
-    def crossover(
-        self, parent1: List[ScheduledItem], parent2: List[ScheduledItem]
-    ) -> tuple[List[ScheduledItem], List[ScheduledItem]]:
-        if len(parent1) != len(parent2):
-            raise ValueError("Parents must have the same length for crossover.")
-        if len(parent1) <= 1:
-            return [item.model_copy() for item in parent1], [
-                item.model_copy() for item in parent2
-            ]
+    # ------------------------------------------------------------------
+    # NSGA-II helper methods (kept simple, 2-objective specific)
+    # ------------------------------------------------------------------
 
-        # Uniform crossover: for each gene, randomly choose parent
-        child1 = []
-        child2 = []
-        
-        for i in range(len(parent1)):
-            if random.random() < 0.5:
-                # Child1 gets gene from parent1, child2 gets gene from parent2
-                child1.append(parent1[i].model_copy())
-                child2.append(parent2[i].model_copy())
-            else:
-                # Child1 gets gene from parent2, child2 gets gene from parent1
-                child1.append(parent2[i].model_copy())
-                child2.append(parent1[i].model_copy())
-                
-        return child1, child2
+    @staticmethod
+    def _fast_non_dominated_sort(objective_vectors: List[Tuple[int, float]]) -> List[List[int]]:
+        """Return list of fronts (each a list of indices). Complexity O(N^2)."""
+        N = len(objective_vectors)
+        dominates: list[set[int]] = [set() for _ in range(N)]
+        domination_count: list[int] = [0] * N
 
-    def mutate(self, chromosome: List[ScheduledItem]) -> List[ScheduledItem]:
-        mutated_chromosome: List[ScheduledItem] = [
-            item.model_copy() for item in chromosome
-        ]
+        for i in range(N):
+            for j in range(i + 1, N):
+                p = objective_vectors[i]
+                q = objective_vectors[j]
 
-        for i in range(len(mutated_chromosome)):
-            if random.random() < self.gene_mutation_rate:
-                item_to_mutate = mutated_chromosome[i]
-                mutation_type = random.choice(["room", "time", "day", "all"])
+                if (p[0] <= q[0] and p[1] <= q[1]) and (p[0] < q[0] or p[1] < q[1]):
+                    dominates[i].add(j)
+                    domination_count[j] += 1
+                elif (q[0] <= p[0] and q[1] <= p[1]) and (q[0] < p[0] or q[1] < p[1]):
+                    dominates[j].add(i)
+                    domination_count[i] += 1
 
-                # Use diversity-guided hybrid mutation
-                if random.random() < self.heuristic_mutation_probability:
-                    # Apply heuristic-guided mutation (exploitation)
-                    mutated_chromosome[i] = self._heuristic_mutate_gene(item_to_mutate, mutation_type)
-                else:
-                    # Apply purely random mutation (exploration)
-                    mutated_chromosome[i] = self._random_mutate_gene(item_to_mutate, mutation_type)
-                    
-        return mutated_chromosome
+        fronts: List[List[int]] = []
+        current_front = [idx for idx, cnt in enumerate(domination_count) if cnt == 0]
+
+        while current_front:
+            fronts.append(current_front)
+            next_front: List[int] = []
+            for idx in current_front:
+                for dominated_idx in dominates[idx]:
+                    domination_count[dominated_idx] -= 1
+                    if domination_count[dominated_idx] == 0:
+                        next_front.append(dominated_idx)
+            current_front = next_front
+
+        return fronts
+
+    @staticmethod
+    def _calculate_crowding_distance(front: List[int], objective_vectors: List[Tuple[int, float]]) -> dict[int, float]:
+        """Return crowding distance per index for a given front."""
+        if not front:
+            return {}
+
+        distance = {idx: 0.0 for idx in front}
+        num_objectives = len(objective_vectors[0])
+
+        for m in range(num_objectives):
+            front_sorted = sorted(front, key=lambda idx: objective_vectors[idx][m])
+            min_val = objective_vectors[front_sorted[0]][m]
+            max_val = objective_vectors[front_sorted[-1]][m]
+
+            # Assign infinite distance to boundary points
+            distance[front_sorted[0]] = float("inf")
+            distance[front_sorted[-1]] = float("inf")
+
+            if max_val == min_val:
+                continue  # All points have same value for this objective
+
+            for i in range(1, len(front_sorted) - 1):
+                prev_val = objective_vectors[front_sorted[i - 1]][m]
+                next_val = objective_vectors[front_sorted[i + 1]][m]
+                distance[front_sorted[i]] += (next_val - prev_val) / (max_val - min_val)
+
+        return distance
 
     def evolve(
-        self, population: List[List[ScheduledItem]], fitness_scores: List[float]
+        self,
+        population: List[List[ScheduledItem]],
+        fitness_scores: List[float],
+        objective_vectors: List[Tuple[int, float]],
     ) -> List[List[ScheduledItem]]:
         new_population: List[List[ScheduledItem]] = []
 
@@ -358,7 +431,7 @@ class GeneticScheduler:
                 new_population.append([item.model_copy() for item in elite])
 
         # Generate offspring
-        parents = self.selection(population, fitness_scores)
+        parents = self.selection(population, objective_vectors, fitness_scores)
         num_offspring_needed = self.population_size - ELITISM_COUNT
         offspring_generated = 0
         parent_idx = 0
@@ -507,3 +580,49 @@ class GeneticScheduler:
             mutated_item.day = random.choice(self.days)
                 
         return mutated_item
+
+    def crossover(
+        self, parent1: List[ScheduledItem], parent2: List[ScheduledItem]
+    ) -> tuple[List[ScheduledItem], List[ScheduledItem]]:
+        if len(parent1) != len(parent2):
+            raise ValueError("Parents must have the same length for crossover.")
+        if len(parent1) <= 1:
+            return [item.model_copy() for item in parent1], [
+                item.model_copy() for item in parent2
+            ]
+
+        # Uniform crossover: for each gene, randomly choose parent
+        child1 = []
+        child2 = []
+        
+        for i in range(len(parent1)):
+            if random.random() < 0.5:
+                # Child1 gets gene from parent1, child2 gets gene from parent2
+                child1.append(parent1[i].model_copy())
+                child2.append(parent2[i].model_copy())
+            else:
+                # Child1 gets gene from parent2, child2 gets gene from parent1
+                child1.append(parent2[i].model_copy())
+                child2.append(parent1[i].model_copy())
+                
+        return child1, child2
+
+    def mutate(self, chromosome: List[ScheduledItem]) -> List[ScheduledItem]:
+        mutated_chromosome: List[ScheduledItem] = [
+            item.model_copy() for item in chromosome
+        ]
+
+        for i in range(len(mutated_chromosome)):
+            if random.random() < self.gene_mutation_rate:
+                item_to_mutate = mutated_chromosome[i]
+                mutation_type = random.choice(["room", "time", "day", "all"])
+
+                # Use diversity-guided hybrid mutation
+                if random.random() < self.heuristic_mutation_probability:
+                    # Apply heuristic-guided mutation (exploitation)
+                    mutated_chromosome[i] = self._heuristic_mutate_gene(item_to_mutate, mutation_type)
+                else:
+                    # Apply purely random mutation (exploration)
+                    mutated_chromosome[i] = self._random_mutate_gene(item_to_mutate, mutation_type)
+                    
+        return mutated_chromosome
