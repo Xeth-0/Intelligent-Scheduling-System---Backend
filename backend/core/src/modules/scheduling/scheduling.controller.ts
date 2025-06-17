@@ -26,7 +26,7 @@ import {
   ActivateScheduleDocs,
   SearchSessionsDocs,
 } from '@/common/decorators/swagger/scheduling.swagger.docs';
-import {  ApiParam } from '@nestjs/swagger';
+import { ApiParam } from '@nestjs/swagger';
 @Controller('schedules')
 @ApiBearerAuth()
 @ApiTags('Scheduling')
