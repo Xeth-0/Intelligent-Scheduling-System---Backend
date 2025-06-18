@@ -1,0 +1,6 @@
+classroomId,name,capacity,type,campusId,buildingId,isWheelchairAccessible,openingTime,closingTime,floor
+classroom-001,NB111,300,LECTURE,campus-001,building-001,true,08:00,18:00,2
+classroom-002,NB112,100,LECTURE,campus-001,building-001,true,08:00,18:00,2
+classroom-003,NB113,50,LECTURE,campus-001,building-001,false,08:00,18:00,2
+classroom-004,NB114,200,LAB,campus-001,building-001,true,08:00,18:00,2
+classroom-005,NB115,50,LAB,campus-001,building-001,false,08:00,18:00,2 

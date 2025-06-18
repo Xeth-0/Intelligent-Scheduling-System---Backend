@@ -1,0 +1,16 @@
+studentId,firstName,lastName,email,password,phone,role,needWheelchairAccessibleRoom,studentGroupId
+student-y1-001-001,Meron,Tadesse,student-y1-001-001@email.com,studenty1001password001,+251922000001,STUDENT,false,sg-y1-001
+student-y1-001-002,Dawit,Alemayehu,student-y1-001-002@email.com,studenty1001password002,+251922000002,STUDENT,false,sg-y1-001
+student-y1-001-003,Hanan,Mekonnen,student-y1-001-003@email.com,studenty1001password003,+251922000003,STUDENT,true,sg-y1-001
+student-y2-001-001,Bereket,Haile,student-y2-001-001@email.com,studenty2001password001,+251922000004,STUDENT,false,sg-y2-001
+student-y2-001-002,Selamawit,Tesfaye,student-y2-001-002@email.com,studenty2001password002,+251922000005,STUDENT,true,sg-y2-001
+student-y3-se-s1-001,Amanuel,Gebru,student-y3-se-s1-001@email.com,studenty3ses1password001,+251922000006,STUDENT,false,sg-y3-se-s1
+student-y3-se-s1-002,Eyerusalem,Wolde,student-y3-se-s1-002@email.com,studenty3ses1password002,+251922000007,STUDENT,false,sg-y3-se-s1
+student-y3-se-s2-001,Samuel,Kifle,student-y3-se-s2-001@email.com,studenty3ses2password001,+251922000008,STUDENT,true,sg-y3-se-s2
+student-y3-se-s2-002,Bethlehem,Negash,student-y3-se-s2-002@email.com,studenty3ses2password002,+251922000009,STUDENT,false,sg-y3-se-s2
+student-y4-se-s1-001,Yonas,Tsegaye,student-y4-se-s1-001@email.com,studenty4ses1password001,+251922000010,STUDENT,false,sg-y4-se-s1
+student-y4-se-s1-002,Rahel,Abebe,student-y4-se-s1-002@email.com,studenty4ses1password002,+251922000011,STUDENT,false,sg-y4-se-s1
+student-y4-ai-001,Daniel,Solomon,student-y4-ai-001@email.com,studenty4aipassword001,+251922000012,STUDENT,false,sg-y4-ai
+student-y4-ai-002,Kidist,Bekele,student-y4-ai-002@email.com,studenty4aipassword002,+251922000013,STUDENT,true,sg-y4-ai
+student-y5-s1-001,Biniam,Desta,student-y5-s1-001@email.com,studenty5s1password001,+251922000014,STUDENT,false,sg-y5-s1
+student-y5-s1-002,Mahlet,Girma,student-y5-s1-002@email.com,studenty5s1password002,+251922000015,STUDENT,false,sg-y5-s1 

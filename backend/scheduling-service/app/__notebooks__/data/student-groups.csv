@@ -1,0 +1,14 @@
+studentGroupId,name,size,accessibilityRequirement,departmentId
+sg-y1-001,Year 1,50,false,dept-cs-001
+sg-y2-001,Year 2,50,true,dept-cs-001
+sg-y3-se-s1,3rd Year Software Engineering Section 1,52,false,dept-cs-001
+sg-y3-se-s2,3rd Year Software Engineering Section 2,45,true,dept-cs-001
+sg-y3-se-s3,3rd Year Software Engineering Section 3,60,false,dept-cs-001
+sg-y3-se-s4,3rd Year Software Engineering Section 4,40,false,dept-cs-001
+sg-y4-se-s1,4th Year Software Engineering Section 1,33,false,dept-cs-001
+sg-y4-se-s2,4th Year Software Engineering Section 2,48,true,dept-cs-001
+sg-y4-ai,4th Year Artificial Intelligence,70,false,dept-cs-001
+sg-y4-cy,4th Year Cybersecurity,35,true,dept-cs-001
+sg-y4-it,4th Year Information Technology,61,false,dept-cs-001
+sg-y5-s1,5th Year Section 1,28,false,dept-cs-001
+sg-y5-s2,5th Year Section 2,39,true,dept-cs-001 

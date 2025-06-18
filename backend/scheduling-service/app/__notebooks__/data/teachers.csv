@@ -1,0 +1,10 @@
+teacherId,firstName,lastName,email,password,phone,role,departmentId,needWheelchairAccessibleRoom
+teacher-1,Abrham,Gebremedhin,teacher1@email.email,teacher1password,01234567890,TEACHER,dept-cs-001,true
+teacher-002,Natinael,Wondimu,natinael@gmail.com,teacher002password,1234567890,TEACHER,dept-cs-001,true
+teacher-003,Nebiat,Tekle,nebiat@gmail.com,teacher003password,1234567890,TEACHER,dept-cs-001,false
+teacher-004,Amanuel,Tadesse,amanuel@gmail.com,teacher004password,1234567890,TEACHER,dept-cs-001,false
+teacher-005,Bereket,Haile,teacher5@gmail.com,teacher005password,1234567890,TEACHER,dept-cs-001,false
+teacher-006,Dawit,Solomon,teacher6@gmail.com,teacher006password,1234567890,TEACHER,dept-cs-001,false
+teacher-007,Eyob,Kifle,teacher7@gmail.com,teacher007password,1234567890,TEACHER,dept-cs-001,false
+teacher-008,Fitsum,Tesfaye,teacher8@gmail.com,teacher008password,1234567890,TEACHER,dept-cs-001,false
+teacher-009,Goitom,Tsegay,teacher9@gmail.com,teacher009password,1234567890,TEACHER,dept-cs-001,false 
