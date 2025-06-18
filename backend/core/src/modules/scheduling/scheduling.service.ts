@@ -500,7 +500,7 @@ export class SchedulingService implements ISchedulingService {
 
     try {
       const page = await browser.newPage();
-      
+
       // Generate HTML based on user role
       let html: string;
       if (user.role === Role.ADMIN) {
@@ -511,7 +511,7 @@ export class SchedulingService implements ISchedulingService {
 
       // Set content and generate PDF
       await page.setContent(html, { waitUntil: 'networkidle0' });
-      
+
       const pdfBuffer = await page.pdf({
         format: 'A4',
         landscape: true,
@@ -530,13 +530,13 @@ export class SchedulingService implements ISchedulingService {
     }
   }
 
-    private async _generateAdminHtml(
+  private async _generateAdminHtml(
     scheduleResponse: any,
     sessions: any[],
   ): Promise<string> {
     // Group sessions by student group
     const sessionsByGroup = new Map<string, any[]>();
-    
+
     for (const session of sessions) {
       const groupId = session.classGroupIds || 'No Group';
       if (!sessionsByGroup.has(groupId)) {
@@ -565,7 +565,7 @@ export class SchedulingService implements ISchedulingService {
     for (const [groupId, groupSessions] of sessionsByGroup) {
       const groupName = groupNames.get(groupId) || 'Unassigned Group';
       const scheduleHtml = this._generateScheduleGrid(groupSessions);
-      
+
       groupsHtml += `
         <div class="schedule-page">
           <div class="header">
@@ -587,7 +587,7 @@ export class SchedulingService implements ISchedulingService {
     user: any,
   ): Promise<string> {
     let subtitle = 'Personal Schedule';
-    
+
     if (user.role === Role.TEACHER) {
       subtitle = `Teacher Schedule - ${user.firstName} ${user.lastName}`;
     } else if (user.role === Role.STUDENT && user.student?.studentGroup) {
@@ -595,7 +595,7 @@ export class SchedulingService implements ISchedulingService {
     }
 
     const scheduleHtml = this._generateScheduleGrid(sessions);
-    
+
     const content = `
       <div class="schedule-page">
         <div class="header">
@@ -610,19 +610,33 @@ export class SchedulingService implements ISchedulingService {
   }
 
   private _generateScheduleGrid(sessions: any[]): string {
-    const days = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
+    const days = [
+      'MONDAY',
+      'TUESDAY',
+      'WEDNESDAY',
+      'THURSDAY',
+      'FRIDAY',
+      'SATURDAY',
+      'SUNDAY',
+    ];
     const timeSlots = [
-      '08:30-09:30', '09:30-10:30', '10:30-11:30', '11:30-12:30',
-      '13:30-14:30', '14:30-15:30', '15:30-16:30', '16:30-17:30'
+      '08:30-09:30',
+      '09:30-10:30',
+      '10:30-11:30',
+      '11:30-12:30',
+      '13:30-14:30',
+      '14:30-15:30',
+      '15:30-16:30',
+      '16:30-17:30',
     ];
 
     // Group sessions by day and time
     const schedule = new Map<string, Map<string, any>>();
-    days.forEach(day => {
+    days.forEach((day) => {
       schedule.set(day, new Map());
     });
 
-    sessions.forEach(session => {
+    sessions.forEach((session) => {
       const day = session.day.toUpperCase();
       const timeslot = session.timeslot;
       if (schedule.has(day)) {
@@ -637,15 +651,15 @@ export class SchedulingService implements ISchedulingService {
     `;
 
     // Day headers
-    days.forEach(day => {
+    days.forEach((day) => {
       gridHtml += `<div class="day-header">${day.charAt(0) + day.slice(1).toLowerCase()}</div>`;
     });
 
     // Time slots and sessions
-    timeSlots.forEach(timeSlot => {
+    timeSlots.forEach((timeSlot) => {
       gridHtml += `<div class="time-slot">${timeSlot}</div>`;
-      
-      days.forEach(day => {
+
+      days.forEach((day) => {
         const session = schedule.get(day)?.get(timeSlot);
         if (session) {
           gridHtml += `
@@ -1027,6 +1041,32 @@ export class SchedulingService implements ISchedulingService {
    * @param scheduleId - ID of the schedule to evaluate
    * @returns Promise with the fitness evaluation report
    */
+  async deleteSchedule(userId: string, scheduleId: string) {
+    const { admin } = await this._findSchedule(scheduleId, userId);
+
+    if (!admin) {
+      throw new ForbiddenException('User is not an admin');
+    }
+
+    try {
+      await this.prismaService.schedule.delete({
+        where: {
+          scheduleId: scheduleId,
+        },
+      });
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2025') {
+          throw new NotFoundException('Schedule not found');
+        }
+      }
+      throw new InternalServerErrorException('An unexpected error occurred');
+    }
+  }
+
   async evaluateSchedule(
     userId: string,
     scheduleId: string,

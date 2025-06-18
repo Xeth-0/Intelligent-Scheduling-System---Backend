@@ -663,3 +663,43 @@ export const GetTeacherScheduleDocs = () => {
     }),
   );
 };
+
+export const DeleteScheduleDocs = () => {
+  return applyDecorators(
+    ApiOperation({
+      summary: 'Delete a schedule (admin only)',
+      description: 'Permanently deletes a schedule and all its associated sessions. Only admins can perform this action.',
+    }),
+    ApiBearerAuth(),
+    ApiParam({
+      name: 'scheduleId',
+      description: 'Schedule ID (UUID) to delete',
+      example: 'uuid-string',
+      type: 'string',
+    }),
+    ApiOkResponse({
+      description: 'Schedule deleted successfully',
+      schema: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', example: true },
+          statusCode: { type: 'number', example: 200 },
+          message: { type: 'string', example: 'Schedule deleted successfully' },
+          data: { type: 'null', example: null }
+        },
+      },
+    }),
+    ApiUnauthorizedResponse({
+      description: 'Invalid or expired access token',
+    }),
+    ApiForbiddenResponse({
+      description: 'Insufficient permissions - Admin access required',
+    }),
+    ApiNotFoundResponse({
+      description: 'Schedule not found with the provided ID',
+    }),
+    ApiBadRequestResponse({
+      description: 'Invalid schedule ID format',
+    }),
+  );
+};

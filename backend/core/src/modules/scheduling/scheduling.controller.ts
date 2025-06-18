@@ -11,6 +11,7 @@ import {
   BadRequestException,
   Res,
   StreamableFile,
+  Delete,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { Role, User } from '@prisma/client';
@@ -28,6 +29,7 @@ import {
   GetAllSchedulesDocs,
   ActivateScheduleDocs,
   SearchSessionsDocs,
+  DeleteScheduleDocs,
 } from '@/common/decorators/swagger/scheduling.swagger.docs';
 import { ApiParam } from '@nestjs/swagger';
 @Controller('schedules')
@@ -151,5 +153,16 @@ export class SchedulingController {
       scheduleId,
     );
     return ApiResponse.success(200, resp, 'Schedule evaluated successfully');
+  }
+
+  @Delete(':scheduleId')
+  @Roles(Role.ADMIN)
+  @DeleteScheduleDocs()
+  async deleteSchedule(
+    @GetUser() admin: User,
+    @Param('scheduleId') scheduleId: string,
+  ) {
+    await this.schedulingService.deleteSchedule(admin.userId, scheduleId);
+    return ApiResponse.success(200, null, 'Schedule deleted successfully');
   }
 }
