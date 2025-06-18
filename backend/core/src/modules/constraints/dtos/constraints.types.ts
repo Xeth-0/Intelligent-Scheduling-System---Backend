@@ -76,16 +76,13 @@ export interface TeacherCompactnessConstraintValue {
 
 // Valid timeslot codes for validation. This is temporary, more granular timeslot choices will be added later.
 export const VALID_TIMESLOT_CODES = [
-  '0800_0900',
-  '0900_1000',
-  '1000_1100',
-  '1100_1200',
-  '1200_1300',
-  '1300_1400',
-  '1400_1500',
-  '1500_1600',
-  '1600_1700',
-  '1700_1800',
+  '0830_0930',
+  '0930_1030',
+  '1030_1130',
+  '1130_1230',
+  '1330_1430',
+  '1430_1530',
+  '1530_1630',
 ] as const;
 
 export const CONSTRAINT_DEFINITIONS = {
