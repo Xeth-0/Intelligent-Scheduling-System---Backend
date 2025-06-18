@@ -9,7 +9,10 @@ import {
   Query,
   Body,
   BadRequestException,
+  Res,
+  StreamableFile,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { Role, User } from '@prisma/client';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
@@ -114,6 +117,27 @@ export class SchedulingController {
     const resp = await this.schedulingService.searchSessions(user.userId, body);
     console.log(`filtered schedule response`, resp);
     return ApiResponse.success(200, resp, 'Sessions retrieved successfully');
+  }
+
+  @Post('/export/pdf')
+  @Roles(Role.ADMIN, Role.TEACHER, Role.STUDENT)
+  async exportScheduleToPdf(
+    @GetUser() user: User,
+    @Body() body: SearchSessionsBody,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const pdfBuffer = await this.schedulingService.exportScheduleToPdf(
+      user.userId,
+      body,
+    );
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="schedule-${body.scheduleId}-${new Date().toISOString().split('T')[0]}.pdf"`,
+      'Content-Length': pdfBuffer.length,
+    });
+
+    return new StreamableFile(pdfBuffer);
   }
 
   @Get('/evaluate/id/:scheduleId')

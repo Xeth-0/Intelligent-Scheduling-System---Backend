@@ -28,6 +28,7 @@ import { ScheduleEvaluationResponse } from './dtos/schedule.dto';
 import { ISchedulingService } from '../__interfaces__/scheduling.service.interface';
 import { ConstraintService } from '../constraints/constraints.service';
 import { TimeslotService } from '../timeslots/timeslots.service';
+import * as puppeteer from 'puppeteer';
 @Injectable()
 export class SchedulingService implements ISchedulingService {
   constructor(
@@ -457,6 +458,366 @@ export class SchedulingService implements ISchedulingService {
     } catch (error) {
       throw error;
     }
+  }
+
+  /**
+   * Exports a schedule as PDF based on search parameters
+   * @param userId - ID of the user requesting the export
+   * @param body - Search parameters to filter the schedule
+   * @returns Buffer containing the PDF data
+   */
+  async exportScheduleToPdf(
+    userId: string,
+    body: SearchSessionsBody,
+  ): Promise<Buffer> {
+    // Get user information to determine role
+    const user = await this.prismaService.user.findFirst({
+      where: { userId },
+      include: {
+        admin: true,
+        teacher: true,
+        student: {
+          include: {
+            studentGroup: true,
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    // Get filtered sessions using existing search logic
+    const scheduleResponse = await this.searchSessions(userId, body);
+    const sessions = scheduleResponse.sessions || [];
+
+    // Launch Puppeteer
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    });
+
+    try {
+      const page = await browser.newPage();
+      
+      // Generate HTML based on user role
+      let html: string;
+      if (user.role === Role.ADMIN) {
+        html = await this._generateAdminHtml(scheduleResponse, sessions);
+      } else {
+        html = await this._generateUserHtml(scheduleResponse, sessions, user);
+      }
+
+      // Set content and generate PDF
+      await page.setContent(html, { waitUntil: 'networkidle0' });
+      
+      const pdfBuffer = await page.pdf({
+        format: 'A4',
+        landscape: true,
+        margin: {
+          top: '20px',
+          bottom: '20px',
+          left: '20px',
+          right: '20px',
+        },
+        printBackground: true,
+      });
+
+      return Buffer.from(pdfBuffer);
+    } finally {
+      await browser.close();
+    }
+  }
+
+    private async _generateAdminHtml(
+    scheduleResponse: any,
+    sessions: any[],
+  ): Promise<string> {
+    // Group sessions by student group
+    const sessionsByGroup = new Map<string, any[]>();
+    
+    for (const session of sessions) {
+      const groupId = session.classGroupIds || 'No Group';
+      if (!sessionsByGroup.has(groupId)) {
+        sessionsByGroup.set(groupId, []);
+      }
+      sessionsByGroup.get(groupId)!.push(session);
+    }
+
+    // Get student group names
+    const studentGroups = await this.prismaService.studentGroup.findMany({
+      where: {
+        studentGroupId: {
+          in: Array.from(sessionsByGroup.keys()).filter(
+            (id) => id !== 'No Group',
+          ),
+        },
+      },
+    });
+
+    const groupNames = new Map(
+      studentGroups.map((g) => [g.studentGroupId, g.name]),
+    );
+
+    // Generate HTML for each student group
+    let groupsHtml = '';
+    for (const [groupId, groupSessions] of sessionsByGroup) {
+      const groupName = groupNames.get(groupId) || 'Unassigned Group';
+      const scheduleHtml = this._generateScheduleGrid(groupSessions);
+      
+      groupsHtml += `
+        <div class="schedule-page">
+          <div class="header">
+            <h1>${scheduleResponse.scheduleName}</h1>
+            <h2>Schedule for ${groupName}</h2>
+          </div>
+          ${scheduleHtml}
+        </div>
+        ${groupId !== Array.from(sessionsByGroup.keys()).pop() ? '<div class="page-break"></div>' : ''}
+      `;
+    }
+
+    return this._wrapInHtmlTemplate(groupsHtml);
+  }
+
+  private async _generateUserHtml(
+    scheduleResponse: any,
+    sessions: any[],
+    user: any,
+  ): Promise<string> {
+    let subtitle = 'Personal Schedule';
+    
+    if (user.role === Role.TEACHER) {
+      subtitle = `Teacher Schedule - ${user.firstName} ${user.lastName}`;
+    } else if (user.role === Role.STUDENT && user.student?.studentGroup) {
+      subtitle = `Student Schedule - ${user.student.studentGroup.name}`;
+    }
+
+    const scheduleHtml = this._generateScheduleGrid(sessions);
+    
+    const content = `
+      <div class="schedule-page">
+        <div class="header">
+          <h1>${scheduleResponse.scheduleName}</h1>
+          <h2>${subtitle}</h2>
+        </div>
+        ${scheduleHtml}
+      </div>
+    `;
+
+    return this._wrapInHtmlTemplate(content);
+  }
+
+  private _generateScheduleGrid(sessions: any[]): string {
+    const days = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
+    const timeSlots = [
+      '08:30-09:30', '09:30-10:30', '10:30-11:30', '11:30-12:30',
+      '13:30-14:30', '14:30-15:30', '15:30-16:30', '16:30-17:30'
+    ];
+
+    // Group sessions by day and time
+    const schedule = new Map<string, Map<string, any>>();
+    days.forEach(day => {
+      schedule.set(day, new Map());
+    });
+
+    sessions.forEach(session => {
+      const day = session.day.toUpperCase();
+      const timeslot = session.timeslot;
+      if (schedule.has(day)) {
+        schedule.get(day)!.set(timeslot, session);
+      }
+    });
+
+    // Generate grid HTML
+    let gridHtml = `
+      <div class="schedule-grid">
+        <div class="time-header">Time Range</div>
+    `;
+
+    // Day headers
+    days.forEach(day => {
+      gridHtml += `<div class="day-header">${day.charAt(0) + day.slice(1).toLowerCase()}</div>`;
+    });
+
+    // Time slots and sessions
+    timeSlots.forEach(timeSlot => {
+      gridHtml += `<div class="time-slot">${timeSlot}</div>`;
+      
+      days.forEach(day => {
+        const session = schedule.get(day)?.get(timeSlot);
+        if (session) {
+          gridHtml += `
+            <div class="session-cell">
+              <div class="course-name">${session.courseName}</div>
+              <div class="course-details">
+                <div class="teacher">${session.teacherName}</div>
+                <div class="room">${session.classroomName}</div>
+              </div>
+            </div>
+          `;
+        } else {
+          gridHtml += `<div class="empty-cell"></div>`;
+        }
+      });
+    });
+
+    gridHtml += '</div>';
+    return gridHtml;
+  }
+
+  private _wrapInHtmlTemplate(content: string): string {
+    return `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Schedule Export</title>
+        <style>
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+
+          body {
+            font-family: 'Arial', sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #333;
+            background: white;
+          }
+
+          .schedule-page {
+            width: 100%;
+            page-break-after: avoid;
+            margin-bottom: 20px;
+          }
+
+          .page-break {
+            page-break-before: always;
+          }
+
+          .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #2563eb;
+            padding-bottom: 15px;
+          }
+
+          .header h1 {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1e40af;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+          }
+
+          .header h2 {
+            font-size: 16px;
+            color: #64748b;
+            font-weight: 500;
+          }
+
+          .schedule-grid {
+            display: grid;
+            grid-template-columns: 120px repeat(7, 1fr);
+            gap: 1px;
+            background-color: #e2e8f0;
+            border: 2px solid #e2e8f0;
+          }
+
+          .time-header {
+            background-color: #1e40af;
+            color: white;
+            font-weight: bold;
+            text-align: center;
+            padding: 12px 8px;
+            font-size: 13px;
+          }
+
+          .day-header {
+            background-color: #3b82f6;
+            color: white;
+            font-weight: bold;
+            text-align: center;
+            padding: 12px 8px;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+
+          .time-slot {
+            background-color: #f1f5f9;
+            font-weight: 600;
+            text-align: center;
+            padding: 15px 8px;
+            border-right: 1px solid #cbd5e1;
+            color: #475569;
+            font-size: 11px;
+          }
+
+          .session-cell {
+            background-color: white;
+            padding: 8px;
+            min-height: 60px;
+            border: 1px solid #e2e8f0;
+            position: relative;
+          }
+
+          .course-name {
+            font-weight: bold;
+            font-size: 11px;
+            color: #1e40af;
+            margin-bottom: 4px;
+            line-height: 1.2;
+          }
+
+          .course-details {
+            font-size: 10px;
+            color: #64748b;
+          }
+
+          .teacher {
+            font-weight: 500;
+            margin-bottom: 2px;
+          }
+
+          .room {
+            color: #059669;
+            font-weight: 500;
+          }
+
+          .empty-cell {
+            background-color: #f8fafc;
+            min-height: 60px;
+            border: 1px solid #e2e8f0;
+          }
+
+          /* Print-specific styles */
+          @media print {
+            body {
+              font-size: 11px;
+            }
+            
+            .schedule-page {
+              break-inside: avoid;
+            }
+            
+            .page-break {
+              page-break-before: always;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        ${content}
+      </body>
+      </html>
+    `;
   }
 
   /**

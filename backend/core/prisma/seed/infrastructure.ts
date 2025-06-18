@@ -128,95 +128,70 @@ export async function seedClassrooms(
 export async function seedTimeslots(prisma: PrismaClient) {
   console.log('Creating timeslots...');
 
+  // Timeslots: Start at 2:30, 1hr sessions, 1hr gap after 12:30, stop at 16:30
   const timeslots = await Promise.all([
     prisma.timeslot.create({
       data: {
-        code: '0800_0900',
-        label: '08:00-09:00',
-        startTime: '08:00',
-        endTime: '09:00',
-        order: 1,
-      },
-    }),
-    prisma.timeslot.create({
-      data: {
-        code: '0900_1000',
-        label: '09:00-10:00',
-        startTime: '09:00',
-        endTime: '10:00',
-        order: 2,
-      },
-    }),
-    prisma.timeslot.create({
-      data: {
-        code: '1000_1100',
-        label: '10:00-11:00',
-        startTime: '10:00',
-        endTime: '11:00',
-        order: 3,
-      },
-    }),
-    prisma.timeslot.create({
-      data: {
-        code: '1100_1200',
-        label: '11:00-12:00',
-        startTime: '11:00',
-        endTime: '12:00',
-        order: 4,
-      },
-    }),
-    prisma.timeslot.create({
-      data: {
-        code: '1200_1300',
-        label: '12:00-13:00',
-        startTime: '12:00',
-        endTime: '13:00',
-        order: 5,
-      },
-    }),
-    prisma.timeslot.create({
-      data: {
-        code: '1300_1400',
-        label: '13:00-14:00',
-        startTime: '13:00',
-        endTime: '14:00',
-        order: 6,
-      },
-    }),
-    prisma.timeslot.create({
-      data: {
-        code: '1400_1500',
-        label: '14:00-15:00',
-        startTime: '14:00',
-        endTime: '15:00',
+        code: '0830_0930',
+        label: '08:30-09:30',
+        startTime: '08:30',
+        endTime: '09:30',
         order: 7,
       },
     }),
     prisma.timeslot.create({
       data: {
-        code: '1500_1600',
-        label: '15:00-16:00',
-        startTime: '15:00',
-        endTime: '16:00',
+        code: '0930_1030',
+        label: '09:30-10:30',
+        startTime: '09:30',
+        endTime: '10:30',
         order: 8,
       },
     }),
     prisma.timeslot.create({
       data: {
-        code: '1600_1700',
-        label: '16:00-17:00',
-        startTime: '16:00',
-        endTime: '17:00',
+        code: '1030_1130',
+        label: '10:30-11:30',
+        startTime: '10:30',
+        endTime: '11:30',
         order: 9,
       },
     }),
     prisma.timeslot.create({
       data: {
-        code: '1700_1800',
-        label: '17:00-18:00',
-        startTime: '17:00',
-        endTime: '18:00',
+        code: '1130_1230',
+        label: '11:30-12:30',
+        startTime: '11:30',
+        endTime: '12:30',
         order: 10,
+      },
+    }),
+    // 1hr gap after 12:30, next session starts at 13:30
+    prisma.timeslot.create({
+      data: {
+        code: '1330_1430',
+        label: '13:30-14:30',
+        startTime: '13:30',
+        endTime: '14:30',
+        order: 11,
+      },
+    }),
+    prisma.timeslot.create({
+      data: {
+        code: '1430_1530',
+        label: '14:30-15:30',
+        startTime: '14:30',
+        endTime: '15:30',
+        order: 12,
+      },
+    }),
+    prisma.timeslot.create({
+      data: {
+        code: '1530_1630',
+        label: '15:30-16:30',
+        startTime: '15:30',
+        endTime: '16:30',
+        order: 13,
       },
     }),
   ]);
