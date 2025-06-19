@@ -417,10 +417,10 @@ export class SeedDatabase {
 
       // Create unique course instance ID following seeding pattern
       // Format: originalCourseId-INSTANCE-studentGroupId-teacherId
-      const instanceId = `${item.courseId}-INST-${item.studentGroupId.slice(-6)}-${item.teacherId.slice(-6)}`;
+      const instanceId = `${item.courseId}-INST-${item.studentGroupId}-${item.teacherId}`;
 
       // Create unique course code
-      const instanceCode = `${courseTemplate.code}-${item.studentGroupId.slice(-6)}`;
+      const instanceCode = `${courseTemplate.code}-${item.studentGroupId}`;
 
       // Create course instance
       const courseInstance = await tx.course.create({
