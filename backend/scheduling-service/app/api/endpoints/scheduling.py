@@ -15,7 +15,18 @@ router = APIRouter(prefix="/scheduler")
 async def generate_schedule(request: ScheduleApiRequest):
     logging.info(f"Received Schedule Request with {len(request.constraints)} constraints")
 
-    days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+    days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+
+    # Get time limit from request (default to 180 seconds, max 300 seconds)
+    time_limit = getattr(request, 'timeLimit', 180)
+    if time_limit and time_limit > 300:
+        time_limit = 300
+        logging.info(f"Time limit clamped to maximum of 300 seconds")
+    elif time_limit and time_limit < 1:
+        time_limit = 180
+        logging.info(f"Time limit set to default of 180 seconds (minimum)")
+    
+    logging.info(f"Using time limit: {time_limit} seconds")
 
     logging.info("Initializing scheduler...")
     scheduler = GeneticScheduler(
@@ -27,6 +38,7 @@ async def generate_schedule(request: ScheduleApiRequest):
         timeslots=request.timeslots,
         days=days,
         population_size=100,
+        time_limit=time_limit,
     )
 
     logging.info("Running scheduler...")

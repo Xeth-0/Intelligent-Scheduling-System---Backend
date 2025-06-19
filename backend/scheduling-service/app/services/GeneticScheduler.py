@@ -20,7 +20,7 @@ GENE_MUTATION_RATE = (
     0.1  # Probability of mutating a single gene (ScheduledItem's assignment)
 )
 CHROMOSOME_MUTATION_RATE = 0.2  # Probability that a whole chromosome undergoes mutation
-MAX_DURATION_SECONDS = 120  # Updated to match your 30-second requirement
+MAX_DURATION_SECONDS = 10  # Updated to match your 30-second requirement
 SELECTION_TOURNAMENT_SIZE = 3
 CHROMOSOME_POPULATION_SIZE = 50
 ELITISM_COUNT = 2  # Number of best individuals to carry over to the next generation
@@ -49,6 +49,7 @@ class GeneticScheduler:
         gene_mutation_rate: float = GENE_MUTATION_RATE,
         chromosome_mutation_rate: float = CHROMOSOME_MUTATION_RATE,
         use_detailed_fitness: bool = True,
+        time_limit: int = MAX_DURATION_SECONDS,
     ):
         self.courses = courses
         self.teachers = teachers
@@ -60,6 +61,7 @@ class GeneticScheduler:
         self.gene_mutation_rate = gene_mutation_rate
         self.chromosome_mutation_rate = chromosome_mutation_rate
         self.use_detailed_fitness = use_detailed_fitness
+        self.time_limit = time_limit
 
         # Initialize the constraint registry
         self.constraint_registry = SchedulingConstraintRegistry(constraints)
@@ -166,7 +168,7 @@ class GeneticScheduler:
                 print(f"Generations: {generation}/{generations}", end=" ")
                 print(f"Time: {elapsed_time:.2f}s")
                 break
-            elif elapsed_time > MAX_DURATION_SECONDS:
+            elif elapsed_time > self.time_limit:
                 print(f"Time limit reached after {generation} generations", end=" ")
                 print(f"Best fitness: {best_fitness_overall}", end=" ")
                 print(f"Time: {elapsed_time:.2f}s")

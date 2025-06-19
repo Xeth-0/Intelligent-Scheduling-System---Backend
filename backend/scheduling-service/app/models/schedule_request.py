@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Optional
 
 from .course import Course
 from .teacher import Teacher
@@ -21,4 +21,5 @@ class ScheduleApiRequest(BaseModel):
     studentGroups: List[StudentGroup] = Field(..., description="List of student groups")
     rooms: List[Classroom] = Field(..., description="List of available classrooms")
     timeslots: List[Timeslot] = Field(..., description="List of available timeslots")
-    constraints: List[Constraint] = Field(..., description="List of scheduling constraints") 
+    constraints: List[Constraint] = Field(..., description="List of scheduling constraints")
+    timeLimit: Optional[int] = Field(None, description="Time limit in seconds for schedule generation (max 300)") 

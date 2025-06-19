@@ -176,11 +176,17 @@ describe('TeachersService', () => {
         courseIds: ['course-1', 'course-2'],
       };
 
+      const mockCourses = [
+        { courseId: 'course-1', teacherId: '1' },
+        { courseId: 'course-2', teacherId: '1' },
+      ];
+
       mockPrismaService.admin.findFirst.mockResolvedValue({ userId, campusId: 'campus-1' });
       mockPrismaService.teacher.findUnique.mockResolvedValue({
         ...mockTeacher,
         department: { deptId: 'dept-1', campusId: 'campus-1' }
       });
+      mockPrismaService.course.findMany.mockResolvedValue(mockCourses);
       mockPrismaService.course.update.mockResolvedValue({});
 
       await service.unassignTeacher(userId, unassignDto);

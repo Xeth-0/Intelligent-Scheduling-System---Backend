@@ -1,7 +1,14 @@
 classroomId,name,capacity,type,buildingId,isWheelchairAccessible,openingTime,closingTime,floor
 cls-nb-011,Room NB 011,50,LECTURE,bdg-nb-01,True,08:00,18:00,0
 cls-nb-015,Room NB 015,50,LECTURE,bdg-nb-01,True,08:00,18:00,0
+cls-nb-107,Room NB 107,200,LECTURE,bdg-nb-01,True,08:00,18:00,0
 cls-nb-108,Room NB 108,50,LECTURE,bdg-nb-01,True,08:00,18:00,1
+cls-nb-109,Room NB 109,50,LECTURE,bdg-nb-01,True,08:00,18:00,1
+cls-nb-110,Room NB 110,50,LECTURE,bdg-nb-01,True,08:00,18:00,1
+cls-nb-111,Room NB 111,50,LECTURE,bdg-nb-01,True,08:00,18:00,1
+cls-nb-112,Room NB 112,50,LECTURE,bdg-nb-01,True,08:00,18:00,1
+cls-nb-113,Room NB 113,50,LECTURE,bdg-nb-01,True,08:00,18:00,1
+cls-nb-114,Room NB 114,50,LAB,bdg-nb-01,True,08:00,18:00,1
 cls-nb-204,Room NB 204,50,LECTURE,bdg-nb-01,False,08:00,18:00,2
 cls-nb-205,Room NB 205,50,LECTURE,bdg-nb-01,False,08:00,18:00,2
 cls-nb-207,Room NB 207,50,LECTURE,bdg-nb-01,False,08:00,18:00,2

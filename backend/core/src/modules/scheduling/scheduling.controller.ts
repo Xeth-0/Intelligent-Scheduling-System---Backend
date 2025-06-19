@@ -50,12 +50,16 @@ export class SchedulingController {
   async generateSchedule(
     @GetUser() admin: User,
     @Param('scheduleName') scheduleName?: string,
+    @Query('timeLimit') timeLimit?: string,
   ) {
     const finalScheduleName =
       scheduleName ?? 'Unnamed Schedule - ' + new Date().toISOString();
+    const timeLimitMinutes = timeLimit ? parseFloat(timeLimit) : undefined;
+    console.log(`timeLimitMinutes`, timeLimitMinutes);
     const resp = await this.schedulingService.generateSchedule(
       admin.userId,
       finalScheduleName,
+      timeLimitMinutes,
     );
     return ApiResponse.success(201, resp, 'Schedule generated successfully');
   }

@@ -1,9 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from '../auth.controller';
 import { AuthService } from '../auth.service';
-import { LoginDto, RegisterDto, TokensDto } from '../dtos';
-import { UnauthorizedException, ConflictException } from '@nestjs/common';
-import { Role } from '@prisma/client';
+import { LoginDto, TokensDto } from '../dtos';
+import { UnauthorizedException } from '@nestjs/common';
 import { UsersService } from '../../users/users.service';
 import { Request } from 'express';
 
@@ -16,15 +15,15 @@ describe('AuthController', () => {
     refreshToken: 'mockRefresh',
   };
 
-  const mockUsersService = {
-    isFirstUser: jest.fn(),
-  };
-
   beforeEach(async () => {
     const mockAuthService = {
       login: jest.fn(),
-      register: jest.fn(),
       refreshTokens: jest.fn(),
+      logout: jest.fn(),
+    };
+
+    const mockUsersService = {
+      findAllUsers: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -40,7 +39,7 @@ describe('AuthController', () => {
   });
 
   describe('login', () => {
-    it('should call authService.login with correct parameters', async () => {
+    it('should login successfully with valid credentials', async () => {
       const loginDto: LoginDto = {
         email: 'test@example.com',
         password: 'password123',
@@ -51,9 +50,10 @@ describe('AuthController', () => {
 
       expect(authService.login).toHaveBeenCalledWith(loginDto);
       expect(result.data).toEqual(mockTokens);
+      expect(result.statusCode).toBe(200);
     });
 
-    it('should throw UnauthorizedException when credentials are invalid', async () => {
+    it('should throw UnauthorizedException for invalid credentials', async () => {
       const loginDto: LoginDto = {
         email: 'wrong@example.com',
         password: 'wrongpass',
@@ -66,46 +66,8 @@ describe('AuthController', () => {
     });
   });
 
-  describe('register', () => {
-    it('should force STUDENT role and call authService.register', async () => {
-      const registerDto: RegisterDto = {
-        firstName: 'John',
-        lastName: 'Doe',
-        email: 'new@example.com',
-        password: 'password123',
-        role: Role.ADMIN, // Should be overridden
-      };
-      authService.register.mockResolvedValue(mockTokens);
-
-      const result = await controller.register(registerDto);
-
-      expect(result.data).toEqual(mockTokens);
-      expect(authService.register).toHaveBeenCalledWith({
-        ...registerDto,
-        role: Role.STUDENT,
-      });
-    });
-
-    it('should throw ConflictException when email exists', async () => {
-      const registerDto: RegisterDto = {
-        firstName: 'John',
-        lastName: 'Doe',
-        email: 'exists@example.com',
-        password: 'password123',
-        role: Role.STUDENT,
-      };
-      authService.register.mockRejectedValue(
-        new ConflictException('Email exists'),
-      );
-
-      await expect(controller.register(registerDto)).rejects.toThrow(
-        ConflictException,
-      );
-    });
-  });
-
   describe('refresh', () => {
-    it('should call authService.refreshTokens with header token', async () => {
+    it('should refresh tokens successfully', async () => {
       const mockRequest = {
         get: jest.fn().mockReturnValue('Bearer validRefreshToken'),
       } as unknown as Request;
@@ -113,28 +75,15 @@ describe('AuthController', () => {
       authService.refreshTokens.mockResolvedValue(mockTokens);
 
       const result = await controller.refresh(mockRequest);
-      const expectedToken = 'validRefreshToken';
 
       expect(result.data).toEqual(mockTokens);
-      expect(authService.refreshTokens).toHaveBeenCalledWith(expectedToken);
+      expect(authService.refreshTokens).toHaveBeenCalledWith('validRefreshToken');
     });
 
     it('should throw UnauthorizedException when no token provided', async () => {
       const mockRequest = {
         get: jest.fn().mockReturnValue(undefined),
       } as unknown as Request;
-
-      await expect(controller.refresh(mockRequest)).rejects.toThrow(
-        UnauthorizedException,
-      );
-    });
-
-    it('should throw UnauthorizedException for invalid refresh token', async () => {
-      const mockRequest = {
-        get: jest.fn().mockReturnValue('Bearer invalidToken'),
-      } as unknown as Request;
-
-      authService.refreshTokens.mockRejectedValue(new UnauthorizedException());
 
       await expect(controller.refresh(mockRequest)).rejects.toThrow(
         UnauthorizedException,

@@ -157,6 +157,9 @@ export class MetricsService {
       };
     }
 
+    // Calculate dynamic session duration
+    const sessionDuration = await this.calculateSessionDuration();
+
     // Get all scheduled sessions for this schedule
     const sessions = await this.prismaService.scheduledSession.findMany({
       where: {
@@ -222,8 +225,9 @@ export class MetricsService {
         classroom.building.buildingId,
       );
       if (buildingData) {
-        // Assuming 90-minute sessions and 5 working days
-        buildingData.totalMinutesAvailable += timeslots.length * 5 * 90;
+        // Using dynamic session duration and 5 working days
+        buildingData.totalMinutesAvailable +=
+          timeslots.length * 5 * sessionDuration;
       }
     });
 
@@ -235,8 +239,8 @@ export class MetricsService {
         session.classroom.building.buildingId,
       );
       if (buildingData) {
-        // Assuming 90-minute sessions
-        buildingData.totalMinutesScheduled += 90;
+        // Using dynamic session duration
+        buildingData.totalMinutesScheduled += sessionDuration;
       }
     });
 
@@ -311,43 +315,46 @@ export class MetricsService {
       },
     });
 
-    const teacherWorkloads: TeacherWorkloadDto[] = teachers.map((teacher) => {
-      const teacherSessions = sessions.filter(
-        (s) => s.teacherId === teacher.teacherId,
-      );
+    const teacherWorkloads: TeacherWorkloadDto[] = await Promise.all(
+      teachers.map(async (teacher) => {
+        const teacherSessions = sessions.filter(
+          (s) => s.teacherId === teacher.teacherId,
+        );
 
-      // Calculate daily sessions (assuming 5 working days)
-      const dailySessions = [0, 0, 0, 0, 0]; // Mon-Fri
-      const dayMap = {
-        MONDAY: 0,
-        TUESDAY: 1,
-        WEDNESDAY: 2,
-        THURSDAY: 3,
-        FRIDAY: 4,
-      };
+        // Calculate daily sessions (assuming 5 working days)
+        const dailySessions = [0, 0, 0, 0, 0]; // Mon-Fri
+        const dayMap = {
+          MONDAY: 0,
+          TUESDAY: 1,
+          WEDNESDAY: 2,
+          THURSDAY: 3,
+          FRIDAY: 4,
+        };
 
-      teacherSessions.forEach((session) => {
-        const dayIndex = dayMap[session.day as keyof typeof dayMap];
-        if (dayIndex !== undefined) {
-          dailySessions[dayIndex]++;
-        }
-      });
+        teacherSessions.forEach((session) => {
+          const dayIndex = dayMap[session.day as keyof typeof dayMap];
+          if (dayIndex !== undefined) {
+            dailySessions[dayIndex]++;
+          }
+        });
 
-      // Calculate preference satisfaction ratio based on actual constraints
-      // Using a simple heuristic: if teacher has any sessions, assume reasonable satisfaction
-      const preferenceSatisfactionRatio =
-        teacherSessions.length > 0
-          ? Math.min(0.95, 0.6 + teacherSessions.length * 0.05)
-          : 0.6;
+        // Calculate preference satisfaction ratio based on actual constraints
+        const preferenceSatisfactionRatio =
+          await this.calculateActualTeacherPreferenceSatisfaction(
+            teacher.teacherId,
+            teacherSessions,
+            campusId,
+          );
 
-      return {
-        teacherId: teacher.teacherId,
-        teacherName: `${teacher.user.firstName} ${teacher.user.lastName}`,
-        totalSessions: teacherSessions.length,
-        preferenceSatisfactionRatio,
-        dailySessions,
-      };
-    });
+        return {
+          teacherId: teacher.teacherId,
+          teacherName: `${teacher.user.firstName} ${teacher.user.lastName}`,
+          totalSessions: teacherSessions.length,
+          preferenceSatisfactionRatio,
+          dailySessions,
+        };
+      }),
+    );
 
     return teacherWorkloads;
   }
@@ -542,14 +549,21 @@ export class MetricsService {
     const scheduleCompactness =
       await this.calculateScheduleCompactness(targetScheduleId);
 
-    // Overall score (average of all metrics)
+    // Overall score with weighted importance (business priorities)
+    const weights = {
+      studentGroupConflictRate: 0.35, // Most critical - no conflicts
+      teacherPreferenceSatisfaction: 0.25, // Important for teacher satisfaction
+      teacherWorkloadBalance: 0.2, // Fair distribution
+      roomUtilization: 0.15, // Resource efficiency
+      scheduleCompactness: 0.05, // Nice to have
+    };
+
     const overallScore =
-      (roomUtilization +
-        teacherPreferenceSatisfaction +
-        teacherWorkloadBalance +
-        studentGroupConflictRate +
-        scheduleCompactness) /
-      5;
+      roomUtilization * weights.roomUtilization +
+      teacherPreferenceSatisfaction * weights.teacherPreferenceSatisfaction +
+      teacherWorkloadBalance * weights.teacherWorkloadBalance +
+      studentGroupConflictRate * weights.studentGroupConflictRate +
+      scheduleCompactness * weights.scheduleCompactness;
 
     return {
       roomUtilization,
@@ -581,7 +595,8 @@ export class MetricsService {
    * Helper method to calculate workload balance using Gini coefficient
    */
   private calculateWorkloadBalance(workloads: TeacherWorkloadDto[]): number {
-    if (workloads.length === 0) return 0;
+    if (workloads.length === 0) return 100; // Perfect balance with no teachers
+    if (workloads.length === 1) return 100; // Perfect balance with one teacher
 
     const sessions = workloads
       .map((w) => w.totalSessions)
@@ -589,7 +604,7 @@ export class MetricsService {
     const n = sessions.length;
     const mean = sessions.reduce((sum, s) => sum + s, 0) / n;
 
-    if (mean === 0) return 100;
+    if (mean === 0) return 100; // Perfect balance if no sessions
 
     let giniSum = 0;
     for (let i = 0; i < n; i++) {
@@ -599,7 +614,7 @@ export class MetricsService {
     }
 
     const giniCoeff = giniSum / (2 * n * n * mean);
-    return Math.max(0, (1 - giniCoeff) * 100);
+    return Math.max(0, Math.min(100, (1 - giniCoeff) * 100));
   }
 
   /**
@@ -733,8 +748,13 @@ export class MetricsService {
     });
 
     // Calculate compactness score (fewer gaps = higher score)
-    // Maximum possible gaps would be if every session was isolated
-    const maxPossibleGaps = sessions.length * 2; // Rough estimate
+    // Calculate theoretical maximum gaps: if every teacher worked every day with maximum spread
+    const totalTimeslots = await this.prismaService.timeslot.count();
+    const maxPossibleGaps = Math.max(
+      1,
+      totalTeacherDays * (totalTimeslots - 1),
+    );
+
     const compactnessScore =
       maxPossibleGaps > 0
         ? Math.max(0, (1 - totalGaps / maxPossibleGaps) * 100)
@@ -819,5 +839,99 @@ export class MetricsService {
     }
 
     return alerts;
+  }
+
+  /**
+   * Calculate actual teacher preference satisfaction based on scheduled sessions vs constraints
+   */
+  private async calculateActualTeacherPreferenceSatisfaction(
+    teacherId: string,
+    scheduledSessions: Array<{
+      day: string;
+      timeslot: { code: string };
+    }>,
+    campusId: string,
+  ): Promise<number> {
+    if (scheduledSessions.length === 0) {
+      return 0.6; // Neutral score for teachers with no sessions
+    }
+
+    // Get teacher's time preference constraints
+    const constraints = await this.prismaService.constraint.findMany({
+      where: {
+        teacherId,
+        constraintType: {
+          name: 'Time Preference',
+        },
+        isActive: true,
+      },
+    });
+
+    if (constraints.length === 0) {
+      return 0.7; // Default score for teachers without explicit preferences
+    }
+
+    let totalScore = 0;
+    let sessionCount = 0;
+
+    // Evaluate each scheduled session against preferences
+    scheduledSessions.forEach((session) => {
+      constraints.forEach((constraint) => {
+        const value = constraint.value as {
+          preferences?: {
+            PREFER?: { timeslotCodes?: string[][] };
+            AVOID?: { timeslotCodes?: string[][] };
+            NEUTRAL?: { timeslotCodes?: string[][] };
+          };
+        };
+
+        if (value?.preferences) {
+          const checkTimeslot = (prefs?: { timeslotCodes?: string[][] }) => {
+            if (!prefs?.timeslotCodes) return false;
+            return prefs.timeslotCodes.some((codes: string[]) =>
+              codes.includes(session.timeslot.code),
+            );
+          };
+
+          if (checkTimeslot(value.preferences.PREFER)) {
+            totalScore += 1.0; // Perfect score for preferred times
+          } else if (checkTimeslot(value.preferences.AVOID)) {
+            totalScore += 0.2; // Low score for avoided times
+          } else if (checkTimeslot(value.preferences.NEUTRAL)) {
+            totalScore += 0.7; // Neutral score
+          } else {
+            totalScore += 0.6; // Default score for unspecified times
+          }
+          sessionCount++;
+        }
+      });
+    });
+
+    return sessionCount > 0 ? totalScore / sessionCount : 0.6;
+  }
+
+  /**
+   * Calculate dynamic session duration from timeslot data
+   */
+  private async calculateSessionDuration(): Promise<number> {
+    const timeslots = await this.prismaService.timeslot.findMany({
+      orderBy: { order: 'asc' },
+      take: 2,
+    });
+
+    if (timeslots.length >= 2) {
+      // Extract hour and minute from time format (assuming HH:MM format)
+      const parseTime = (timeStr: string) => {
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        return hours * 60 + minutes;
+      };
+
+      const firstStart = parseTime(timeslots[0].startTime);
+      const firstEnd = parseTime(timeslots[0].endTime);
+
+      return firstEnd - firstStart; // Return duration in minutes
+    }
+
+    return 90; // Fallback to 90 minutes if we can't determine from data
   }
 }

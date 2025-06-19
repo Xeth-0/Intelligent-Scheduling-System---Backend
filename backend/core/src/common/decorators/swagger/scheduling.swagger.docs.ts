@@ -668,7 +668,8 @@ export const DeleteScheduleDocs = () => {
   return applyDecorators(
     ApiOperation({
       summary: 'Delete a schedule (admin only)',
-      description: 'Permanently deletes a schedule and all its associated sessions. Only admins can perform this action.',
+      description:
+        'Permanently deletes a schedule and all its associated sessions. Only admins can perform this action.',
     }),
     ApiBearerAuth(),
     ApiParam({
@@ -685,7 +686,7 @@ export const DeleteScheduleDocs = () => {
           success: { type: 'boolean', example: true },
           statusCode: { type: 'number', example: 200 },
           message: { type: 'string', example: 'Schedule deleted successfully' },
-          data: { type: 'null', example: null }
+          data: { type: 'null', example: null },
         },
       },
     }),

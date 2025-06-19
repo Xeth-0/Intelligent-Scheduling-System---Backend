@@ -900,7 +900,7 @@ export class SchedulingService implements ISchedulingService {
    * @param userId - ID of the admin user generating the schedule
    * @returns Promise with the generated schedule details
    */
-  async generateSchedule(userId: string, scheduleName: string) {
+  async generateSchedule(userId: string, scheduleName: string, timeLimitMinutes?: number) {
     const admin = await this.prismaService.admin.findFirst({
       where: {
         userId: userId,
@@ -922,8 +922,6 @@ export class SchedulingService implements ISchedulingService {
     }
 
     // Prepare the data for the generate schedule endpoint
-    // first teacher in the list takes that course for now
-    // ! Schema needs updating to disallow multiple teachers per course
     const courses = await this.prismaService.course.findMany({
       where: {
         teacherId: {
@@ -1016,6 +1014,9 @@ export class SchedulingService implements ISchedulingService {
         endTime: slot.endTime,
         order: slot.order,
       })),
+
+      // Include time limit if provided (convert minutes to seconds)
+      timeLimit: timeLimitMinutes ? timeLimitMinutes * 60 : undefined,
     };
 
     // Call the generate schedule endpoint
@@ -1085,9 +1086,13 @@ export class SchedulingService implements ISchedulingService {
       return this.getScheduleById(userId, newSchedule.scheduleId);
     } catch (e: unknown) {
       if (e instanceof Prisma.PrismaClientKnownRequestError) {
-        throw new InternalServerErrorException(
-          `DB error generating schedule: ${e.message}`,
-        );
+        // P2002 is the unique constraint violation error code in Prisma
+        if (e.code === 'P2002') {
+          throw new InternalServerErrorException(
+            'Unable to generate schedule: The provided constraints and available institution resources may not allow for a feasible schedule. Please review your constraints and resources and try again.',
+          );
+        }
+        throw new InternalServerErrorException(`Error generating schedule: `);
       }
       throw e;
     }
