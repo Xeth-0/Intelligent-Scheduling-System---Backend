@@ -1,4 +1,4 @@
-studentGroupId,courseId
-sgp-111aaa,crs-aaa111
-sgp-111aaa,crs-bbb222
-sgp-222bbb,crs-bbb222
+studentGroupId,courseId,teacherId
+sgp-111aaa,crs-aaa111,tch-xyz789
+sgp-111aaa,crs-bbb222,tch-opq456
+sgp-222bbb,crs-bbb222,tch-xyz789

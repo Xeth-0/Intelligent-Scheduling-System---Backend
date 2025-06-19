@@ -337,11 +337,22 @@ def check_duplicate_rows(df, taskId):
 
 def edit_ids(df: pd.DataFrame, editable_comlumns, prefix=""):
     errors = []
+    
+    print(f"🔍 DEBUG edit_ids: prefix='{prefix}', columns={editable_comlumns}")
 
     for column in editable_comlumns:
         if column not in df.columns:
             continue
+        
+        # Debug: Show original values
+        print(f"🔍 Column '{column}' original values: {df[column].tolist()}")
+        
+        # Apply prefix
         df[column] = prefix + df[column].astype(str)
+        
+        # Debug: Show transformed values
+        print(f"🔍 Column '{column}' after prefix: {df[column].tolist()}")
+        
     return errors
 
 
@@ -362,7 +373,7 @@ def validate_csv_file(file_path, taskId, category, campus_id):
         encoding=config.get("encoding", "utf-8"),
     )
     if df is None:
-        return {"success": False, "errors": read_errors, data: [], "type": category}
+        return {"success": False, "errors": read_errors, "data": [], "type": category}
 
     errors = read_errors
 
@@ -402,7 +413,6 @@ def validate_csv_file(file_path, taskId, category, campus_id):
 ID_COLUMNS = [
     "deptId",
     "departmentId",
-    # "campusId",
     "courseId",
     "teacherId",
     "studentGroupId",
@@ -415,9 +425,8 @@ DEPARTMENT_CONFIG = {
     "expected_columns": [
         "deptId",  # Will be converted to UUID later if needed
         "name",
-        "campusId",
     ],
-    "required_columns": ["deptId", "name", "campusId"],
+    "required_columns": ["deptId", "name"],
     "unique_columns": ["deptId", "name"],
     "length_checks": {
         "name": 100  # Adjust max length based on your schema constraints
@@ -506,7 +515,6 @@ CLASSROOM_CONFIG = {
         "name",
         "capacity",
         "type",
-        "campusId",
         "buildingId",  # Optional
         "isWheelchairAccessible",  # Optional Boolean
         "openingTime",  # Optional (expected as String - format can be validated separately)
@@ -518,7 +526,6 @@ CLASSROOM_CONFIG = {
         "name",
         "capacity",
         "type",
-        "campusId",
         "floor",
     ],
     "unique_columns": ["classroomId", "name"],
@@ -560,10 +567,10 @@ STUDENT_CONFIG = {
 }
 
 SGCOURSE_CONFIG = {
-    "expected_columns": ["studentGroupId", "courseId"],
-    "required_columns": ["studentGroupId", "courseId"],
-    # "format_checks": {"studentGroupId": "uuid", "courseId": "uuid"},
-    # "unique_columns": ["studentGroupId", "courseId"],
+    "expected_columns": ["studentGroupId", "courseId", "teacherId"],
+    "required_columns": ["studentGroupId", "courseId", "teacherId"],
+    # "format_checks": {"studentGroupId": "uuid", "courseId": "uuid", "teacherId": "uuid"},
+    # Note: Each combination of studentGroupId + courseId + teacherId should be unique
 }
 
 
@@ -632,6 +639,8 @@ def on_message(ch, method, properties, body):
         category = data.get("category")
         admin_id = data.get("adminId")
         campus_id = data.get("campusId")
+
+        print(f"🔍 DEBUG: Received campus_id='{campus_id}' for category='{category}'")
 
         if not task_id or not file_data_encoded or not category:
             raise ValueError("Invalid message format")

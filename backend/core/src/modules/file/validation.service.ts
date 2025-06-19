@@ -4,12 +4,20 @@ import { RabbitDto, ValidatedDataType } from './dtos/validation-result.dto';
 import { SeedDatabase } from './seedDatabase.service';
 import { Channel, ConsumeMessage, Message } from 'amqplib';
 import { PrismaService } from '@/prisma/prisma.service';
-import { TaskStatus } from '@prisma/client';
+import { TaskStatus, TaskSeverity } from '@prisma/client';
 import { TaskDetailDto, TaskDto } from './dtos/task.dto';
 import {
   PaginatedResponse,
   PaginationData,
 } from '@/common/response/api-response.dto';
+
+// Interface for validation errors from Python service
+interface PythonValidationError {
+  row?: number;
+  column?: string;
+  message?: string;
+  severity?: string;
+}
 
 @Injectable()
 export class ValidationService {
@@ -32,13 +40,26 @@ export class ValidationService {
             data.result.data,
             data.result.type,
             data.taskId,
+            data.adminId,
+            data.campusId || '',
           );
         this.logger.log(
           `Successfully processed validation result for ${data.result.type}, adminId: ${data.adminId}, campusId: ${data.campusId}, taskId: ${data.taskId}`,
         );
-        console.log('Errors: ', ...errors);
-        const proms = [
-          await this.prismaService.task.update({
+        console.log('Seeding errors: ', ...errors);
+
+        // Debug: Check if all errors have correct taskId
+        const invalidErrors = errors.filter(
+          (error) => !error.taskId || error.taskId !== data.taskId,
+        );
+        if (invalidErrors.length > 0) {
+          this.logger.error('Found errors with invalid taskId:', invalidErrors);
+        }
+
+        // Execute operations in a transaction to ensure consistency
+        await this.prismaService.$transaction(async (tx) => {
+          // First update the task
+          await tx.task.update({
             where: {
               taskId: data.taskId,
             },
@@ -46,38 +67,55 @@ export class ValidationService {
               status: TaskStatus.COMPLETED,
               errorCount: errors.length,
             },
-          }),
-          await this.prismaService.taskError.createMany({
-            data: errors,
-          }),
-        ];
-        await Promise.all(proms);
+          });
+
+          // Only create task errors if there are any
+          if (errors.length > 0) {
+            await tx.taskError.createMany({
+              data: errors,
+            });
+          }
+        });
       } else {
         this.logger.error(
           `Validation failed with ${data.result.errors.length} errors`,
         );
 
-        const errorProms = [
-          await this.prismaService.task.update({
+        // Convert Python validation errors to TaskError format
+        const validationErrors = (
+          data.result.errors as PythonValidationError[]
+        ).map((error, index: number) => ({
+          taskId: data.taskId,
+          row: error.row || index + 1,
+          column: error.column || null,
+          message: error.message || JSON.stringify(error),
+          severity: (error.severity as TaskSeverity) || TaskSeverity.ERROR,
+          createdAt: new Date(),
+        }));
+
+        // Execute operations in a transaction to ensure consistency
+        await this.prismaService.$transaction(async (tx) => {
+          // First update the task
+          await tx.task.update({
             where: {
               taskId: data.taskId,
             },
             data: {
               status: TaskStatus.FAILED,
-              errorCount: data.result.errors.length,
+              errorCount: validationErrors.length,
             },
-          }),
-          await this.prismaService.taskError.createMany({
-            data: data.result.errors,
-          }),
-        ];
-        await Promise.all(errorProms);
-        console.log('Errors2: ', data.result.errors);
+          });
+
+          // Only create task errors if there are any
+          if (validationErrors.length > 0) {
+            await tx.taskError.createMany({
+              data: validationErrors,
+            });
+          }
+        });
+
+        console.log('Validation errors: ', validationErrors);
       }
-      // const channel = context.getChannelRef();
-      // const originalMsg = context.getMessage();
-      // // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-      // channel.ack(originalMsg);
 
       return;
     } catch (error) {

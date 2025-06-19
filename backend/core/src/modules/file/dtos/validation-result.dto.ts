@@ -34,16 +34,15 @@ export type ValidatedDataType =
   | Student
   | SGCourse;
 export interface Department {
-  departmentId: string;
+  deptId: string;
   name: string;
-  campusId: string;
 }
 
 export interface Course {
   courseId: string;
   name: string;
   code: string;
-  departmentId: Department['departmentId'];
+  departmentId: Department['deptId'];
   description?: string;
   sessionType?: SessionType;
   sessionsPerWeek: number;
@@ -61,7 +60,7 @@ export interface Teacher extends IUser {
   teacherId: string;
 
   needWheelchairAccessibleRoom: boolean;
-  departmentId: Department['departmentId'];
+  departmentId: Department['deptId'];
 }
 
 export interface Classroom {
@@ -69,13 +68,11 @@ export interface Classroom {
   name: string;
   capacity: number;
   type: ClassroomType;
-  campusId: string;
   buildingId: string;
   floor: number;
   isWheelchairAccessible: boolean;
   openingTime?: string;
   closingTime?: string;
-  departmentId: Department['departmentId'];
 }
 
 export interface StudentGroup {
@@ -83,7 +80,7 @@ export interface StudentGroup {
   name: string;
   size: number;
   accessibilityRequirement: boolean;
-  departmentId: Department['departmentId'];
+  departmentId: Department['deptId'];
 }
 
 export interface Student extends IUser {
@@ -96,4 +93,5 @@ export interface Student extends IUser {
 export interface SGCourse {
   studentGroupId: StudentGroup['studentGroupId'];
   courseId: Course['courseId'];
+  teacherId: Teacher['teacherId'];
 }

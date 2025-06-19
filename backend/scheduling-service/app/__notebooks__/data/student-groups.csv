@@ -1,14 +1,20 @@
 studentGroupId,name,size,accessibilityRequirement,departmentId
-sg-y1-001,Year 1,50,false,dept-cs-001
-sg-y2-001,Year 2,50,true,dept-cs-001
-sg-y3-se-s1,3rd Year Software Engineering Section 1,52,false,dept-cs-001
-sg-y3-se-s2,3rd Year Software Engineering Section 2,45,true,dept-cs-001
-sg-y3-se-s3,3rd Year Software Engineering Section 3,60,false,dept-cs-001
-sg-y3-se-s4,3rd Year Software Engineering Section 4,40,false,dept-cs-001
-sg-y4-se-s1,4th Year Software Engineering Section 1,33,false,dept-cs-001
-sg-y4-se-s2,4th Year Software Engineering Section 2,48,true,dept-cs-001
-sg-y4-ai,4th Year Artificial Intelligence,70,false,dept-cs-001
-sg-y4-cy,4th Year Cybersecurity,35,true,dept-cs-001
-sg-y4-it,4th Year Information Technology,61,false,dept-cs-001
-sg-y5-s1,5th Year Section 1,28,false,dept-cs-001
-sg-y5-s2,5th Year Section 2,39,true,dept-cs-001 
+sgp-sec-01,Section 1,50,True,dpt-preeng-001
+sgp-sec-02,Section 2,50,False,dpt-preeng-001
+sgp-sec-03,Section 3,50,True,dpt-preeng-001
+sgp-sec-04,Section 4,50,True,dpt-preeng-001
+sgp-sec-05,Section 5,50,False,dpt-preeng-001
+sgp-sec-06,Section 6,50,False,dpt-preeng-001
+sgp-sec-07,Section 7,50,False,dpt-preeng-001
+sgp-sec-08,Section 8,50,True,dpt-preeng-001
+sgp-sec-09,Section 9,50,True,dpt-preeng-001
+sgp-sec-10,Section 10,50,False,dpt-preeng-001
+sgp-sec-11,Section 11,50,False,dpt-preeng-001
+sgp-sec-12,Section 12,50,False,dpt-preeng-001
+sgp-sec-13,Section 13,50,False,dpt-preeng-001
+sgp-sec-14,Section 14,50,False,dpt-preeng-001
+sgp-sec-15,Section 15,50,False,dpt-preeng-001
+sgp-sec-16,Section 16,50,False,dpt-preeng-001
+sgp-sec-17,Section 17,50,False,dpt-preeng-001
+sgp-sec-18,Section 18,50,False,dpt-preeng-001
+sgp-sec-19,Section 19,50,True,dpt-preeng-001

@@ -569,8 +569,7 @@ export class SchedulingService implements ISchedulingService {
       groupsHtml += `
         <div class="schedule-page">
           <div class="header">
-            <h1>${scheduleResponse.scheduleName}</h1>
-            <h2>Schedule for ${groupName}</h2>
+            <h1>Schedule for ${groupName}</h1>
           </div>
           ${scheduleHtml}
         </div>
@@ -599,8 +598,7 @@ export class SchedulingService implements ISchedulingService {
     const content = `
       <div class="schedule-page">
         <div class="header">
-          <h1>${scheduleResponse.scheduleName}</h1>
-          <h2>${subtitle}</h2>
+          <h1>${subtitle}</h1>
         </div>
         ${scheduleHtml}
       </div>
@@ -624,6 +622,7 @@ export class SchedulingService implements ISchedulingService {
       '09:30-10:30',
       '10:30-11:30',
       '11:30-12:30',
+      'LUNCH_BREAK',
       '13:30-14:30',
       '14:30-15:30',
       '15:30-16:30',
@@ -657,24 +656,31 @@ export class SchedulingService implements ISchedulingService {
 
     // Time slots and sessions
     timeSlots.forEach((timeSlot) => {
-      gridHtml += `<div class="time-slot">${timeSlot}</div>`;
+      if (timeSlot === 'LUNCH_BREAK') {
+        gridHtml += `<div class="lunch-break-header">LUNCH BREAK<br/>12:30-13:30</div>`;
+        days.forEach(() => {
+          gridHtml += `<div class="lunch-break-cell">Lunch Break</div>`;
+        });
+      } else {
+        gridHtml += `<div class="time-slot">${timeSlot}</div>`;
 
-      days.forEach((day) => {
-        const session = schedule.get(day)?.get(timeSlot);
-        if (session) {
-          gridHtml += `
-            <div class="session-cell">
-              <div class="course-name">${session.courseName}</div>
-              <div class="course-details">
-                <div class="teacher">${session.teacherName}</div>
-                <div class="room">${session.classroomName}</div>
+        days.forEach((day) => {
+          const session = schedule.get(day)?.get(timeSlot);
+          if (session) {
+            gridHtml += `
+              <div class="session-cell">
+                <div class="course-name">${session.courseName}</div>
+                <div class="course-details">
+                  <div class="teacher">${session.teacherName}</div>
+                  <div class="room">${session.classroomName}</div>
+                </div>
               </div>
-            </div>
-          `;
-        } else {
-          gridHtml += `<div class="empty-cell"></div>`;
-        }
-      });
+            `;
+          } else {
+            gridHtml += `<div class="empty-cell"></div>`;
+          }
+        });
+      }
     });
 
     gridHtml += '</div>';
@@ -698,16 +704,21 @@ export class SchedulingService implements ISchedulingService {
 
           body {
             font-family: 'Arial', sans-serif;
-            font-size: 12px;
-            line-height: 1.4;
+            font-size: 10px;
+            line-height: 1.3;
             color: #333;
             background: white;
+            margin: 0;
+            padding: 10px;
           }
 
           .schedule-page {
             width: 100%;
             page-break-after: avoid;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
+            height: calc(100vh - 40px);
+            display: flex;
+            flex-direction: column;
           }
 
           .page-break {
@@ -716,109 +727,156 @@ export class SchedulingService implements ISchedulingService {
 
           .header {
             text-align: center;
-            margin-bottom: 30px;
-            border-bottom: 2px solid #2563eb;
-            padding-bottom: 15px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #64748b;
+            padding-bottom: 10px;
+            flex-shrink: 0;
           }
 
           .header h1 {
-            font-size: 24px;
-            font-weight: bold;
-            color: #1e40af;
-            margin-bottom: 8px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-          }
-
-          .header h2 {
-            font-size: 16px;
-            color: #64748b;
-            font-weight: 500;
+            font-size: 18px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 0;
+            letter-spacing: 0.5px;
           }
 
           .schedule-grid {
             display: grid;
-            grid-template-columns: 120px repeat(7, 1fr);
-            gap: 1px;
-            background-color: #e2e8f0;
-            border: 2px solid #e2e8f0;
+            grid-template-columns: 100px repeat(7, 1fr);
+            gap: 0.5px;
+            background-color: #e5e7eb;
+            border: 1px solid #6b7280;
+            flex-grow: 1;
+            align-self: stretch;
           }
 
           .time-header {
-            background-color: #1e40af;
+            background-color: #4b5563;
             color: white;
-            font-weight: bold;
+            font-weight: 600;
             text-align: center;
-            padding: 12px 8px;
-            font-size: 13px;
+            padding: 8px 6px;
+            font-size: 10px;
           }
 
           .day-header {
-            background-color: #3b82f6;
+            background-color: #6b7280;
             color: white;
-            font-weight: bold;
+            font-weight: 600;
             text-align: center;
-            padding: 12px 8px;
-            font-size: 13px;
+            padding: 8px 6px;
+            font-size: 10px;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.3px;
           }
 
           .time-slot {
-            background-color: #f1f5f9;
-            font-weight: 600;
+            background-color: #f3f4f6;
+            font-weight: 500;
             text-align: center;
-            padding: 15px 8px;
-            border-right: 1px solid #cbd5e1;
-            color: #475569;
-            font-size: 11px;
+            padding: 10px 6px;
+            border: 1px solid #d1d5db;
+            color:rgb(45, 79, 128);
+            font-size: 9px;
           }
 
           .session-cell {
             background-color: white;
-            padding: 8px;
-            min-height: 60px;
-            border: 1px solid #e2e8f0;
+            padding: 6px;
+            min-height: 45px;
+            border: 1px solid #d1d5db;
             position: relative;
           }
 
           .course-name {
-            font-weight: bold;
-            font-size: 11px;
-            color: #1e40af;
-            margin-bottom: 4px;
-            line-height: 1.2;
+            font-weight: 600;
+            font-size: 9px;
+            color: #374151;
+            margin-bottom: 3px;
+            line-height: 1.1;
           }
 
           .course-details {
-            font-size: 10px;
-            color: #64748b;
+            font-size: 8px;
+            color: #6b7280;
           }
 
           .teacher {
             font-weight: 500;
-            margin-bottom: 2px;
+            margin-bottom: 1px;
           }
 
           .room {
-            color: #059669;
+            color: #4b5563;
             font-weight: 500;
           }
 
           .empty-cell {
-            background-color: #f8fafc;
-            min-height: 60px;
-            border: 1px solid #e2e8f0;
+            background-color: #f9fafb;
+            min-height: 45px;
+            border: 1px solid #d1d5db;
+          }
+
+          .lunch-break-header {
+            background-color: #9ca3af;
+            color: #374151;
+            font-weight: 500;
+            text-align: center;
+            padding: 10px 6px;
+            border: 1px solid #6b7280;
+            font-size: 9px;
+            line-height: 1.1;
+          }
+
+          .lunch-break-cell {
+            background-color: #e5e7eb;
+            color: #6b7280;
+            font-weight: 400;
+            text-align: center;
+            padding: 10px 6px;
+            min-height: 45px;
+            border: 1px solid #9ca3af;
+            font-size: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
           }
 
           /* Print-specific styles */
           @media print {
             body {
-              font-size: 11px;
+              font-size: 9px;
+              padding: 5px;
             }
             
             .schedule-page {
               break-inside: avoid;
+              height: calc(100vh - 20px);
+              max-height: calc(100vh - 20px);
+            }
+            
+            .header {
+              margin-bottom: 10px;
+              padding-bottom: 8px;
+            }
+            
+            .header h1 {
+              font-size: 16px;
+            }
+            
+            .schedule-grid {
+              font-size: 8px;
+            }
+            
+            .session-cell {
+              min-height: 35px;
+              padding: 4px;
+            }
+            
+            .lunch-break-cell {
+              min-height: 35px;
+              padding: 8px 4px;
             }
             
             .page-break {

@@ -1,28 +1,8 @@
 courseId,name,code,departmentId,description,sessionType,sessionsPerWeek
-course-001-L-G1,Fundamental of Electrical Circuits and Electronics,ECE301-L-G1,dept-cs-001,Fundamental of Electrical Circuits and Electronics,LECTURE,2
-course-001-P-G1,Fundamental of Electrical Circuits and Electronics,ECE301-P-G1,dept-cs-001,Fundamental of Electrical Circuits and Electronics,LAB,1
-course-001-L-G2,Fundamental of Electrical Circuits and Electronics,ECE301-L-G2,dept-cs-001,Fundamental of Electrical Circuits and Electronics,LECTURE,2
-course-001-P-G2,Fundamental of Electrical Circuits and Electronics,ECE301-P-G2,dept-cs-001,Fundamental of Electrical Circuits and Electronics,LAB,1
-course-002-L-G1,Computer Architecture and Organization,CS302-L-G1,dept-cs-001,Computer Architecture and Organization,LECTURE,2
-course-002-L-G2,Computer Architecture and Organization,CS302-L-G2,dept-cs-001,Computer Architecture and Organization,LECTURE,2
-course-003-L-G1,Web Design and Development,CS303-L-G1,dept-cs-001,Web Design and Development,LECTURE,2
-course-003-P-G1,Web Design and Development,CS303-P-G1,dept-cs-001,Web Design and Development,LAB,1
-course-003-L-G2,Web Design and Development,CS303-L-G2,dept-cs-001,Web Design and Development,LECTURE,2
-course-003-P-G2,Web Design and Development,CS303-P-G2,dept-cs-001,Web Design and Development,LAB,1
-course-004-L-G1,Human Computer Interaction,CS304-L-G1,dept-cs-001,Human Computer Interaction,LECTURE,2
-course-004-L-G2,Human Computer Interaction,CS304-L-G2,dept-cs-001,Human Computer Interaction,LECTURE,2
-course-005-L-G1,Fundamentals of Software Engineering,SE301-L-G1,dept-cs-001,Fundamentals of Software Engineering,LECTURE,2
-course-005-P-G1,Fundamentals of Software Engineering,SE301-P-G1,dept-cs-001,Fundamentals of Software Engineering,LAB,1
-course-005-L-G2,Fundamentals of Software Engineering,SE301-L-G2,dept-cs-001,Fundamentals of Software Engineering,LECTURE,2
-course-005-P-G2,Fundamentals of Software Engineering,SE301-P-G2,dept-cs-001,Fundamentals of Software Engineering,LAB,1
-course-006-L-G1,Software Project Management,SE401-L-G1,dept-cs-001,Software Project Management,LECTURE,2
-course-006-L-G2,Software Project Management,SE401-L-G2,dept-cs-001,Software Project Management,LECTURE,2
-course-006-L-G3,Software Project Management,SE401-L-G3,dept-cs-001,Software Project Management,LECTURE,2
-course-007-L-G1,Enterprise Application Development,SE402-L-G1,dept-cs-001,Enterprise Application Development,LECTURE,2
-course-007-P-G1,Enterprise Application Development,SE402-P-G1,dept-cs-001,Enterprise Application Development,LAB,1
-course-008-L-G1,History of Ethiopia and the Horn,HIS401-L-G1,dept-cs-001,History of Ethiopia and the Horn,LECTURE,2
-course-008-L-G2,History of Ethiopia and the Horn,HIS401-L-G2,dept-cs-001,History of Ethiopia and the Horn,LECTURE,2
-course-008-L-G3,History of Ethiopia and the Horn,HIS401-L-G3,dept-cs-001,History of Ethiopia and the Horn,LECTURE,2
-course-008-L-G4,History of Ethiopia and the Horn,HIS401-L-G4,dept-cs-001,History of Ethiopia and the Horn,LECTURE,2
-course-009-L-G1,Machine Learning and Big Data,ML401-L-G1,dept-cs-001,Machine Learning and Big Data,LECTURE,2
-course-009-P-G1,Machine Learning and Big Data,ML401-P-G1,dept-cs-001,Machine Learning and Big Data,LAB,1 
+crs-mfn-101,Mathematics for Natural Sciences,MNS101,dpt-preeng-001,An introductory course on mathematics for science students.,LECTURE,2
+crs-phy-101,General Physics,PHY101,dpt-preeng-001,A foundational course in classical physics.,LECTURE,2
+crs-eng-101,Communicative English Language Skills-I,ENG101,dpt-preeng-001,Focuses on developing fundamental English communication skills.,LECTURE,2
+crs-pft-101,Physical Fitness,PFT101,dpt-preeng-001,Promotes physical health and wellness through various activities.,LECTURE,1
+crs-ctk-101,Critical Thinking,CTK101,dpt-preeng-001,Develops skills in logical reasoning and argumentation.,LECTURE,1
+crs-geo-101,Geography of Ethiopia and the Horn,GEO101,dpt-preeng-001,A study of the physical and human geography of the region.,LECTURE,1
+crs-psy-101,General Psychology,PSY101,dpt-preeng-001,An introduction to the basic principles of psychology.,LECTURE,1

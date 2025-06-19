@@ -20,7 +20,7 @@ GENE_MUTATION_RATE = (
     0.1  # Probability of mutating a single gene (ScheduledItem's assignment)
 )
 CHROMOSOME_MUTATION_RATE = 0.2  # Probability that a whole chromosome undergoes mutation
-MAX_DURATION_SECONDS = 30  # Updated to match your 30-second requirement
+MAX_DURATION_SECONDS = 120  # Updated to match your 30-second requirement
 SELECTION_TOURNAMENT_SIZE = 3
 CHROMOSOME_POPULATION_SIZE = 50
 ELITISM_COUNT = 2  # Number of best individuals to carry over to the next generation

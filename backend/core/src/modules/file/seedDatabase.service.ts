@@ -119,8 +119,8 @@ function formatPrismaError(
     row: rowNumber,
     column: '',
     message: 'Unknown database error',
-    taskId: '',
-    severity: 'ERROR',
+    taskId: taskId,
+    severity: TaskSeverity.ERROR,
     createdAt: new Date(),
   } as TaskError;
 }
@@ -129,123 +129,327 @@ function formatPrismaError(
 export class SeedDatabase {
   constructor(private readonly prismaService: PrismaService) {}
   private logger = new Logger(SeedDatabase.name);
-  async seed(data: ValidatedDataType[], tableName: fileTypes, taskid: string) {
+  async seed(
+    data: ValidatedDataType[],
+    tableName: fileTypes,
+    taskid: string,
+    adminId: string,
+    adminCampusId: string,
+  ) {
     const results = {
       errors: [] as TaskError[],
       erroneousItems: [] as ValidatedDataType[],
       successfulRecords: 0,
     };
 
-    const operations = data.map(async (item, idx) => {
+    // Process items sequentially to avoid race conditions
+    for (let idx = 0; idx < data.length; idx++) {
+      const item = data[idx];
       try {
-        await this.processItem(item, tableName);
+        await this.processItem(item, tableName, adminCampusId);
         results.successfulRecords++;
       } catch (error) {
         results.errors.push(formatPrismaError(error, idx + 1, taskid));
-
         results.erroneousItems.push(item);
         this.logger.error('Error processing item', item, error);
       }
-    });
+    }
 
-    await Promise.all(operations);
     return results;
   }
 
-  private async processItem(item: ValidatedDataType, tableName: fileTypes) {
+  private async processItem(
+    item: ValidatedDataType,
+    tableName: fileTypes,
+    adminCampusId: string,
+  ) {
     switch (tableName) {
       case fileTypes.TEACHER:
-        await this.createTeacher(item as Teacher);
+        await this.createTeacher(item as Teacher, adminCampusId);
         break;
       case fileTypes.COURSE:
-        await this.createCourse(item as Course);
+        await this.createCourse(item as Course, adminCampusId);
         break;
       case fileTypes.CLASSROOM:
-        await this.createClassroom(item as Classroom);
+        await this.createClassroom(item as Classroom, adminCampusId);
         break;
       case fileTypes.DEPARTMENT:
-        await this.createDepartment(item as Department);
+        await this.createDepartment(item as Department, adminCampusId);
         break;
       case fileTypes.STUDENT:
-        await this.createStudent(item as Student);
+        await this.createStudent(item as Student, adminCampusId);
         break;
       case fileTypes.STUDENTGROUP:
-        await this.createStudentGroup(item as StudentGroup);
+        await this.createStudentGroup(item as StudentGroup, adminCampusId);
         break;
       case fileTypes.SGCOURSE:
-        await this.updateSGCourse(item as SGCourse);
+        await this.updateSGCourse(item as SGCourse, adminCampusId);
         break;
       default:
         throw new Error('Invalid table name');
     }
   }
-  private async createUser(item: Teacher | Student, tableName: fileTypes) {
-    // eslint-disable-next-line @typescript-eslint/dot-notation
-    const userId = (item['teacherId'] ?? item['studentId']) as string;
 
-    const userData = {
-      userId: userId,
-      firstName: item.firstName,
-      lastName: item.lastName,
-      email: item.email,
-      passwordHash: item.passwordHash ?? 'default_hash', // Provide default if needed
-      role: tableName === fileTypes.STUDENT ? Role.STUDENT : Role.TEACHER,
-      phone: item.phone,
-      needWheelchairAccessibleRoom: item.needWheelchairAccessibleRoom ?? false,
-    };
-    const user = await this.prismaService.user.create({ data: userData });
-    return user;
-  }
-  private async createTeacher(item: Teacher) {
-    const user = await this.createUser(item, fileTypes.TEACHER);
-    const teacher = {
-      teacherId: user.userId,
-      departmentId: item.departmentId,
-      userId: user.userId,
-    };
-    await this.prismaService.teacher.create({
-      data: teacher,
-    });
-  }
-  private async createStudent(item: Student) {
-    const user = await this.createUser(item, fileTypes.STUDENT);
-    const student = {
-      studentId: user.userId,
-      studentGroupId: item.studentGroupId,
-      userId: user.userId,
-    };
-    await this.prismaService.student.create({
-      data: student,
-    });
-  }
-  private async createCourse(item: Course) {
-    await this.prismaService.course.create({
-      data: item,
-    });
-  }
-  private async createClassroom(item: Classroom) {
-    await this.prismaService.classroom.create({
-      data: item,
-    });
-  }
-  private async createDepartment(item: Department) {
-    await this.prismaService.department.create({
-      data: item,
-    });
-  }
-  private async createStudentGroup(item: StudentGroup) {
-    await this.prismaService.studentGroup.create({
-      data: item,
-    });
-  }
-  private async updateSGCourse(item: SGCourse) {
-    await this.prismaService.studentGroup.update({
-      where: { studentGroupId: item.studentGroupId },
-      data: {
-        courses: {
-          connect: { courseId: item.courseId },
+  private async createTeacher(item: Teacher, adminCampusId: string) {
+    // Use transaction to ensure both User and Teacher are created together
+    return await this.prismaService.$transaction(async (tx) => {
+      // Prefix teacherID with campusID to ensure uniqueness across campuses
+      const userId = `${item.teacherId}`;
+
+      // Also prefix departmentId to match the department that was created
+      const departmentId = `${adminCampusId}${item.departmentId}`;
+
+      // Upsert user to handle conflicts gracefully
+      const user = await tx.user.upsert({
+        where: { userId },
+        update: {
+          firstName: item.firstName,
+          lastName: item.lastName,
+          email: item.email,
+          phone: item.phone,
+          needWheelchairAccessibleRoom:
+            item.needWheelchairAccessibleRoom ?? false,
         },
+        create: {
+          userId,
+          firstName: item.firstName,
+          lastName: item.lastName,
+          email: item.email,
+          passwordHash: item.passwordHash || 'default_hash',
+          role: Role.TEACHER,
+          phone: item.phone,
+          needWheelchairAccessibleRoom:
+            item.needWheelchairAccessibleRoom ?? false,
+        },
+      });
+
+      // Upsert teacher to handle conflicts gracefully
+      await tx.teacher.upsert({
+        where: { teacherId: userId },
+        update: {
+          departmentId: departmentId,
+        },
+        create: {
+          teacherId: userId,
+          departmentId: departmentId,
+          userId: user.userId,
+        },
+      });
+    });
+  }
+
+  private async createStudent(item: Student, adminCampusId: string) {
+    // Use transaction to ensure both User and Student are created together
+    return await this.prismaService.$transaction(async (tx) => {
+      const userId = item.studentId;
+
+      // Upsert user to handle conflicts gracefully
+      const user = await tx.user.upsert({
+        where: { userId },
+        update: {
+          firstName: item.firstName,
+          lastName: item.lastName,
+          email: item.email,
+          phone: item.phone,
+          needWheelchairAccessibleRoom:
+            item.needWheelchairAccessibleRoom ?? false,
+        },
+        create: {
+          userId,
+          firstName: item.firstName,
+          lastName: item.lastName,
+          email: item.email,
+          passwordHash: item.passwordHash || 'default_hash',
+          role: Role.STUDENT,
+          phone: item.phone,
+          needWheelchairAccessibleRoom:
+            item.needWheelchairAccessibleRoom ?? false,
+        },
+      });
+
+      // Upsert student to handle conflicts gracefully
+      await tx.student.upsert({
+        where: { studentId: userId },
+        update: {
+          studentGroupId: item.studentGroupId,
+        },
+        create: {
+          studentId: userId,
+          studentGroupId: item.studentGroupId,
+          userId: user.userId,
+        },
+      });
+    });
+  }
+
+  private async createCourse(item: Course, adminCampusId: string) {
+    // Prefix departmentId with campusID to match the department that was created
+    const departmentId = `${adminCampusId}${item.departmentId}`;
+
+    // Use upsert to handle conflicts gracefully
+    await this.prismaService.course.upsert({
+      where: { courseId: item.courseId },
+      update: {
+        name: item.name,
+        code: item.code,
+        departmentId,
+        description: item.description,
+        sessionType: item.sessionType,
+        sessionsPerWeek: item.sessionsPerWeek,
       },
+      create: {
+        ...item,
+        departmentId,
+      },
+    });
+  }
+
+  private async createClassroom(item: Classroom, adminCampusId: string) {
+    // Use transaction to handle building creation and classroom creation atomically
+    return await this.prismaService.$transaction(async (tx) => {
+      const buildingId = item.buildingId;
+
+      if (buildingId) {
+        // Use upsert to handle building conflicts gracefully
+        await tx.building.upsert({
+          where: { buildingId },
+          update: {
+            name: `Building ${buildingId}`,
+            floor: item.floor || 1,
+          },
+          create: {
+            buildingId,
+            name: `Building ${buildingId}`,
+            floor: item.floor || 1,
+          },
+        });
+      }
+
+      // Use upsert to handle classroom conflicts gracefully
+      await tx.classroom.upsert({
+        where: { classroomId: item.classroomId },
+        update: {
+          name: item.name,
+          capacity: item.capacity,
+          type: item.type,
+          buildingId: item.buildingId,
+          isWheelchairAccessible: item.isWheelchairAccessible,
+          openingTime: item.openingTime,
+          closingTime: item.closingTime,
+          floor: item.floor,
+          campusId: adminCampusId,
+        },
+        create: {
+          ...item,
+          campusId: adminCampusId,
+        },
+      });
+    });
+  }
+
+  private async createDepartment(item: Department, adminCampusId: string) {
+    // Use upsert to handle conflicts gracefully
+    // Prefix deptId with campusID to ensure uniqueness across campuses
+    const deptId = `${adminCampusId}${item.deptId}`;
+
+    console.log('Creating department: ', { ...item, deptId }, adminCampusId);
+    await this.prismaService.department.upsert({
+      where: { deptId },
+      update: {
+        name: item.name,
+        campusId: adminCampusId,
+      },
+      create: {
+        deptId,
+        name: item.name,
+        campusId: adminCampusId,
+      },
+    });
+  }
+
+  private async createStudentGroup(item: StudentGroup, adminCampusId: string) {
+    // Prefix departmentId with campusID to match the department that was created
+    const departmentId = `${adminCampusId}${item.departmentId}`;
+
+    // Use upsert to handle conflicts gracefully
+    await this.prismaService.studentGroup.upsert({
+      where: { studentGroupId: item.studentGroupId },
+      update: {
+        name: item.name,
+        size: item.size,
+        accessibilityRequirement: item.accessibilityRequirement,
+        departmentId,
+      },
+      create: {
+        ...item,
+        departmentId,
+      },
+    });
+  }
+
+  private async updateSGCourse(item: SGCourse, adminCampusId: string) {
+    // Create course instance for specific student group + teacher combination
+    return await this.prismaService.$transaction(async (tx) => {
+      // Get the course template from the courses table
+      const courseTemplate = await tx.course.findUnique({
+        where: { courseId: item.courseId },
+      });
+
+      if (!courseTemplate) {
+        throw new Error(
+          `Course template not found for courseId: ${item.courseId}`,
+        );
+      }
+
+      // Prefix teacherId with campusID to match the teacher that was created
+      const prefixedTeacherId = `${item.teacherId}`;
+
+      // Verify teacher exists
+      const teacher = await tx.teacher.findUnique({
+        where: { teacherId: prefixedTeacherId },
+      });
+
+      if (!teacher) {
+        throw new Error(
+          `Teacher not found for teacherId: ${prefixedTeacherId} (original: ${item.teacherId})`,
+        );
+      }
+
+      // Create unique course instance ID following seeding pattern
+      // Format: originalCourseId-INSTANCE-studentGroupId-teacherId
+      const instanceId = `${item.courseId}-INST-${item.studentGroupId.slice(-6)}-${item.teacherId.slice(-6)}`;
+
+      // Create unique course code
+      const instanceCode = `${courseTemplate.code}-${item.studentGroupId.slice(-6)}`;
+
+      // Create course instance
+      const courseInstance = await tx.course.create({
+        data: {
+          courseId: instanceId,
+          name: courseTemplate.name,
+          code: instanceCode,
+          description: courseTemplate.description,
+          departmentId: courseTemplate.departmentId,
+          ectsCredits: courseTemplate.ectsCredits,
+          sessionType: courseTemplate.sessionType,
+          sessionsPerWeek: courseTemplate.sessionsPerWeek,
+          teacherId: prefixedTeacherId,
+        },
+      });
+
+      // Connect student group to this course instance
+      await tx.course.update({
+        where: { courseId: courseInstance.courseId },
+        data: {
+          studentGroups: {
+            connect: { studentGroupId: item.studentGroupId },
+          },
+        },
+      });
+
+      console.log(
+        `Created course instance: ${courseTemplate.name} for group ${item.studentGroupId} with teacher ${prefixedTeacherId}`,
+      );
     });
   }
 }

@@ -1,6 +1,13 @@
-classroomId,name,capacity,type,campusId,buildingId,isWheelchairAccessible,openingTime,closingTime,floor
-classroom-001,NB111,300,LECTURE,campus-001,building-001,true,08:00,18:00,2
-classroom-002,NB112,100,LECTURE,campus-001,building-001,true,08:00,18:00,2
-classroom-003,NB113,50,LECTURE,campus-001,building-001,false,08:00,18:00,2
-classroom-004,NB114,200,LAB,campus-001,building-001,true,08:00,18:00,2
-classroom-005,NB115,50,LAB,campus-001,building-001,false,08:00,18:00,2 
+classroomId,name,capacity,type,buildingId,isWheelchairAccessible,openingTime,closingTime,floor
+cls-nb-011,Room NB 011,50,LECTURE,bdg-nb-01,True,08:00,18:00,0
+cls-nb-015,Room NB 015,50,LECTURE,bdg-nb-01,True,08:00,18:00,0
+cls-nb-108,Room NB 108,50,LECTURE,bdg-nb-01,True,08:00,18:00,1
+cls-nb-204,Room NB 204,50,LECTURE,bdg-nb-01,False,08:00,18:00,2
+cls-nb-205,Room NB 205,50,LECTURE,bdg-nb-01,False,08:00,18:00,2
+cls-nb-207,Room NB 207,50,LECTURE,bdg-nb-01,False,08:00,18:00,2
+cls-nb-208,Room NB 208,50,LECTURE,bdg-nb-01,False,08:00,18:00,2
+cls-nb-210,Room NB 210,50,LECTURE,bdg-nb-01,False,08:00,18:00,2
+cls-nb-211,Room NB 211,50,LECTURE,bdg-nb-01,False,08:00,18:00,2
+cls-nb-212,Room NB 212,50,LECTURE,bdg-nb-01,False,08:00,18:00,2
+cls-nb-213,Room NB 213,50,LECTURE,bdg-nb-01,False,08:00,18:00,2
+cls-nb-215,Room NB 215,50,LECTURE,bdg-nb-01,False,08:00,18:00,2
