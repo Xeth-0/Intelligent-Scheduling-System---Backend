@@ -2,6 +2,10 @@
 
 An AI-powered platform that automatically generates optimized university timetables using advanced genetic algorithms and constraint satisfaction techniques.
 
+>**This repository contains the backend code, the readme below focuses on the system architecture and design.**
+
+>**For the frontend code, it can be found <a href='https://github.com/JohnnyPro/intelligent-scheduler-frontend'> here </a>**
+
 ## Problem & Solution
 
 Traditional university scheduling relies on manual processes or simple rule-based systems that struggle with complex constraints. ISS solves this by:
